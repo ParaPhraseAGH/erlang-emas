@@ -9,12 +9,19 @@
 %% ====================================================================
 -compile(export_all).
 
-steps() -> 1000.
+steps() -> 10000.
 populationSize() -> 50.
 initialEnergy() -> 10.
 
+reproductionThreshold() -> 11.
 reproductionTransfer() -> 5.
 fightTransfer() -> 10.
+
+problemSize() -> 10.
+mutationRate() -> 0.1.
+mutationRange() -> 0.05.
+mutationChance() -> 0.75.
+recombinationChance() -> 0.3.
 
 
 %% ====================================================================

@@ -10,6 +10,7 @@
 -export([run/0]).
 
 run() -> 
+	random:seed({123,345,678}),
 	Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
 	Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
 	Result = step(Agents, config:steps()),
@@ -20,9 +21,10 @@ run() ->
 %% ====================================================================
 
 behavior({_, _, Energy}) -> 
+	ReproductionThreshold = config:reproductionThreshold(),
 	case Energy of
 		N when N == 0 -> death;
-		N when N > 10 -> reproduction;
+		N when N > ReproductionThreshold -> reproduction;
 		_ -> fight
 	end.
 
