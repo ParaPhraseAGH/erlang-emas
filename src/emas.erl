@@ -7,19 +7,26 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([run/0]).
+-export([run/0,run/1,start/1]).
 
-run() -> 
-	random:seed(erlang:now()),
-	Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
-	Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
-	{Time,Result} = timer:tc(fun step/2, [Agents,config:steps()]),
-	io:format("Total time: ~p s ~nBest fitness: ~p~n",[Time/1000000,Result]).
+run() ->
+  run(1).
+
+
+run(NoIslands) ->
+  _Pids = [spawn(emas,start,[self()]) || _ <- lists:seq(1,NoIslands)],
+  emas_util:receiver(NoIslands).
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
+start(Pid) ->
+	random:seed(erlang:now()),
+	Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
+	Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
+  {Time,Result} = timer:tc(fun step/2, [Agents,config:steps()]),
+	Pid ! {self(),Time,Result}.
 
 sendToWork({death, _}) ->
 	[];
@@ -32,7 +39,7 @@ doFight({A}) -> [A];
 doFight({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) -> 
 	AtoBtransfer = 
 		if EvA < EvB -> erlang:min(config:fightTransfer(), EnA);
-		   EvA >= EvB -> -erlang:min(config:fightTransfer(), EnB)
+			 EvA >= EvB -> -erlang:min(config:fightTransfer(), EnB)
 		end,
 	[{SolA, EvA, EnA - AtoBtransfer}, {SolB, EvB, EnB + AtoBtransfer}].
 
@@ -50,9 +57,9 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
 step(Agents, 0) ->
 	lists:max([ Ev || {_ ,Ev, _} <- Agents]);
 step(Agents, N) ->
-%% 	io:format("Population at step ~B: ~w ~n", [config:steps() - N + 1, Agents]),
+%	io:format("Population at step ~B: ~w ~n", [config:steps() - N + 1, Agents]),
 	Groups = emas_util:regroup(Agents),
 	NewGroups = [sendToWork(G) || G <- Groups],
 	NewAgents = emas_util:shuffle(lists:flatten(NewGroups)),
-	emas_util:print(N,NewAgents,Groups),
-  step(NewAgents, N - 1).
+%	emas_util:print(N,NewAgents,Groups),
+	step(NewAgents, N - 1).

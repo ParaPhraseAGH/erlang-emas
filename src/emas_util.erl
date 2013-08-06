@@ -7,7 +7,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([shuffle/1, optionalPairs/1, print/3, behavior/1, regroup/1, isUniform/2]).
+-export([shuffle/1, optionalPairs/1, print/3, behavior/1, regroup/1, isUniform/2, receiver/1]).
 
 regroup(Agents) ->
 	DeathList = [X || X <- Agents, behavior(X) == death],
@@ -22,6 +22,7 @@ shuffle(L) ->
 optionalPairs(L) ->
 	optionalPairsTail(L,[]).
 
+%% Aktualnie nieuzywana funkcja do sprawdzania identycznosci kolejnych generacji
 isUniform(Groups,Step) ->
 	[{death,D},{fight,_},{reproduction,R}] = Groups,
 	Ld = length(D),
@@ -48,6 +49,15 @@ behavior({_, _, Energy}) ->
 		Energy >  ReproductionThreshold -> reproduction;
 		Energy =< ReproductionThreshold -> fight
 	end.
+
+receiver(0) ->
+  ok;
+receiver(N) ->
+  receive
+    {_From,Time,Result} ->
+      io:format("~nTotal time: ~p s ~nBest fitness: ~p~n",[Time/1000000,Result]),
+      receiver(N-1)
+  end.
 
 %% ====================================================================
 %% Internal functions
