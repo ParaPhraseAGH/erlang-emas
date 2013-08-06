@@ -35,11 +35,11 @@ isUniform(Groups,Step) ->
 print(Step,Agents,Groups) ->
 	[{death,D},{fight,F},{reproduction,R}] = Groups,
 	Fitness = lists:max([ Ev || {_ ,Ev, _} <- Agents]),
-	if Step rem 1 == 0 -> 
-		io:format("~nStep ~p, Fitness: ~p~n",[config:steps() - Step,Fitness]),
-		io:format("Died: ~p    Fought: ~p    Reproduced: ~p~n",[length(D),length(F),length(R)]);
-	   Step rem 1 /= 0 ->
-		notyet
+	if Step rem 100 == 0 ->
+		    io:format("~nStep ~p, Fitness: ~p~n",[config:steps() - Step,Fitness]),
+		    io:format("Died: ~p    Fought: ~p    Reproduced: ~p~n",[length(D),length(F),length(R)]);
+	   Step rem 100 /= 0 ->
+		    notyet
 	end.
 
 behavior({_, _, Energy}) -> 

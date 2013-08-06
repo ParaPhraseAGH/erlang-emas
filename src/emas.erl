@@ -32,8 +32,7 @@ doFight({A}) -> [A];
 doFight({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) -> 
 	AtoBtransfer = 
 		if EvA < EvB -> erlang:min(config:fightTransfer(), EnA);
-		   EvA > EvB -> -erlang:min(config:fightTransfer(), EnB);
-		   EvA == EvB -> 0
+		   EvA >= EvB -> -erlang:min(config:fightTransfer(), EnB)
 		end,
 	[{SolA, EvA, EnA - AtoBtransfer}, {SolB, EvB, EnB + AtoBtransfer}].
 
@@ -56,7 +55,4 @@ step(Agents, N) ->
 	NewGroups = [sendToWork(G) || G <- Groups],
 	NewAgents = emas_util:shuffle(lists:flatten(NewGroups)),
 	emas_util:print(N,NewAgents,Groups),
-	case emas_util:isUniform(Groups,N) of
-		true -> step(NewAgents, 0);
-		false -> step(NewAgents, N - 1)
-	end.
+  step(NewAgents, N - 1).
