@@ -12,21 +12,30 @@
 run() ->
   run(1).
 
-
 run(NoIslands) ->
   _Pids = [spawn(emas,start,[self()]) || _ <- lists:seq(1,NoIslands)],
-  emas_util:receiver(NoIslands).
+  receiver(NoIslands).
+
+start(Pid) ->
+  random:seed(erlang:now()),
+  Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
+  Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
+  {Time,Result} = timer:tc(fun step/2, [Agents,config:steps()]),
+  Pid ! {result,Time,Result}.
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
-start(Pid) ->
-	random:seed(erlang:now()),
-	Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
-	Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
-  {Time,Result} = timer:tc(fun step/2, [Agents,config:steps()]),
-	Pid ! {self(),Time,Result}.
+receiver(0) ->
+  ok;
+receiver(N) ->
+  receive
+    {result,Time,Result} ->
+      io:format("~nTotal time: ~p s ~nBest fitness: ~p~n",[Time/1000000,Result]),
+      receiver(N-1);
+    {agent,From,Agent} -> ok
+  end.
 
 sendToWork({death, _}) ->
 	[];
