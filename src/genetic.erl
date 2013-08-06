@@ -26,17 +26,17 @@ reproduction(S1, S2) ->
 	M1 = case random:uniform() < config:mutationChance() of
 			 true -> mutateSolution(R1);
 			 false -> R1
-		 end,
+	end,
 	M2 = case random:uniform() < config:mutationChance() of
 			 true -> mutateSolution(R2);
 			 false -> R2
-		 end,
+	end,
 	[M1, M2].
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-
+%%TODO recombine features szybciej
 recombineSolutions(S1, S2) -> lists:unzip([ {recombineFeatures(F1, F2), recombineFeatures(F2, F1)} || {F1, F2} <- lists:zip(S1,S2)]).
 
 recombineFeatures(F1, F2) -> erlang:min(F1, F2) + random:uniform() * (erlang:max(F1, F2) - erlang:min(F1, F2)).

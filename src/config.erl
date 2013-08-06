@@ -1,7 +1,6 @@
 %% @author krzywick
 %% @doc @todo Add description to config.
 
-
 -module(config).
 
 %% ====================================================================
@@ -9,8 +8,8 @@
 %% ====================================================================
 -compile(export_all).
 
-steps() -> 10000.
-populationSize() -> 50.
+steps() -> 1500.
+populationSize() -> 100. 
 initialEnergy() -> 10.
 
 reproductionThreshold() -> 11.
@@ -27,5 +26,4 @@ recombinationChance() -> 0.3.
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-
 

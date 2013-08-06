@@ -10,30 +10,23 @@
 -export([run/0]).
 
 run() -> 
-	random:seed({123,345,678}),
+	random:seed(erlang:now()),
 	Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
 	Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
-	Result = step(Agents, config:steps()),
-	lists:max([ Ev || {_ ,Ev, _} <- Result]).
+	{Time,Result} = timer:tc(fun step/2, [Agents,config:steps()]),
+	io:format("Total time: ~p s ~nBest fitness: ~p~n",[Time/1000000,Result]).
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
-behavior({_, _, Energy}) -> 
-	ReproductionThreshold = config:reproductionThreshold(),
-	case Energy of
-		N when N == 0 -> death;
-		N when N > ReproductionThreshold -> reproduction;
-		_ -> fight
-	end.
 
-logic({Arena, Agents}) ->
-	case Arena of
-		death -> [];
-		fight -> lists:flatmap(fun doFight/1, emas_util:optionalPairs(Agents));
-		reproduction -> lists:flatmap(fun doReproduce/1, emas_util:optionalPairs(Agents))
-	end.
+sendToWork({death, _}) ->
+	[];
+sendToWork({fight, Agents}) ->
+	lists:flatmap(fun doFight/1, emas_util:optionalPairs(Agents));
+sendToWork({reproduction,Agents}) ->
+	lists:flatmap(fun doReproduce/1, emas_util:optionalPairs(Agents)).
 
 doFight({A}) -> [A];
 doFight({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) -> 
@@ -55,13 +48,15 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
 	[AtoCTransfer, BtoDTransfer] = [ erlang:min(config:reproductionTransfer(), E) || E <- [EnA, EnB] ],
 	[{SolA, EvA, EnA - AtoCTransfer}, {SolB, EvB, EnB - BtoDTransfer}, {SolC, EvC, AtoCTransfer}, {SolD, EvD, BtoDTransfer}].
 
-step(Agents, 0) -> 
-%% 	io:format("Population at step ~B: ~w ~n", [0, Agents]),
-	Agents;
+step(Agents, 0) ->
+	lists:max([ Ev || {_ ,Ev, _} <- Agents]);
 step(Agents, N) ->
-%% 	io:format("Population at step ~B: ~w ~n", [N, Agents]),
-	Groups = dict:to_list(emas_util:groupBy(fun behavior/1, Agents)),
-	NewGroups = [ logic(G) || G <- Groups],
+%% 	io:format("Population at step ~B: ~w ~n", [config:steps() - N + 1, Agents]),
+	Groups = emas_util:regroup(Agents),
+	NewGroups = [sendToWork(G) || G <- Groups],
 	NewAgents = emas_util:shuffle(lists:flatten(NewGroups)),
-	step(NewAgents, N - 1).
-
+	emas_util:print(N,NewAgents,Groups),
+	case emas_util:isUniform(Groups,N) of
+		true -> step(NewAgents, 0);
+		false -> step(NewAgents, N - 1)
+	end.
