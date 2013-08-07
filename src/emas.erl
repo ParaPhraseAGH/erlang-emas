@@ -14,7 +14,8 @@ run() ->
 
 run(NoIslands) ->
   register(supervisor,self()),
-  Pids = [spawn(emas,start,[]) || _ <- lists:seq(1,NoIslands)],
+  PidsRefs = [spawn_monitor(emas,start,[]) || _ <- lists:seq(1,NoIslands)],
+  {Pids,_} = lists:unzip(PidsRefs),
   receiver(NoIslands,Pids).
 
 start() ->
@@ -29,17 +30,30 @@ start() ->
 %% ====================================================================
 
 receiver(0,_) ->
+  unregister(supervisor),
   ok;
 receiver(N,Pids) ->
   receive
     {result,Time,Result} ->
       io:format("~nTotal time: ~p s ~nBest fitness: ~p~n",[Time/1000000,Result]),
-      receiver(N-1,Pids);
-    {agent,From,Agent} ->
-      Lista = lists:delete(From,Pids),
-      Index = random:uniform(length(Lista)),
-      lists:nth(Index, Lista) ! {agent,self(),Agent},
-      receiver(N,Pids)
+      receiver(N,Pids);
+    {agent,_From,Agent} ->
+      Index = random:uniform(length(Pids)),  % a co jesli lista pusta? (jest jeden proces)
+      lists:nth(Index, Pids) ! {agent,self(),Agent},
+      receiver(N,Pids);
+    {'DOWN',_Ref,process,Pid,Reason} ->
+      case Reason of
+        'Populacja wymarla' ->
+          io:format("Populacja wymarla w procesie ~p~n",[Pid]);
+        normal ->
+          ok;
+        _ ->
+          io:format("Proces ~p zakonczyl sie z powodu ~p~n",[Pid,Reason])
+      end,
+      receiver(N-1,lists:delete(Pid,Pids))
+  after 10000 ->
+    unregister(supervisor),
+    timeout
   end.
 
 sendToWork({death, _}) ->
@@ -76,12 +90,16 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
 	[{SolA, EvA, EnA - AtoCTransfer}, {SolB, EvB, EnB - BtoDTransfer}, {SolC, EvC, AtoCTransfer}, {SolD, EvD, BtoDTransfer}].
 
 step(Agents, 0) ->
-	lists:max([ Ev || {_ ,Ev, _} <- Agents]);
+	lists:max([ Fitness || {_ ,Fitness, _} <- Agents]);
 step(Agents, N) ->
 %	io:format("Population at step ~B: ~w ~n", [config:steps() - N + 1, Agents]),
-	Groups = emas_util:regroup(Agents),
+  WithImmigrants = emas_util:addImmigrants(Agents),
+	Groups = emas_util:regroup(WithImmigrants),
 	NewGroups = [sendToWork(G) || G <- Groups],
-  WithImmigrants = emas_util:addImmigrants(NewGroups),
-	NewAgents = emas_util:shuffle(lists:flatten(WithImmigrants)),
-	emas_util:print(N,NewAgents,Groups),
+	NewAgents = emas_util:shuffle(lists:flatten(NewGroups)),
+  if NewAgents == [] ->
+      exit('Populacja wymarla');
+    NewAgents /= [] -> notyet
+  end,
+%	emas_util:print(N,NewAgents,Groups),
 	step(NewAgents, N - 1).

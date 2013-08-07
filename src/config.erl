@@ -8,8 +8,8 @@
 %% ====================================================================
 -compile(export_all).
 
-steps() -> 1000.
-populationSize() -> 100. 
+steps() -> 1500.
+populationSize() -> 100.
 initialEnergy() -> 10.
 
 reproductionThreshold() -> 11.
