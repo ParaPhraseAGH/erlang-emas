@@ -7,7 +7,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([rambo/1, result/1, shuffle/1, cleanup/1, energyReport/2, optionalPairs/1, print/3, behavior/1, regroup/1, isUniform/2, addImmigrants/1]).
+-export([rambo/1, result/1, clearInbox/0, shuffle/1, checkIfDead/1, energyReport/2, optionalPairs/1, print/3, behavior/1, regroup/1, addImmigrants/1]).
 
 %% Chyba niepotrzebnie przechodzimy liste agentow czterokrotnie
 regroup(Agents) ->
@@ -35,6 +35,22 @@ rambo([H|T]) ->
   exit(H,finished),
   rambo(T).
 
+checkIfDead([]) ->
+  ok;
+checkIfDead(Pids) ->
+  receive
+    {'DOWN',_Ref,process,Pid,_Reason} ->
+      checkIfDead(lists:delete(Pid,Pids))
+  end.
+
+
+clearInbox() ->
+  receive
+    _ -> clearInbox()
+  after 0 ->
+    ok
+  end.
+
 energyReport(N,Agents) ->
   if N rem 500 == 0 ->
     whereis(supervisor) ! {energy,self(),sumEnergy(Agents)};
@@ -42,25 +58,8 @@ energyReport(N,Agents) ->
       notyet
   end.
 
-cleanup(Pids) ->
-  rambo(Pids),
-  checkIfDead(Pids),
-  clearInbox(),
-  unregister(supervisor).
-
 optionalPairs(L) ->
 	optionalPairsTail(L,[]).
-
-%% Aktualnie nieuzywana funkcja do sprawdzania identycznosci kolejnych generacji
-isUniform(Groups,Step) ->
-	[{death,D},{fight,_},{reproduction,R}] = Groups,
-	Ld = length(D),
-	Lr = length(R),
-	AllSteps = config:steps(),
-	if Step == AllSteps -> false;
-		Ld + Lr == 0 -> true;
-		Ld + Lr /= 0 -> false
-	end.
 
 print(Step,Agents,Groups) ->
 	[{death,D},{fight,F},{reproduction,R},{migration,M}] = Groups,
@@ -105,18 +104,3 @@ optionalPairsTail([],Acc) -> Acc;
 optionalPairsTail([A],Acc) -> [{A}|Acc];
 optionalPairsTail([A,B|L],Acc) -> optionalPairsTail(L,[{A,B}|Acc]).
 
-checkIfDead([]) ->
-  ok;
-checkIfDead(Pids) ->
-  receive
-    {'DOWN',_Ref,process,Pid,_Reason} ->
-      checkIfDead(lists:delete(Pid,Pids))
-   end.
-
-
-clearInbox() ->
-  receive
-    _ -> clearInbox()
-  after 0 ->
-    ok
-  end.

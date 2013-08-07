@@ -7,40 +7,50 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([run/0,run/1,start/0]).
+-export([run/0,run/1,proces/0]).
 
 run() ->
   run(1).
 
 run(NoIslands) ->
-  register(supervisor,self()),
-  PidsRefs = [spawn_monitor(emas,start,[]) || _ <- lists:seq(1,NoIslands)],
-  {Pids,_} = lists:unzip(PidsRefs),
-  receiver(Pids).
+  init(),
+  {Time,{Result,Pids}} = timer:tc(fun spawner/1, [NoIslands]),
+  cleanup(Pids),
+  io:format("Total time:   ~p s~nFitness:     ~p~n",[Time/1000000,Result]).
 
-start() ->
-  random:seed(erlang:now()),
+proces() ->
   Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
   Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
   loop(Agents).
-  %{Time,Result} = timer:tc(fun step/2, [Agents,config:steps()]),
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+
+init() ->
+  register(supervisor,self()),
+  random:seed(erlang:now()).
+
+cleanup(Pids) ->
+  emas_util:rambo(Pids),
+  emas_util:checkIfDead(Pids),
+  emas_util:clearInbox(),
+  unregister(supervisor).
+
+spawner(NoIslands) ->
+  PidsRefs = [spawn_monitor(emas,proces,[]) || _ <- lists:seq(1,NoIslands)],
+  {Pids,_} = lists:unzip(PidsRefs),
+  receiver(Pids).
 
 %% Powinien byc jeszcze timeout
 receiver(Pids) ->
   receive
     {result,Result} ->
       Precision = config:stopPrec(),
-      if Result == islandEmpty ->
-        receiver(Pids);
-      Result < -Precision ->
+      if Result == islandEmpty orelse Result < -Precision ->
         receiver(Pids);
       Result >= -Precision ->
-        io:format("Final result: ~p~n",[Result]),
-        emas_util:cleanup(Pids)
+        {Result,Pids}
       end;
 %    {energy,From,Energy} ->
 %      case lists:member(From,EnList) of
@@ -63,15 +73,13 @@ receiver(Pids) ->
       receiver(Pids);
     {'DOWN',_Ref,process,Pid,Reason} ->
       case Reason of
-        normal ->
-          ok;
         _ ->
           io:format("Proces ~p zakonczyl sie z powodu ~p~n",[Pid,Reason])
       end,
       %% Tutaj mozna postawic kolejna wyspe
       receiver(lists:delete(Pid,Pids))
   after 10000 ->
-    emas_util:cleanup(Pids),
+    cleanup(Pids),
     timeout
   end.
 
