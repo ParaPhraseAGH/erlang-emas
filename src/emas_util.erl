@@ -7,7 +7,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([shuffle/1, sumEnergy/1,optionalPairs/1, print/3, behavior/1, regroup/1, isUniform/2, addImmigrants/1]).
+-export([rambo/1, result/1, shuffle/1, cleanup/1, energyReport/2, optionalPairs/1, print/3, behavior/1, regroup/1, isUniform/2, addImmigrants/1]).
 
 %% Chyba niepotrzebnie przechodzimy liste agentow czterokrotnie
 regroup(Agents) ->
@@ -25,12 +25,28 @@ addImmigrants(Agents) ->
   Pid = whereis(supervisor),
   receive
     {agent,Pid,A} -> addImmigrants([A|Agents])
-  after 1 ->
+  after 0 ->
     Agents
   end.
 
-sumEnergy(Agents) ->
-  lists:foldr(fun({_,_,E},Acc) -> Acc + E end,0,Agents).
+rambo([])->
+  ok;
+rambo([H|T]) ->
+  exit(H,finished),
+  rambo(T).
+
+energyReport(N,Agents) ->
+  if N rem 500 == 0 ->
+    whereis(supervisor) ! {energy,self(),sumEnergy(Agents)};
+    true ->
+      notyet
+  end.
+
+cleanup(Pids) ->
+  rambo(Pids),
+  checkIfDead(Pids),
+  clearInbox(),
+  unregister(supervisor).
 
 optionalPairs(L) ->
 	optionalPairsTail(L,[]).
@@ -48,7 +64,12 @@ isUniform(Groups,Step) ->
 
 print(Step,Agents,Groups) ->
 	[{death,D},{fight,F},{reproduction,R},{migration,M}] = Groups,
-  Fitness = lists:max([ Ev || {_ ,Ev, _} <- Agents]),
+  Fitness = case Agents of
+    [] ->
+      islandEmpty;
+    _ ->
+      lists:max([ Fit || {_ ,Fit, _} <- Agents])
+  end,
 	if Step rem 100 == 0 ->
 		    io:format("~nProcess: ~p, Step ~p, Fitness: ~p~n",[self(),config:steps() - Step,Fitness]),
 		    io:format("Died: ~p    Fought: ~p    Reproduced: ~p    Migrated: ~p~n",[length(D),length(F),length(R),length(M)]);
@@ -67,10 +88,35 @@ behavior({_, _, Energy}) ->
              end
   end.
 
+result(Agents) ->
+  case Agents of
+    [] ->
+      islandEmpty;
+    _ ->
+      lists:max([ Fitness || {_ ,Fitness, _} <- Agents])
+  end.
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+sumEnergy(Agents) ->
+  lists:foldr(fun({_,_,E},Acc) -> Acc + E end,0,Agents).
 
 optionalPairsTail([],Acc) -> Acc;
 optionalPairsTail([A],Acc) -> [{A}|Acc];
 optionalPairsTail([A,B|L],Acc) -> optionalPairsTail(L,[{A,B}|Acc]).
+
+checkIfDead([]) ->
+  ok;
+checkIfDead(Pids) ->
+  receive
+    {'DOWN',_Ref,process,Pid,_Reason} ->
+      checkIfDead(lists:delete(Pid,Pids))
+   end.
+
+
+clearInbox() ->
+  receive
+    _ -> clearInbox()
+  after 0 ->
+    ok
+  end.

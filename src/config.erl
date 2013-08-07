@@ -8,7 +8,8 @@
 %% ====================================================================
 -compile(export_all).
 
-steps() -> 1500.
+stopPrec() -> 0.0000001.
+steps() -> 5000.
 populationSize() -> 100.
 initialEnergy() -> 10.
 
