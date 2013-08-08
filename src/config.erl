@@ -22,7 +22,7 @@ mutationRate() -> 0.1.
 mutationRange() -> 0.05.
 mutationChance() -> 0.75.
 recombinationChance() -> 0.3.
-migrationProbability() -> 0.
+migrationProbability() -> 0.001.
 
 timeout() -> 1000.
 

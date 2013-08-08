@@ -7,7 +7,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([rambo/1, result/1, clearInbox/0, shuffle/1, checkIfDead/1, energyReport/2, optionalPairs/1, print/3, behavior/1, regroup/1, addImmigrants/1]).
+-export([rambo/1, result/1, clearInbox/0, shuffle/1, checkIfDead/1, energyReport/2, optionalPairs/1, print/2, behavior/1, regroup/1, addImmigrants/1]).
 
 %% Chyba niepotrzebnie przechodzimy liste agentow czterokrotnie
 regroup(Agents) ->
@@ -61,20 +61,10 @@ energyReport(N,Agents) ->
 optionalPairs(L) ->
 	optionalPairsTail(L,[]).
 
-print(Step,Agents,Groups) ->
+print(Fitness,Groups) ->
 	[{death,D},{fight,F},{reproduction,R},{migration,M}] = Groups,
-  Fitness = case Agents of
-    [] ->
-      islandEmpty;
-    _ ->
-      lists:max([ Fit || {_ ,Fit, _} <- Agents])
-  end,
-	if Step rem 100 == 0 ->
-		    io:format("~nProcess: ~p, Step ~p, Fitness: ~p~n",[self(),config:steps() - Step,Fitness]),
-		    io:format("Died: ~p    Fought: ~p    Reproduced: ~p    Migrated: ~p~n",[length(D),length(F),length(R),length(M)]);
-	   Step rem 100 /= 0 ->
-		    notyet
-	end.
+	io:format("~nProcess: ~p, Fitness: ~p~n",[self(),Fitness]),
+	io:format("Died: ~p    Fought: ~p    Reproduced: ~p    Migrated: ~p~n",[length(D),length(F),length(R),length(M)]).
 
 behavior({_,_,0}) ->
   death;
