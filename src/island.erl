@@ -1,23 +1,48 @@
-%% Copyright
--module(island).
--author("jasiek").
+%% @author jstypka <jasieek@student.agh.edu.pl>
+%% @version 1.0
+%% @doc Modul odpowiedzialny za logike pojedynczej wyspy.
 
-%% API
+-module(island).
 -export([proces/0]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
+
+%% @spec proces() -> loop(List)
+%% @doc Funkcja generujaca dane poczatkowe, ktora pod koniec uruchamia
+%% petle, w ktorej porusza sie proces.
 proces() ->
   random:seed(erlang:now()),
   Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
   Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
-  loop(Agents,0).
+  loop(Agents).
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
+%% @spec loop(List1) -> loop(List2)
+%% @doc Glowna petla procesu. Kazda iteracja powoduje obliczenie
+%% kolejnego wyniku i opcjonalnie wyslanie go do supervisora.
+loop(Agents) ->
+  WithImmigrants = emas_util:addImmigrants(Agents),
+  Groups = emas_util:groupBy(fun emas_util:behavior/1, WithImmigrants),
+  NewGroups = [sendToWork(G) || G <- Groups],
+  NewAgents = emas_util:shuffle(lists:flatten(NewGroups)),
+  Result = emas_util:result(NewAgents),
+  if Result /= islandEmpty ->
+    whereis(supervisor) ! {result,Result};
+    Result == islandEmpty ->
+      donothing
+  end,
+  emas_util:print(Result,Groups),
+  loop(NewAgents).
+
+%% @spec sendToWork({atom(),List1}) -> List2
+%% @doc Funkcja dostaje atom precyzujacy klase agentow i ich liste,
+%% a nastepnie wykonuje odpowiednie operacje dla kazdej z klas.
+%% Funkcja zwraca liste agentow po przetworzeniu.
 sendToWork({death, _}) ->
   [];
 sendToWork({fight, Agents}) ->
@@ -32,7 +57,13 @@ sendToWork({migration,Agents}) ->
       sendToWork({migration,T})
   end.
 
+%% @spec doFight({Agent1}) -> [Agent2]
+%% @doc Funkcja implementujaca logike "walki" pojedynczego agenta.
+%% Zwracany jest ten sam agent w liscie.
 doFight({A}) -> [A];
+%% @spec doFight({Agent1,Agent2}) -> [Agent3,Agent4]
+%% @doc Funkcja implementujaca logike walki dwoch agentow.
+%% Zwracana jest lista dwoch przetworzonych agentow.
 doFight({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
   AtoBtransfer =
     if EvA < EvB -> erlang:min(config:fightTransfer(), EnA);
@@ -40,30 +71,19 @@ doFight({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
     end,
   [{SolA, EvA, EnA - AtoBtransfer}, {SolB, EvB, EnB + AtoBtransfer}].
 
+%% @spec doReproduce({Agent1}) -> List
+%% @doc Funkcja implementujaca logike reprodukcji pojedynczego agenta.
+%% Zwracana jest dwojka agentow w liscie.
 doReproduce({{SolA, EvA, EnA}}) ->
   SolB = genetic:reproduction(SolA),
   EvB = genetic:evaluation(SolB),
   AtoBtransfer = erlang:min(config:reproductionTransfer(), EnA),
   [{SolA, EvA, EnA - AtoBtransfer}, {SolB, EvB, AtoBtransfer}];
+%% @spec doReproduce({Agent1,Agent2}) -> [Agent3,Agent4,Agent5,Agent6]
+%% @doc Funkcja implementujaca logike reprodukcji dwoch agentow.
+%% Zwracanych jest czterech agentow w liscie.
 doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
   [SolC, SolD] = genetic:reproduction(SolA, SolB),
   [EvC, EvD] = [ genetic:evaluation(S) || S <- [SolC, SolD] ],
   [AtoCTransfer, BtoDTransfer] = [ erlang:min(config:reproductionTransfer(), E) || E <- [EnA, EnB] ],
   [{SolA, EvA, EnA - AtoCTransfer}, {SolB, EvB, EnB - BtoDTransfer}, {SolC, EvC, AtoCTransfer}, {SolD, EvD, BtoDTransfer}].
-
-loop(Agents,Counter) ->
-%	io:format("Population at step ~B: ~w ~n", [config:steps() - N + 1, Agents]),
-  WithImmigrants = emas_util:addImmigrants(Agents),
-% emas_util:energyReport(N,WithImmigrants),
-  Groups = emas_util:regroup(WithImmigrants),
-  NewGroups = [sendToWork(G) || G <- Groups],
-  NewAgents = emas_util:shuffle(lists:flatten(NewGroups)),
-  Result = emas_util:result(NewAgents),
-  whereis(supervisor) ! {result,Result},
-  if Counter == 100 ->
-    Counter2 = 0,
-    emas_util:print(Result,Groups);
-    Counter /= 100 ->
-      Counter2 = Counter + 1
-  end,
-  loop(NewAgents, Counter2).

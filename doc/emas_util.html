@@ -1,0 +1,94 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Module emas_util</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module emas_util</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>Modul zawierajacy funkcje pomocnicze dla innych modulow.
+
+<p><b>Version:</b> 1.0</p>
+<p><b>Authors:</b> jstypka (<a href="mailto:jasieek@student.agh.edu.pl"><tt>jasieek@student.agh.edu.pl</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>Modul zawierajacy funkcje pomocnicze dla innych modulow.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#addImmigrants-1">addImmigrants/1</a></td><td>Funkcja przegladajaca skrzynke i dorzucajaca czekajacych tam
+  agentow do podanej w argumencie listy.</td></tr>
+<tr><td valign="top"><a href="#behavior-1">behavior/1</a></td><td>Funkcja przyporzadkowujaca agentowi dana klase, na podstawie
+  jego energii.</td></tr>
+<tr><td valign="top"><a href="#checkIfDead-1">checkIfDead/1</a></td><td>Funkcja upewniajaca sie, ze wszystkie wyspy zostaly zakonczone.</td></tr>
+<tr><td valign="top"><a href="#clearInbox-0">clearInbox/0</a></td><td>Funkcja czyszczaca skrzynke i wypisujaca na wyjscie, co tam znalazla.</td></tr>
+<tr><td valign="top"><a href="#groupBy-2">groupBy/2</a></td><td>Funkcja grupujaca agentow do krotek przy pomocy funkcji F.</td></tr>
+<tr><td valign="top"><a href="#optionalPairs-1">optionalPairs/1</a></td><td>Funkcja dzielaca podana liste agentow na pary.</td></tr>
+<tr><td valign="top"><a href="#print-2">print/2</a></td><td>Funkcja wypisujaca podstawowe informacje na ekran w danym kroku.</td></tr>
+<tr><td valign="top"><a href="#rambo-1">rambo/1</a></td><td>Funkcja zabijajaca wszystko, co znajdzie na przeslanej liscie.</td></tr>
+<tr><td valign="top"><a href="#result-1">result/1</a></td><td>Funkcja okreslajaca najlepszy wynik na podstawie przeslanej listy agentow.</td></tr>
+<tr><td valign="top"><a href="#shuffle-1">shuffle/1</a></td><td>Funkcja mieszajaca podana liste.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="addImmigrants-1">addImmigrants/1</a></h3>
+<div class="spec">
+<p><tt>addImmigrants(Agents::List1) -&gt; List2</tt><br></p>
+</div><p>Funkcja przegladajaca skrzynke i dorzucajaca czekajacych tam
+  agentow do podanej w argumencie listy.</p>
+
+<h3 class="function"><a name="behavior-1">behavior/1</a></h3>
+<div class="spec">
+<p><tt>behavior(X1::Agent) -&gt; death | migration | reproduction | fight</tt><br></p>
+</div><p>Funkcja przyporzadkowujaca agentowi dana klase, na podstawie
+  jego energii.</p>
+
+<h3 class="function"><a name="checkIfDead-1">checkIfDead/1</a></h3>
+<div class="spec">
+<p><tt>checkIfDead(Pids::List1) -&gt; ok</tt><br></p>
+</div><p>Funkcja upewniajaca sie, ze wszystkie wyspy zostaly zakonczone</p>
+
+<h3 class="function"><a name="clearInbox-0">clearInbox/0</a></h3>
+<div class="spec">
+<p><tt>clearInbox() -&gt; ok</tt><br></p>
+</div><p>Funkcja czyszczaca skrzynke i wypisujaca na wyjscie, co tam znalazla</p>
+
+<h3 class="function"><a name="groupBy-2">groupBy/2</a></h3>
+<div class="spec">
+<p><tt>groupBy(F::function(), L::List1) -&gt; List2</tt><br></p>
+</div><p>Funkcja grupujaca agentow do krotek przy pomocy funkcji F.
+  Zwracana jest lista w formie [{migration,[A1,A2]},{fight,[A3,A4,A5]}]</p>
+
+<h3 class="function"><a name="optionalPairs-1">optionalPairs/1</a></h3>
+<div class="spec">
+<p><tt>optionalPairs(L::List1) -&gt; List2</tt><br></p>
+</div><p>Funkcja dzielaca podana liste agentow na pary. Przykladowe dzialanie:
+  [A1,A2,A3,A4,A5] -&gt; [{A1,A2},{A3,A4},{A5}]</p>
+
+<h3 class="function"><a name="print-2">print/2</a></h3>
+<div class="spec">
+<p><tt>print(Fitness::float(), Groups::List1) -&gt; ok</tt><br></p>
+</div><p>Funkcja wypisujaca podstawowe informacje na ekran w danym kroku</p>
+
+<h3 class="function"><a name="rambo-1">rambo/1</a></h3>
+<div class="spec">
+<p><tt>rambo(T::List1) -&gt; ok</tt><br></p>
+</div><p>Funkcja zabijajaca wszystko, co znajdzie na przeslanej liscie.</p>
+
+<h3 class="function"><a name="result-1">result/1</a></h3>
+<div class="spec">
+<p><tt>result(Agents::List1) -&gt; float() | islandEmpty</tt><br></p>
+</div><p>Funkcja okreslajaca najlepszy wynik na podstawie przeslanej listy agentow</p>
+
+<h3 class="function"><a name="shuffle-1">shuffle/1</a></h3>
+<div class="spec">
+<p><tt>shuffle(L::List1) -&gt; List2</tt><br></p>
+</div><p>Funkcja mieszajaca podana liste.</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Aug 12 2013, 12:28:25.</i></p>
+</body>
+</html>
