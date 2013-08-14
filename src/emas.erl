@@ -1,26 +1,19 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
-%% @version 1.0
+%% @version 1.1
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(emas).
--export([run/0,run/1]).
+-export([run/0]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-%% @spec run() -> ok
-%% @doc Funkcja uruchamiajaca algorytm dla wpisanych parametrow (config.erl)
-%% i na jednej wyspie.
-run() ->
-  run(1).
-
 %% @spec run(int()) -> ok
 %% @doc Funkcja uruchamiajaca algorytm dla wpisanych parametrow (config.erl)
-%% na podanej ilosci wysp.
-run(NoIslands) ->
+run() ->
   init(),
-  {Time,{Result,Pids}} = timer:tc(fun spawner/1, [NoIslands]),
+  {Time,{Result,Pids}} = timer:tc(fun spawner/0, []),
   cleanup(Pids),
   io:format("Total time:   ~p s~nFitness:     ~p~n",[Time/1000000,Result]).
 
@@ -46,8 +39,8 @@ cleanup(Pids) ->
 %% @spec spawner(int()) -> {float(),List}
 %% @doc Funkcja spawnujaca wyspy, ktorych ilosc jest okreslona w argumencie.
 %% Zwracany jest wynik obliczen i lista Pid.
-spawner(NoIslands) ->
-  PidsRefs = [spawn_monitor(island,proces,[]) || _ <- lists:seq(1,NoIslands)],
+spawner() ->
+  PidsRefs = [spawn_monitor(island,proces,[]) || _ <- lists:seq(1,config:islandsNr())],
   {Pids,_} = lists:unzip(PidsRefs),
   receiver(Pids).
 

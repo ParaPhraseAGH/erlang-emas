@@ -1,5 +1,5 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
-%% @version 1.0
+%% @version 1.1
 %% @doc Modul zawierajacy parametry algorytmu.
 
 -module(config).
@@ -14,7 +14,9 @@ stopPrec() -> 1.
 %% @doc Poczatkowa wielkosc populacji
 populationSize() -> 100.
 %% @doc Rozmiar wektora pojedynczego osobnika
-problemSize() -> 100.
+problemSize() -> 50.
+
+islandsNr() -> 2.
 
 %% @doc Energia poczatkowa osobnika.
 initialEnergy() -> 10.
