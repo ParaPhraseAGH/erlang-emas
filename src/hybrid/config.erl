@@ -17,7 +17,7 @@ populationSize() -> 100.
 %% @doc Rozmiar wektora pojedynczego osobnika
 problemSize() -> 30.
 
-islandsNr() -> 10.
+islandsNr() -> 2.
 
 %% @doc Energia poczatkowa osobnika.
 initialEnergy() -> 10.
