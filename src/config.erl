@@ -9,6 +9,7 @@
 %% API functions
 %% ====================================================================
 
+totalTime() -> 5000.
 %% @doc Warunek stopu. dokladnosc po ktorej osiagnieciu algorytm sie zatrzymuje
 stopPrec() -> 1.
 %% @doc Poczatkowa wielkosc populacji
@@ -16,7 +17,7 @@ populationSize() -> 100.
 %% @doc Rozmiar wektora pojedynczego osobnika
 problemSize() -> 30.
 
-islandsNr() -> 2.
+islandsNr() -> 10.
 
 %% @doc Energia poczatkowa osobnika.
 initialEnergy() -> 10.

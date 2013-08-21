@@ -27,6 +27,7 @@ run() ->
 %% algorytmu.
 init(Instancja) ->
   register(supervisor,self()),
+  timer:send_after(config:totalTime(),theEnd),
   file:make_dir(Instancja).
 
 %% @spec cleanup(List) -> ok
@@ -44,29 +45,30 @@ cleanup(Pids) ->
 spawner(Instancja) ->
   PidsRefs = [spawn_monitor(island,proces,[Instancja,X]) || X <- lists:seq(1,config:islandsNr())],
   {Pids,_} = lists:unzip(PidsRefs),
-  receiver(Pids).
+  receiver(Pids,-999999).
 
 %% @spec receiver(List1) -> {float() | timeout,List2}
 %% @doc Funkcja odbierajaca wiadomosci od wysp (z wynikami) i obslugujaca je.
 %% Zwracany jest koncowy wynik wraz z lista uruchomionych procesow.
-receiver(Pids) ->
+receiver(Pids,BestRes) ->
   receive
+    {result,Result} ->
+      if Result =< BestRes ->
+        receiver(Pids,BestRes);
+      Result > BestRes ->
+        receiver(Pids,Result)
+      end;
     {agent,_From,Agent} ->
       Index = random:uniform(length(Pids)),
       lists:nth(Index, Pids) ! {agent,self(),Agent},
-      receiver(Pids);
-    {result,Result} ->
-      Precision = config:stopPrec(),
-      if Result < -Precision ->
-        receiver(Pids);
-        Result >= -Precision ->
-          {Result,Pids}
-      end;
+      receiver(Pids,BestRes);
+    theEnd ->
+      {BestRes,Pids};
     {'DOWN',_Ref,process,Pid,Reason} ->
       io:format("Proces ~p zakonczyl sie z powodu ~p~n",[Pid,Reason]),
       {NewPid,_Ref} = spawn_monitor(emas,proces,[]),
       io:format("Stawiam kolejna wyspe o Pid ~p~n",[NewPid]),
-      receiver([NewPid|lists:delete(Pid,Pids)])
+      receiver([NewPid|lists:delete(Pid,Pids)],BestRes)
   after config:timeout() ->
     {timeout,Pids}
   end.
