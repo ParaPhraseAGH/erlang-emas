@@ -12,8 +12,9 @@
 %% @spec run(int()) -> ok
 %% @doc Funkcja uruchamiajaca algorytm dla wpisanych parametrow (config.erl)
 run() ->
-  init(),
-  {Time,{Result,Pids}} = timer:tc(fun spawner/0, []),
+  Instancja = "instancja",
+  init(Instancja),
+  {Time,{Result,Pids}} = timer:tc(fun spawner/1, [Instancja]),
   cleanup(Pids),
   io:format("Total time:   ~p s~nFitness:     ~p~n",[Time/1000000,Result]).
 
@@ -24,14 +25,15 @@ run() ->
 %% @spec init() -> ok
 %% @doc Funkcja wykonujaca wszelkie operacje potrzebne przed uruchomieniem
 %% algorytmu.
-init() ->
-  register(supervisor,self()).
+init(Instancja) ->
+  register(supervisor,self()),
+  file:make_dir(Instancja).
 
 %% @spec cleanup(List) -> ok
 %% @doc Funkcja sprzatajaca po zakonczonym algorytmie, dostajaca jako
 %% argument liste uruchomionych ciagle procesow.
 cleanup(Pids) ->
-  emas_util:rambo(Pids),
+  ok = emas_util:rambo(Pids),
   emas_util:checkIfDead(Pids),
   emas_util:clearInbox(),
   unregister(supervisor).
@@ -39,8 +41,8 @@ cleanup(Pids) ->
 %% @spec spawner(int()) -> {float(),List}
 %% @doc Funkcja spawnujaca wyspy, ktorych ilosc jest okreslona w argumencie.
 %% Zwracany jest wynik obliczen i lista Pid.
-spawner() ->
-  PidsRefs = [spawn_monitor(island,proces,[]) || _ <- lists:seq(1,config:islandsNr())],
+spawner(Instancja) ->
+  PidsRefs = [spawn_monitor(island,proces,[Instancja,X]) || X <- lists:seq(1,config:islandsNr())],
   {Pids,_} = lists:unzip(PidsRefs),
   receiver(Pids).
 

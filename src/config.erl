@@ -14,7 +14,7 @@ stopPrec() -> 1.
 %% @doc Poczatkowa wielkosc populacji
 populationSize() -> 100.
 %% @doc Rozmiar wektora pojedynczego osobnika
-problemSize() -> 50.
+problemSize() -> 30.
 
 islandsNr() -> 2.
 

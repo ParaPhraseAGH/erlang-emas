@@ -54,7 +54,7 @@ addImmigrants(Agents) ->
 rambo([])->
   ok;
 rambo([H|T]) ->
-  exit(H,finished),
+  H ! {finish,self()},
   rambo(T).
 
 %% @spec checkIfDead(List1) -> ok
@@ -65,6 +65,9 @@ checkIfDead(Pids) ->
   receive
     {'DOWN',_Ref,process,Pid,_Reason} ->
       checkIfDead(lists:delete(Pid,Pids))
+  after 1000 ->
+    io:format("Nie wszystkie wyspy sie zakonczyly~n"),
+    timeout
   end.
 
 %% @spec clearInbox() -> ok

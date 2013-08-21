@@ -3,7 +3,7 @@
 %% @doc Modul odpowiedzialny za logike pojedynczej wyspy.
 
 -module(island).
--export([proces/0]).
+-export([proces/2]).
 
 %% ====================================================================
 %% API functions
@@ -12,32 +12,46 @@
 %% @spec proces() -> loop(List)
 %% @doc Funkcja generujaca dane poczatkowe, ktora pod koniec uruchamia
 %% petle, w ktorej porusza sie proces.
-proces() ->
+proces(Instancja,N) ->
   random:seed(erlang:now()),
+  FitnessFD = prepareWriting(Instancja ++ "\\" ++ integer_to_list(N)),
   Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
   Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
-  loop(Agents).
+  loop(Agents,FitnessFD).
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
+prepareWriting(Path) ->
+  file:make_dir(Path),
+  FitnessPath = Path ++ "\\fitness.txt",
+  {ok, FitnessFD} = file:open(FitnessPath,[append,delayed_write,raw]),
+  FitnessFD.
+
 %% @spec loop(List1) -> loop(List2)
 %% @doc Glowna petla procesu. Kazda iteracja powoduje obliczenie
 %% kolejnego wyniku i opcjonalnie wyslanie go do supervisora.
-loop(Agents) ->
-  WithImmigrants = emas_util:addImmigrants(Agents),
-  Groups = emas_util:groupBy(fun emas_util:behavior/1, WithImmigrants),
-  NewGroups = [sendToWork(G) || G <- Groups],
-  NewAgents = emas_util:shuffle(lists:flatten(NewGroups)),
-  Result = emas_util:result(NewAgents),
-  if Result /= islandEmpty ->
-    whereis(supervisor) ! {result,Result};
-    Result == islandEmpty ->
-      donothing
-  end,
-  emas_util:print(Result,Groups),
-  loop(NewAgents).
+loop(Agents,FitnessFD) ->
+  receive
+    {agent,_Pid,A} ->
+      loop([A|Agents],FitnessFD);
+    {finish,_Pid} ->
+      file:close(FitnessFD)
+  after 0 ->
+    Groups = emas_util:groupBy(fun emas_util:behavior/1, Agents),
+    NewGroups = [sendToWork(G) || G <- Groups],
+    NewAgents = emas_util:shuffle(lists:flatten(NewGroups)),
+    Result = emas_util:result(NewAgents),
+    file:write(FitnessFD,io_lib:fwrite("~p\n",[Result])),
+    if Result /= islandEmpty ->
+      whereis(supervisor) ! {result,Result};
+      Result == islandEmpty ->
+        donothing
+    end,
+    %emas_util:print(Result,Groups),
+    loop(NewAgents,FitnessFD)
+  end.
 
 %% @spec sendToWork({atom(),List1}) -> List2
 %% @doc Funkcja dostaje atom precyzujacy klase agentow i ich liste,
