@@ -3,11 +3,16 @@
 %% @doc Modul zawierajacy funkcje pomocnicze dla innych modulow.
 
 -module(emas_util).
--export([rambo/1, result/1, groupBy/2, behavior/1,  clearInbox/0, shuffle/1, checkIfDead/1, optionalPairs/1, print/2, addImmigrants/1]).
+-export([rambo/1, result/1, groupBy/2, behavior/1, write/1, clearInbox/0, shuffle/1, checkIfDead/1, optionalPairs/1, print/2, addImmigrants/1]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
+
+write([]) -> ok;
+write([{FD,Value}|T]) ->
+  file:write(FD,io_lib:fwrite("~p\n",[Value])),
+  write(T).
 
 %% @spec groupBy(function(),List1) -> List2
 %% @doc Funkcja grupujaca agentow do krotek przy pomocy funkcji F.

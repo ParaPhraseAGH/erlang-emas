@@ -43,7 +43,7 @@ loop(Agents,FitnessFD) ->
     NewGroups = [sendToWork(G) || G <- Groups],
     NewAgents = emas_util:shuffle(lists:flatten(NewGroups)),
     Result = emas_util:result(NewAgents),
-    file:write(FitnessFD,io_lib:fwrite("~p\n",[Result])),
+    emas_util:write([{FitnessFD,Result}]),
     if Result /= islandEmpty ->
       whereis(supervisor) ! {result,Result};
       Result == islandEmpty ->
