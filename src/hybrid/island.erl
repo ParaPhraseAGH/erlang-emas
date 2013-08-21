@@ -14,10 +14,10 @@
 %% petle, w ktorej porusza sie proces.
 proces(Instancja,N) ->
   random:seed(erlang:now()),
-  FitnessFD = prepareWriting(Instancja ++ "\\" ++ integer_to_list(N)),
+  FDs = prepareWriting(Instancja ++ "\\" ++ integer_to_list(N)),
   Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
   Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
-  loop(Agents,FitnessFD).
+  loop(Agents,FDs).
 
 %% ====================================================================
 %% Internal functions
@@ -25,32 +25,35 @@ proces(Instancja,N) ->
 
 prepareWriting(Path) ->
   file:make_dir(Path),
-  FitnessPath = Path ++ "\\fitness.txt",
-  {ok, FitnessFD} = file:open(FitnessPath,[append,delayed_write,raw]),
-  FitnessFD.
+  {ok, FitnessFD} = file:open(Path ++ "\\fitness.txt",[append,delayed_write,raw]),
+  {ok, PopulationFD} = file:open(Path ++ "\\population.txt",[append,delayed_write,raw]),
+  dict:store(fitness,FitnessFD,
+    dict:store(population,PopulationFD,
+      dict:new())).
 
 %% @spec loop(List1) -> loop(List2)
 %% @doc Glowna petla procesu. Kazda iteracja powoduje obliczenie
 %% kolejnego wyniku i opcjonalnie wyslanie go do supervisora.
-loop(Agents,FitnessFD) ->
+loop(Agents,FDs) ->
   receive
     {agent,_Pid,A} ->
-      loop([A|Agents],FitnessFD);
+      loop([A|Agents],FDs);
     {finish,_Pid} ->
-      file:close(FitnessFD)
+      [file:close(FD) || {_,FD} <- dict:to_list(FDs)]
   after 0 ->
     Groups = emas_util:groupBy(fun emas_util:behavior/1, Agents),
     NewGroups = [sendToWork(G) || G <- Groups],
     NewAgents = emas_util:shuffle(lists:flatten(NewGroups)),
     Result = emas_util:result(NewAgents),
-    emas_util:write([{FitnessFD,Result}]),
+    emas_util:write(dict:fetch(fitness,FDs),Result),
+    emas_util:write(dict:fetch(population,FDs),length(NewAgents)),
     if Result /= islandEmpty ->
       whereis(supervisor) ! {result,Result};
       Result == islandEmpty ->
         donothing
     end,
     %emas_util:print(Result,Groups),
-    loop(NewAgents,FitnessFD)
+    loop(NewAgents,FDs)
   end.
 
 %% @spec sendToWork({atom(),List1}) -> List2
