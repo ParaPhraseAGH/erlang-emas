@@ -14,7 +14,7 @@
 %% petle, w ktorej porusza sie proces.
 proces(Instancja,N) ->
   random:seed(erlang:now()),
-  FDs = prepareWriting(Instancja ++ "\\" ++ integer_to_list(N)),
+  FDs = emas_util:prepareWriting(Instancja ++ "\\" ++ integer_to_list(N)),
   Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
   Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
   loop(Agents,FDs).
@@ -22,14 +22,6 @@ proces(Instancja,N) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-
-prepareWriting(Path) ->
-  file:make_dir(Path),
-  {ok, FitnessFD} = file:open(Path ++ "\\fitness.txt",[append,delayed_write,raw]),
-  {ok, PopulationFD} = file:open(Path ++ "\\population.txt",[append,delayed_write,raw]),
-  dict:store(fitness,FitnessFD,
-    dict:store(population,PopulationFD,
-      dict:new())).
 
 %% @spec loop(List1) -> loop(List2)
 %% @doc Glowna petla procesu. Kazda iteracja powoduje obliczenie
@@ -39,7 +31,7 @@ loop(Agents,FDs) ->
     {agent,_Pid,A} ->
       loop([A|Agents],FDs);
     {finish,_Pid} ->
-      [file:close(FD) || {_,FD} <- dict:to_list(FDs)]
+      emas_util:closeFiles(FDs)
   after 0 ->
     Groups = emas_util:groupBy(fun emas_util:behavior/1, Agents),
     NewGroups = [sendToWork(G) || G <- Groups],

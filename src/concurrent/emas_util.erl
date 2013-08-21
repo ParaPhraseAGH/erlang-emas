@@ -3,11 +3,14 @@
 %% @doc Modul zawierajacy funkcje pomocnicze dla innych modulow.
 
 -module(emas_util).
--export([behavior/1,  print/1, clearInbox/0, answer/1, cleaner/1]).
+-export([behavior/1,  print/1, clearInbox/0, answer/1, cleaner/1, prepareWriting/1, closeFiles/1, write/2]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
+
+write(FD,Value) ->
+  file:write(FD,io_lib:fwrite("~p\n",[Value])).
 
 %% @spec behavior(Agent) -> death | migration | reproduction | fight
 %% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie
@@ -23,6 +26,9 @@ behavior({_, _, Energy}) ->
              end
   end.
 
+closeFiles(FDs) ->
+  [file:close(FD) || {_,FD} <- dict:to_list(FDs)].
+
 %% @spec clearInbox() -> ok
 %% @doc Funkcja czyszczaca skrzynke procesu
 clearInbox() ->
@@ -31,6 +37,11 @@ clearInbox() ->
   after 0 ->
     ok
   end.
+
+prepareWriting(Path) ->
+  file:make_dir(Path),
+  {ok, FitnessFD} = file:open(Path ++ "\\fitness.txt",[append,delayed_write,raw]),
+  dict:store(fitness, FitnessFD, dict:new()).
 
 %% @spec cleaner(SupervisorPid) -> ok
 %% @doc Funkcja uruchamiana pod koniec zycia przez areny, odsylajaca na

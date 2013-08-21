@@ -3,7 +3,7 @@
 %% @doc Modul zawierajacy funkcje pomocnicze dla innych modulow.
 
 -module(emas_util).
--export([rambo/1, result/1, groupBy/2, behavior/1, write/2, clearInbox/0, shuffle/1, checkIfDead/1, optionalPairs/1, print/2, addImmigrants/1]).
+-export([rambo/1, result/1, groupBy/2, behavior/1, write/2, clearInbox/0, shuffle/1, checkIfDead/1, optionalPairs/1, print/2, prepareWriting/1, closeFiles/1]).
 
 %% ====================================================================
 %% API functions
@@ -11,6 +11,17 @@
 
 write(FD,Value) ->
   file:write(FD,io_lib:fwrite("~p\n",[Value])).
+
+prepareWriting(Path) ->
+  file:make_dir(Path),
+  {ok, FitnessFD} = file:open(Path ++ "\\fitness.txt",[append,delayed_write,raw]),
+  {ok, PopulationFD} = file:open(Path ++ "\\population.txt",[append,delayed_write,raw]),
+  dict:store(fitness,FitnessFD,
+    dict:store(population,PopulationFD,
+      dict:new())).
+
+closeFiles(FDs) ->
+  [file:close(FD) || {_,FD} <- dict:to_list(FDs)].
 
 %% @spec groupBy(function(),List1) -> List2
 %% @doc Funkcja grupujaca agentow do krotek przy pomocy funkcji F.
@@ -39,17 +50,6 @@ behavior({_, _, Energy}) ->
                true -> reproduction;
                false -> fight
              end
-  end.
-
-%% @spec addImmigrants(List1) -> List2
-%% @doc Funkcja przegladajaca skrzynke i dorzucajaca czekajacych tam
-%% agentow do podanej w argumencie listy.
-addImmigrants(Agents) ->
-  Pid = whereis(supervisor),
-  receive
-    {agent,Pid,A} -> addImmigrants([A|Agents])
-  after 0 ->
-    Agents
   end.
 
 %% @spec rambo(List1) -> ok

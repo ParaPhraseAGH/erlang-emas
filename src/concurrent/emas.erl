@@ -12,10 +12,11 @@
 %% @spec run() -> ok
 %% @doc Funkcja uruchamiajaca algorytm dla podanych w config.erl parametrow
 run() ->
-  init(),
-  {Time,Result} = timer:tc(fun spawner/0, []),
+  Instance = "instancja",
+  init(Instance),
+  {Time,_} = timer:tc(fun spawner/1, [Instance]),
   cleanup(),
-  io:format("Total time:   ~p s~nFitness:     ~p~n",[Time/1000000,Result]).
+  io:format("Total time:   ~p s~n",[Time/1000000]).
 
 %% ====================================================================
 %% Internal functions
@@ -24,15 +25,13 @@ run() ->
 %% @spec spawner() -> float()
 %% @doc Funkcja spawnujaca procesy nadzorujace dla kazdej wyspy
 %% oraz czekajaca na koncowy wynik od nich.
-spawner() ->
-  Supervisors = [spawn(island,run,[self()]) || _ <- lists:seq(1,config:islandsNr())],
+spawner(Instance) ->
+  Supervisors = [spawn(island,run,[self(),X,Instance]) || X <- lists:seq(1,config:islandsNr())],
   Arenas = getArenas(Supervisors,[]),
   respondToPorts(Arenas,config:islandsNr()),
-  receive
-    {finalResult,From,Res} ->
-      [X ! {close,self()} || X <- lists:delete(From,Supervisors)],
-      Res
-  end.
+  timer:sleep(config:totalTime()),
+  [Pid ! close || Pid <- Supervisors],
+  finished.
 
 %% @spec getArenas(List1,List2) -> List3
 %% @doc Funkcja odbiera wiadomosci od supervisorow i kompletuje liste
@@ -56,8 +55,8 @@ respondToPorts(Arenas,NoIslands) ->
       respondToPorts(Arenas,NoIslands - 1)
   end.
 
-init() ->
-  nothing.
+init(Instance) ->
+  file:make_dir(Instance).
 
 cleanup() ->
   emas_util:clearInbox().
