@@ -3,7 +3,7 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(emas).
--export([run/0,doMigrate/1,generate/0]).
+-export([run/0]).
 
 %% ====================================================================
 %% API functions
@@ -13,7 +13,8 @@
 %% @doc Funkcja uruchamiajaca algorytm dla wpisanych parametrow (config.erl)
 run() ->
   random:seed(erlang:now()),
-  {Time,Result} = timer:tc(fun start/0, []),
+  {Time,{Result,FDs}} = timer:tc(fun start/0, []),
+  [emas_util:closeFiles(FDDict) || FDDict <- FDs],
   io:format("Total time:   ~p s~nFitness:     ~p~n",[Time/1000000,Result]).
 
 %% ====================================================================
@@ -31,23 +32,27 @@ generate() ->
 %% Zwracany jest koncowy wynik.
 start() ->
   Islands = [generate() || _ <- lists:seq(1,config:islandsNr())],
-  loop(Islands).
+  Instance = "instancja",
+  file:make_dir(Instance),
+  FDs = [emas_util:prepareWriting(Instance ++ "\\" ++ integer_to_list(N)) || N <- lists:seq(1,config:islandsNr())],
+  loop(Islands,FDs).
 
 %% @spec loop(List1) -> float()
 %% @doc Glowa petla programu. Gdy osiagnieta zostanie pozadana precyzja,
 %% wynik jest zwracany.
-loop(Islands) ->
+loop(Islands,FDs) ->
   IslandsMigrated = doMigrate(Islands),
   Groups = [emas_util:groupBy(fun emas_util:behavior/1, I) || I <- IslandsMigrated],
-  NewGroups = [lists:map(fun sendToWork/1,I) || I <- Groups ],
+  NewGroups = [lists:map(fun sendToWork/1,I) || I <- Groups],
   NewIslands = [emas_util:shuffle(lists:flatten(I)) || I <- NewGroups],
-  Result = emas_util:result(lists:append(NewIslands)),
+  Best = lists:max([emas_util:result(I) || I <- NewIslands]),
+  emas_util:writeIslands(FDs,NewIslands),
   %emas_util:print(Result),
   Precision = config:stopPrec(),
-  if Result >= -Precision ->
-    Result;
-  Result < Precision ->
-    loop(NewIslands)
+  if Best >= -Precision ->
+    {Best,FDs};
+  Best < Precision ->
+    loop(NewIslands,FDs)
   end.
 
 %% @spec doMigrate(List1) -> List2

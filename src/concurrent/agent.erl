@@ -61,7 +61,7 @@ call(Msg,ArenaPid) ->
       erlang:demonitor(Ref, [flush]),
       Ans;
     {'DOWN', Ref, process, ArenaPid, Reason} ->
-      io:format("Arena do ktorej chce pisan proces ~p nie istnieje!~n",[self()]),
+      io:format("Arena do ktorej chce pisac proces ~p nie istnieje!~n",[self()]),
       erlang:error(Reason)
   after config:procesTimeout() -> % docelowo nie bedzie timeoutu
     io:format("Proces ~p nie doczekal sie odpowiedzi od areny!~n",[self()]),

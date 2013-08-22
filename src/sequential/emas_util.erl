@@ -3,11 +3,31 @@
 %% @doc Modul zawierajacy funkcje pomocnicze dla innych modulow.
 
 -module(emas_util).
--export([result/1, groupBy/2, behavior/1, shuffle/1, optionalPairs/1, print/1, multiAppend/3]).
+-export([result/1, groupBy/2, behavior/1, shuffle/1, optionalPairs/1, print/1, multiAppend/3, prepareWriting/1, closeFiles/1, write/2, writeIslands/2]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
+
+write(FD,Value) ->
+  file:write(FD,io_lib:fwrite("~p\n",[Value])).
+
+prepareWriting(Path) ->
+  file:make_dir(Path),
+  {ok, FitnessFD} = file:open(Path ++ "\\fitness.txt",[append,delayed_write,raw]),
+  {ok, PopulationFD} = file:open(Path ++ "\\population.txt",[append,delayed_write,raw]),
+  dict:store(fitness,FitnessFD,
+    dict:store(population,PopulationFD,
+      dict:new())).
+
+closeFiles(FDs) ->
+  [file:close(FD) || {_,FD} <- dict:to_list(FDs)].
+
+writeIslands([],[]) -> ok;
+writeIslands([FD|FDs],[I|Islands]) ->
+  write(dict:fetch(fitness,FD),result(I)),
+  write(dict:fetch(population,FD),length(I)),
+  writeIslands(FDs,Islands).
 
 %% @spec groupBy(function(),List1) -> List2
 %% @doc Funkcja grupujaca agentow do krotek przy pomocy funkcji F.
