@@ -22,7 +22,7 @@ start(Ring,Bar,Port) ->
 %% @spec start(RingPid,BarPid,PortPid,Agent) -> ok
 %% @doc Funkcja startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac oraz dane agenta.
-start(Ring,Bar,Port,Agent) ->
+start(Agent,Ring,Bar,Port) ->
   Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
   loop(Agent,Arenas).
 

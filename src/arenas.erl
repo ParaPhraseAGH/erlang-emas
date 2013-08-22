@@ -2,7 +2,7 @@
 %% @version 1.0
 
 -module(arenas).
--export([startBar/3, startRing/1, startPort/2]).
+-export([startBar/1, startRing/1, startPort/2]).
 
 %% ====================================================================
 %% API functions
@@ -35,9 +35,9 @@ startPort(Supervisor,King) ->
 
 %% @spec start(SupervisorPid,RingPid,PortPid) -> ok
 %% @doc Funkcja startujaca bar.
-startBar(Supervisor,Ring,Port) ->
+startBar(Supervisor) ->
   random:seed(erlang:now()),
-  bar(Supervisor,[],Ring,Port).
+  bar(Supervisor,[]).
 
 %% ====================================================================
 %% Internal functions
@@ -48,19 +48,17 @@ startBar(Supervisor,Ring,Port) ->
 %% zgloszenie do krzyzowania/mutacji lub sygnal zamkniecia od supervisora.
 %% List1 jest lista agentow oczekujacych na pojawienie sie wystarczajacej
 %% liczby osobnikow w barze do rozpoczecia reprodukcji.
-bar(Supervisor,Waitline,Ring,Port) ->
+bar(Supervisor,Waitline) ->
   receive
     {Pid1,Ref1,Agent1} -> %{Solution,Fitness,Energy} = Agent,
       case Waitline of
-        [] -> bar(Supervisor,[{Pid1,Ref1,Agent1}],Ring,Port);
+        [] -> bar(Supervisor,[{Pid1,Ref1,Agent1}]);
         [{Pid2,Ref2,Agent2}] ->
           [{_,_,NewEnergy1},{_,_,NewEnergy2},NewAgent1,NewAgent2] = evolution:doReproduce({Agent1,Agent2}),
-          report(Supervisor,Agent1,Agent2,NewAgent1,NewAgent2),
           Pid1 ! {Ref1,NewEnergy1},
           Pid2 ! {Ref2,NewEnergy2},
-          spawn(agent,start,[Ring,self(),Port,NewAgent1]),
-          spawn(agent,start,[Ring,self(),Port,NewAgent2]),
-          bar(Supervisor,[],Ring,Port)
+          Supervisor ! {newAgents,[NewAgent1,NewAgent2]},
+          bar(Supervisor,[])
       end;
     {finish,Supervisor} ->
       answer([{Pid,Ref,0,0} || {Pid,Ref,_} <- Waitline]),
@@ -74,8 +72,8 @@ bar(Supervisor,Waitline,Ring,Port) ->
         io:format("Bar ~p reprodukuje pojedynczego osobnika!~n",[self()]),
         [{_,_,NewEnergy},NewAgent] = evolution:doReproduce({Agent}),
         Pid ! {Ref,NewEnergy},
-        spawn(agent,start,[Ring,self(),Port,NewAgent]),
-        bar(Supervisor,[],Ring,Port)
+        Supervisor ! {newAgents,[NewAgent]},
+        bar(Supervisor,[])
     end
   end.
 
@@ -132,11 +130,6 @@ answer([]) -> ok;
 answer([{Pid,Ref,_,Energy}|Tail]) ->
   Pid ! {Ref,Energy},
   answer(Tail).
-
-%% @spec report(Pid,A1,A2,A3,A4) -> ok
-%% @doc Funkcja wysylajaca pod podany Pid najlepszy fitness z podanych agentow.
-report(Pid,{_,F1,_},{_,F2,_},{_,F3,_},{_,F4,_}) ->
-  Pid ! {result,lists:max([F1,F2,F3,F4])}.
 
 %% @spec cleaner(SupervisorPid) -> ok
 %% @doc Funkcja uruchamiana pod koniec zycia przez areny, odsylajaca na

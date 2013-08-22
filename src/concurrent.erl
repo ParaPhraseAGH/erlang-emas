@@ -27,7 +27,7 @@ run() ->
 %% oraz czekajaca na koncowy wynik od nich.
 spawner(Instance) ->
   Supervisors = [spawn(conc_island,run,[self(),X,Instance]) || X <- lists:seq(1,config:islandsNr())],
-  Arenas = getArenas(Supervisors,[]),
+  Arenas = getArenas(length(Supervisors),[]),
   respondToPorts(Arenas,config:islandsNr()),
   timer:sleep(config:totalTime()),
   [Pid ! close || Pid <- Supervisors],
@@ -37,11 +37,11 @@ spawner(Instance) ->
 %% @doc Funkcja odbiera wiadomosci od supervisorow i kompletuje liste
 %% wszystkich aren w systemie. List1 to lista nadzorcow od ktorych mamy
 %% dostac wiadomosc, List2 to akumulator gdzie gromadzimy krotki z arenami.
-getArenas([],Arenas) -> Arenas;
+getArenas(0,Arenas) -> Arenas;
 getArenas(Supervisors,Arenas) ->
   receive
-    {arenas,Pid,[Ring,Bar,Port]} ->
-       getArenas(lists:delete(Pid,Supervisors),[{Ring,Bar,Port}|Arenas])
+    {arenas,[Ring,Bar,Port]} ->
+       getArenas(Supervisors - 1,[{Ring,Bar,Port}|Arenas])
   end.
 
 %% @spec respondToPorts(List1,int()) -> ok

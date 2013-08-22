@@ -15,14 +15,14 @@
 %% Funkcja spawnuje areny i agentow, czeka na wiadomosci oraz odsyla
 %% koncowy wynik do krola. Na koniec nastepuje zamkniecie aren i sprzatanie.
 run(King,N,Instance) ->
-  Ring = spawn(arenas,startRing,[self()]),
   Port = spawn(arenas,startPort,[self(),King]),
-  Bar = spawn(arenas,startBar,[self(),Ring,Port]),
+  Ring = spawn(arenas,startRing,[self()]),
+  Bar = spawn(arenas,startBar,[self()]),
   Arenas = [Ring,Bar,Port],
-  King ! {arenas,self(),Arenas}, % wysylamy adresy aren do krola, zeby mogl odeslac je portom
-  [spawn(agent,start,Arenas) || _ <- lists:seq(1,config:populationSize())],
+  King ! {arenas,Arenas}, % wysylamy adresy aren do krola, zeby mogl odeslac je portom
+  [spawn_monitor(agent,start,Arenas) || _ <- lists:seq(1,config:populationSize())],
   FDs = io_util:prepareWriting(Instance ++ "\\" ++ integer_to_list(N)),
-  receiver(0,-99999,FDs), % obliczanie wyniku
+  receiver(0,-99999,FDs,config:populationSize(),Arenas), % obliczanie wyniku
   Bar ! Ring ! Port ! {finish,self()},
   io_util:closeFiles(FDs),
   allDead = cleaner(Arenas).
@@ -35,21 +35,27 @@ run(King,N,Instance) ->
 %% @doc Funkcja odbierajaca wiadomosci. Moga to byc meldunki o wyniku
 %% od baru lub rozkaz zamkniecia wyspy od krola. Argumentem jest licznik
 %% odliczajacy kroki do wypisywania, a zwracany jest koncowy wynik.
-receiver(Counter,Best,FDs) ->
+receiver(Counter,Best,FDs,Population,Arenas) ->
   receive
-    {result,Result} ->
+    {'DOWN', _Ref, process, _Pid, _Reason} ->
+      receiver(Counter,Best,FDs,Population - 1,Arenas);
+    {newAgents,AgentList} ->
+      [spawn_monitor(agent,start,[A|Arenas]) || A <- AgentList],
+      Result = misc_util:result(AgentList),
+      NewPopulation = Population + length(AgentList),
+      io_util:write(dict:fetch(population,FDs),NewPopulation),
       Step = config:printStep(),
       if Counter == Step ->
-        io:format("Fitness: ~p~n",[Result]),
+        io:format("Fitness: ~p, Population: ~p~n",[Result,NewPopulation]),
         NewCounter = 0;
       Counter /= Step ->
         NewCounter = Counter + 1
       end,
       if Best > Result ->
-        receiver(NewCounter,Best,FDs);
+        receiver(NewCounter,Best,FDs,NewPopulation,Arenas);
       Best =< Result ->
         io_util:write(dict:fetch(fitness,FDs),Result),
-        receiver(NewCounter,Result,FDs)
+        receiver(NewCounter,Result,FDs,NewPopulation,Arenas)
       end;
     close ->
       forcedShutdown

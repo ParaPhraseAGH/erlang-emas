@@ -13,7 +13,7 @@ totalTime() -> 5000.
 %% @doc Rozmiar wektora pojedynczego osobnika
 problemSize() -> 40.
 %% @doc Ilosc wysp na ktorych generowana jest populacja
-islandsNr() -> 2.
+islandsNr() -> 1.
 %% @doc Poczatkowa wielkosc populacji
 populationSize() -> 100.
 
@@ -35,10 +35,10 @@ mutationChance() -> 0.75.
 %% @doc Prawdopodobienstwo skrzyzowania osobnikow
 recombinationChance() -> 0.3.
 %% @doc Prawdopodobienstwo migracji dowolnego osobnika o niezerowej energii na inna wyspe
-migrationProbability() -> 0.01.
+migrationProbability() -> 0.
 
 %% @doc Liczba agentow, na ktorych czeka ring aby rozpoczac walke (kazdy z kazdym)
-fightNumber() -> 40.
+fightNumber() -> 2.
 
 %% @doc Co ile generacji wypisywany jest fitness
 printStep() -> 1000.
