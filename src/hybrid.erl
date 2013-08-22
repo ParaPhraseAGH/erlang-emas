@@ -69,7 +69,7 @@ receiver(Pids,BestRes) ->
       {NewPid,_Ref} = spawn_monitor(hybrid_island,proces,[]),
       io:format("Stawiam kolejna wyspe o Pid ~p~n",[NewPid]),
       receiver([NewPid|lists:delete(Pid,Pids)],BestRes)
-  after config:timeout() ->
+  after config:supervisorTimeout() ->
     {timeout,Pids}
   end.
 

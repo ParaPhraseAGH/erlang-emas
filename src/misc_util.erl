@@ -2,7 +2,8 @@
 %% @version 1.0
 
 -module(misc_util).
--export([groupBy/2, shuffle/1, behavior/1, behavior_noMig/1, multiAppend/3, rambo/1, checkIfDead/1, clearInbox/0, result/1]).
+-export([groupBy/2, shuffle/1, behavior/1, behavior_noMig/1, multiAppend/3,
+  rambo/1, checkIfDead/1, clearInbox/0, result/1]).
 
 %% ====================================================================
 %% API functions

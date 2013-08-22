@@ -28,8 +28,10 @@ writeIslands([FD|FDs],[I|Islands]) ->
   write(dict:fetch(population,FD),length(I)),
   writeIslands(FDs,Islands).
 
+%% @spec print(float()) -> ok
+%% @doc Funkcja wypisujaca fitness na ekran
 print(Fitness) ->
-  io:format("Fitness: ~p~n",[Fitness]).
+  io:format("~nProcess: ~p, Fitness: ~p~n",[self(),Fitness]).
 
 print(Fitness,Groups) ->
   io:format("~nProcess: ~p, Fitness: ~p~n",[self(),Fitness]),
