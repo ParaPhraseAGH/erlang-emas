@@ -35,23 +35,24 @@ start() ->
   Instance = "instancja",
   file:make_dir(Instance),
   FDs = [io_util:prepareWriting(Instance ++ "\\" ++ integer_to_list(N)) || N <- lists:seq(1,config:islandsNr())],
+  timer:send_after(config:totalTime(),theEnd),
   loop(Islands,FDs).
 
 %% @spec loop(List1) -> float()
 %% @doc Glowa petla programu. Gdy osiagnieta zostanie pozadana precyzja,
 %% wynik jest zwracany.
 loop(Islands,FDs) ->
-  IslandsMigrated = evolution:doMigrate(Islands),
-  Groups = [misc_util:groupBy(fun misc_util:behavior_noMig/1, I) || I <- IslandsMigrated],
-  NewGroups = [lists:map(fun evolution:sendToWork/1,I) || I <- Groups],
-  NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- NewGroups],
-  Best = lists:max([misc_util:result(I) || I <- NewIslands]),
-  io_util:writeIslands(FDs,NewIslands),
-  %io_util:print(Result),
-  Precision = config:stopPrec(),
-  if Best >= -Precision ->
-    {Best,FDs};
-  Best < Precision ->
+  receive
+    theEnd ->
+      Best = lists:max([misc_util:result(I) || I <- Islands]),
+      {Best,FDs}
+  after 0 ->
+    IslandsMigrated = evolution:doMigrate(Islands),
+    Groups = [misc_util:groupBy(fun misc_util:behavior_noMig/1, I) || I <- IslandsMigrated],
+    NewGroups = [lists:map(fun evolution:sendToWork/1,I) || I <- Groups],
+    NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- NewGroups],
+    io_util:writeIslands(FDs,NewIslands),
+    %io_util:print(lists:max([misc_util:result(I) || I <- NewIslands])),
     loop(NewIslands,FDs)
   end.
 

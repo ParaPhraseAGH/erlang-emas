@@ -26,13 +26,13 @@ sendToWork({migration,Agents}) ->
       sendToWork({migration,T})
   end.
 
-%% @spec doFight(List1) -> List2
+%% @spec eachFightsAll(List1) -> List2
 %% @doc Funkcja uruchamiajaca funkcje fightTwo/2 dla kazdej roznej
 %% pary osobnikow w List1. List2 zawiera te wszystkie osobniki po walkach.
 eachFightsAll([]) -> [];
 eachFightsAll([H|T]) ->
   {NewH,NewT} = oneFightsRest(H,T,[]),
-  [NewH | doFight(NewT)].
+  [NewH | eachFightsAll(NewT)].
 
 %% @spec doFight({Agent1}) -> [Agent2]
 %% @doc Funkcja implementujaca logike "walki" pojedynczego agenta.
@@ -86,7 +86,7 @@ doMigrate(Islands) ->
 %% Internal functions
 %% ====================================================================
 
-%% @spec fightAll(A,ToFight,Fought) -> {A2,Rest}
+%% @spec oneFightsRest(A,ToFight,Fought) -> [A2,Rest]
 %% @doc Funkcja uruchamiajaca funkcje fightTwo dla agenta A oraz
 %% kazdego osobnika z listy ToFight. Agenci po walce przechowywani sa
 %% w akumulatorze Fought i na koncu zwracani w krotce z agentem A po walkach.

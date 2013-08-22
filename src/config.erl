@@ -12,8 +12,6 @@
 totalTime() -> 5000.
 %% @doc Rozmiar wektora pojedynczego osobnika
 problemSize() -> 40.
-%% @doc Warunek stopu. dokladnosc po ktorej osiagnieciu algorytm sie zatrzymuje
-stopPrec() -> 1.
 %% @doc Ilosc wysp na ktorych generowana jest populacja
 islandsNr() -> 2.
 %% @doc Poczatkowa wielkosc populacji

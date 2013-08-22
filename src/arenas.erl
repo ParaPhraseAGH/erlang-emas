@@ -87,16 +87,16 @@ bar(Supervisor,Waitline,Ring,Port) ->
 ring(Supervisor,Waitline) ->
   receive
     {Pid,Ref,{Fitness,Energy}} ->
-      Agent = {Pid,Ref,Fitness,Energy},
+      Agent = {{Pid,Ref},Fitness,Energy},
       case length(Waitline) == config:fightNumber() - 1 of
         false -> ring(Supervisor,[Agent|Waitline]);
         true ->
           NewAgents = evolution:eachFightsAll([Agent|Waitline]),
-          answer(NewAgents),
+          answer([{P,R,F,E} || {{P,R},F,E} <- NewAgents]),
           ring(Supervisor,[])
       end;
     {finish,Supervisor} ->
-      answer([{P,R,0,0} || {P,R,_,_} <- Waitline]), % wyslij wiadomosc konczaca rowniez do procesow w waitline
+      answer([{P,R,0,0} || {{P,R},_,_} <- Waitline]), % wyslij wiadomosc konczaca rowniez do procesow w waitline
       cleaner(Supervisor);
     _ ->
       io:format("Ring ~p dostal cos dziwnego~n",[self()])
