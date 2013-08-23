@@ -10,26 +10,26 @@
 
 %% @spec start(SupervisorPid) -> ok
 %% @doc Funkcja startujaca ring.
-startRing(Supervisor) ->
+startRing(_Supervisor) ->
   random:seed(erlang:now()),
-  ring(Supervisor,[]).
+  ring([]).
 
 %% @spec start(SupervisorPid,KingPid) -> ok | timeout
 %% @doc Funkcja startujaca port. Na poczatku wysylane jest zapytanie do
-%% krola o liste Aren, a pozniej nastepuje czekanie na odpowiedz.
+%% krola o liste supervisorow, a pozniej nastepuje czekanie na odpowiedz.
 startPort(Supervisor,King) ->
   random:seed(erlang:now()),
   Ref = erlang:monitor(process, King),
-  King ! {self(),Ref,getArenas},
+  King ! {self(),Ref,getAdresses},
   receive
-    {Ref,Arenas} ->
+    {Ref,AllSupervisors} ->
       erlang:demonitor(Ref, [flush]),
-      port(Supervisor,Arenas);
+      port(Supervisor,AllSupervisors);
     {'DOWN', Ref, process, King, Reason} ->
       io:format("The king is dead, long live the king!~n",[]),
       erlang:error(Reason)
   after 1000 ->
-    io:format("Port ~p nie dostal wiadomosci z arenami~n",[self()]),
+    io:format("Port ~p nie dostal wiadomosci z adresami~n",[self()]),
     timeout
   end.
 
@@ -60,9 +60,9 @@ bar(Supervisor,Waitline) ->
           Supervisor ! {newAgents,[NewAgent1,NewAgent2]},
           bar(Supervisor,[])
       end;
-    {finish,Supervisor} ->
+    {finish,_Supervisor} ->
       answer([{{Pid,Ref},0,0} || {Pid,Ref,_} <- Waitline]),
-      cleaner(Supervisor);
+      cleaner();
     _ ->
       io:format("Bar ~p dostal cos dziwnego~n",[self()])
   after config:arenaTimeout() ->
@@ -83,46 +83,47 @@ bar(Supervisor,Waitline) ->
 %% zgloszenie do walki lub sygnal zamkniecia od supervisora.
 %% List1 jest lista agentow oczekujacych na pojawienie sie wystarczajacej
 %% liczby osobnikow w ringu do rozpoczecia walk.
-ring(Supervisor,Waitline) ->
+ring(Waitline) ->
   receive
     {Pid,Ref,{_Solution,Fitness,Energy}} ->
       Agent = {{Pid,Ref},Fitness,Energy},
       case length(Waitline) == config:fightNumber() - 1 of
-        false -> ring(Supervisor,[Agent|Waitline]);
+        false -> ring([Agent|Waitline]);
         true ->
           NewAgents = evolution:eachFightsAll([Agent|Waitline]),
           answer(NewAgents), % moze potrzebne flatten
-          ring(Supervisor,[])
+          ring([])
       end;
-    {finish,Supervisor} ->
+    {finish,_Supervisor} ->
       answer([{{P,R},0,0} || {{P,R},_,_} <- Waitline]), % wyslij wiadomosc konczaca rowniez do procesow w waitline
-      cleaner(Supervisor);
+      cleaner();
     _ ->
       io:format("Ring ~p dostal cos dziwnego~n",[self()])
   after config:arenaTimeout() ->
     case length(Waitline) of
       0 ->
-        ring(Supervisor,[]);
+        ring([]);
       _ ->
         io:format("Ring ~p daje do walki niepelna liczbe osobnikow!~n",[self()]),
         Agents = evolution:eachFightsAll(Waitline),
         answer(Agents),  % moze niepotrzebne flatten
-        ring(Supervisor,[])
+        ring([])
     end
   end.
 
-%% @spec receiver(SupervisorPid,Arenas) -> ok
+%% @spec receiver(SupervisorPid,OtherSupervisors) -> ok
 %% @doc Funkcja glowna portu. Oczekuje na wiadomosci i albo umozliwia
 %% migracje albo konczy prace portu.
-port(Supervisor,Arenas) ->
+port(Supervisor,AllSupervisors) ->
   receive
     {Pid, Ref, emigration} ->
-      Index = random:uniform(length(Arenas)),
-      NewArenas = lists:nth(Index,Arenas),
-      Pid ! {Ref,NewArenas},
-      port(Supervisor,Arenas);
+      Index = random:uniform(length(AllSupervisors)),
+      NewSupervisor = lists:nth(Index,AllSupervisors),
+      Supervisor ! {emigrated,Pid},
+      NewSupervisor ! {imigrated,Pid,Ref},
+      port(Supervisor,AllSupervisors);
     {finish,Supervisor} ->
-      cleaner(Supervisor)
+      cleaner()
   end.
 
 %% @spec answer(AgentList) -> ok
@@ -133,19 +134,18 @@ answer([{{Pid,Ref},_,Energy}|Tail]) ->
   Pid ! {Ref,Energy},
   answer(Tail).
 
-%% @spec cleaner(SupervisorPid) -> ok
+%% @spec cleaner() -> ok
 %% @doc Funkcja uruchamiana pod koniec zycia przez areny, odsylajaca na
 %% wszystkie zgloszenia sygnal zabijajacy. Dzieki temu gina wszyscy agenci
 %% w systemie. Po zakonczeniu funkcji zakonczony jest proces
-cleaner(Supervisor) ->
+cleaner() ->
   receive
     {Pid,_Ref,emigration} ->
       exit(Pid,finished),
-      cleaner(Supervisor);
+      cleaner();
     {Pid,Ref,_} ->
       Pid ! {Ref,0},
-      cleaner(Supervisor)
+      cleaner()
   after config:arenaTimeout() ->
-    Supervisor ! {finished,self()},
     exit(normal)
   end.

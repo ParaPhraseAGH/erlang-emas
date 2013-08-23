@@ -26,33 +26,24 @@ run() ->
 %% @doc Funkcja spawnujaca procesy nadzorujace dla kazdej wyspy
 %% oraz czekajaca na koncowy wynik od nich.
 spawner(Instance) ->
-  Supervisors = [spawn(conc_island,run,[self(),X,Instance]) || X <- lists:seq(1,config:islandsNr())],
-  Arenas = getArenas(length(Supervisors),[]),
-  respondToPorts(Arenas,config:islandsNr()),
+  Supervisors = [spawn(conc_supervisor,run,[self(),X,Instance]) || X <- lists:seq(1,config:islandsNr())],
+  respondToPorts(Supervisors,config:islandsNr()),
   timer:sleep(config:totalTime()),
   [Pid ! close || Pid <- Supervisors],
   finished.
-
-%% @spec getArenas(List1,List2) -> List3
-%% @doc Funkcja odbiera wiadomosci od supervisorow i kompletuje liste
-%% wszystkich aren w systemie. List1 to lista nadzorcow od ktorych mamy
-%% dostac wiadomosc, List2 to akumulator gdzie gromadzimy krotki z arenami.
-getArenas(0,Arenas) -> Arenas;
-getArenas(Supervisors,Arenas) ->
-  receive
-    {arenas,[Ring,Bar,Port]} ->
-       getArenas(Supervisors - 1,[{Ring,Bar,Port}|Arenas])
-  end.
 
 %% @spec respondToPorts(List1,int()) -> ok
 %% @doc Funkcja odpowiada wszystkim portom wysylajac im liste wszystkich aren.
 %% Po poinformowaniu wszystkich portow (liczba podana w arg), funkcja zwraca ok.
 respondToPorts(_,0) -> ok;
-respondToPorts(Arenas,NoIslands) ->
+respondToPorts(Supervisors,NoIslands) ->
   receive
-    {Pid,Ref,getArenas} ->
-      Pid ! {Ref,Arenas},
-      respondToPorts(Arenas,NoIslands - 1)
+    {Pid,Ref,getAdresses} ->
+      Pid ! {Ref,Supervisors},
+      respondToPorts(Supervisors,NoIslands - 1)
+  after config:supervisorTimeout() ->
+    erlang:error(noMsgFromPorts),
+    timeout
   end.
 
 init(Instance) ->

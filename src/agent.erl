@@ -47,7 +47,7 @@ loop(Agent,Arenas) ->
       NewEnergy = call(Agent,Arenas#arenas.fight),
       loop({Solution,Fitness,NewEnergy},Arenas);
     migration ->
-      {Ring,Bar,Port} = call(emigration,Arenas#arenas.migration),
+      [Ring,Bar,Port] = call(emigration,Arenas#arenas.migration),
       loop(Agent,#arenas{fight = Ring, reproduction = Bar, migration = Port})
   end.
 
@@ -65,6 +65,6 @@ call(Msg,ArenaPid) ->
       io:format("Arena do ktorej chce pisac proces ~p nie istnieje!~n",[self()]),
       erlang:error(Reason)
   after config:procesTimeout() -> % docelowo nie bedzie timeoutu
-    io:format("Proces ~p nie doczekal sie odpowiedzi od areny!~n",[self()]),
+    io:format("Proces ~p nie doczekal sie odpowiedzi od areny ~p!~n",[self(),ArenaPid]),
     exit(timeout)
   end.
