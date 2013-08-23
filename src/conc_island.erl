@@ -38,6 +38,7 @@ run(King,N,Instance) ->
 receiver(Counter,Best,FDs,Population,Arenas) ->
   receive
     {'DOWN', _Ref, process, _Pid, _Reason} ->
+      %io_util:write(dict:fetch(population,FDs),Population - 1),
       receiver(Counter,Best,FDs,Population - 1,Arenas);
     {newAgents,AgentList} ->
       [spawn_monitor(agent,start,[A|Arenas]) || A <- AgentList],

@@ -38,7 +38,7 @@ recombinationChance() -> 0.3.
 migrationProbability() -> 0.
 
 %% @doc Liczba agentow, na ktorych czeka ring aby rozpoczac walke (kazdy z kazdym)
-fightNumber() -> 2.
+fightNumber() -> 40.
 
 %% @doc Co ile generacji wypisywany jest fitness
 printStep() -> 1000.

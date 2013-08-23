@@ -14,12 +14,13 @@
 %% @doc Funkcja generujaca dane i startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac.
 start(Ring,Bar,Port) ->
+  random:seed(erlang:now()),
   S = genetic:solution(),
   Agent = {S,genetic:evaluation(S),config:initialEnergy()},
   Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
   loop(Agent,Arenas).
 
-%% @spec start(RingPid,BarPid,PortPid,Agent) -> ok
+%% @spec start(Agent,RingPid,BarPid,PortPid) -> ok
 %% @doc Funkcja startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac oraz dane agenta.
 start(Agent,Ring,Bar,Port) ->
@@ -36,14 +37,14 @@ start(Agent,Ring,Bar,Port) ->
 loop(Agent,Arenas) ->
   case misc_util:behavior(Agent) of
     death ->
-      exit(normal);
+      dying;
     reproduction ->
-      {Solution,Fitness,Energy} = Agent,
-      NewEnergy = call({Solution,Fitness,Energy},Arenas#arenas.reproduction),
+      {Solution,Fitness,_} = Agent,
+      NewEnergy = call(Agent,Arenas#arenas.reproduction),
       loop({Solution,Fitness,NewEnergy},Arenas);
     fight ->
-      {Solution,Fitness,Energy} = Agent,
-      NewEnergy = call({Fitness,Energy},Arenas#arenas.fight),
+      {Solution,Fitness,_} = Agent,
+      NewEnergy = call(Agent,Arenas#arenas.fight),
       loop({Solution,Fitness,NewEnergy},Arenas);
     migration ->
       {Ring,Bar,Port} = call(emigration,Arenas#arenas.migration),

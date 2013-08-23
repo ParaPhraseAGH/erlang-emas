@@ -33,7 +33,7 @@ startPort(Supervisor,King) ->
     timeout
   end.
 
-%% @spec start(SupervisorPid,RingPid,PortPid) -> ok
+%% @spec start(SupervisorPid) -> ok
 %% @doc Funkcja startujaca bar.
 startBar(Supervisor) ->
   random:seed(erlang:now()),
@@ -61,13 +61,14 @@ bar(Supervisor,Waitline) ->
           bar(Supervisor,[])
       end;
     {finish,Supervisor} ->
-      answer([{Pid,Ref,0,0} || {Pid,Ref,_} <- Waitline]),
+      answer([{{Pid,Ref},0,0} || {Pid,Ref,_} <- Waitline]),
       cleaner(Supervisor);
     _ ->
       io:format("Bar ~p dostal cos dziwnego~n",[self()])
   after config:arenaTimeout() ->
     case Waitline of
-      [] -> nothing;
+      [] ->
+        bar(Supervisor,[]);
       [{Pid,Ref,Agent}] ->
         io:format("Bar ~p reprodukuje pojedynczego osobnika!~n",[self()]),
         [{_,_,NewEnergy},NewAgent] = evolution:doReproduce({Agent}),
@@ -84,27 +85,28 @@ bar(Supervisor,Waitline) ->
 %% liczby osobnikow w ringu do rozpoczecia walk.
 ring(Supervisor,Waitline) ->
   receive
-    {Pid,Ref,{Fitness,Energy}} ->
+    {Pid,Ref,{_Solution,Fitness,Energy}} ->
       Agent = {{Pid,Ref},Fitness,Energy},
       case length(Waitline) == config:fightNumber() - 1 of
         false -> ring(Supervisor,[Agent|Waitline]);
         true ->
           NewAgents = evolution:eachFightsAll([Agent|Waitline]),
-          answer([{P,R,F,E} || {{P,R},F,E} <- NewAgents]),
+          answer(NewAgents), % moze potrzebne flatten
           ring(Supervisor,[])
       end;
     {finish,Supervisor} ->
-      answer([{P,R,0,0} || {{P,R},_,_} <- Waitline]), % wyslij wiadomosc konczaca rowniez do procesow w waitline
+      answer([{{P,R},0,0} || {{P,R},_,_} <- Waitline]), % wyslij wiadomosc konczaca rowniez do procesow w waitline
       cleaner(Supervisor);
     _ ->
       io:format("Ring ~p dostal cos dziwnego~n",[self()])
   after config:arenaTimeout() ->
     case length(Waitline) of
-      0 -> nothing;
+      0 ->
+        ring(Supervisor,[]);
       _ ->
         io:format("Ring ~p daje do walki niepelna liczbe osobnikow!~n",[self()]),
-        Agents = evolution:eachFightsAll([Waitline]),
-        answer(lists:flatten(Agents)),
+        Agents = evolution:eachFightsAll(Waitline),
+        answer(Agents),  % moze niepotrzebne flatten
         ring(Supervisor,[])
     end
   end.
@@ -127,7 +129,7 @@ port(Supervisor,Arenas) ->
 %% @doc Funkcja wysyla wiadomosci do wszystkich agentow w agent list
 %% o ich energii.
 answer([]) -> ok;
-answer([{Pid,Ref,_,Energy}|Tail]) ->
+answer([{{Pid,Ref},_,Energy}|Tail]) ->
   Pid ! {Ref,Energy},
   answer(Tail).
 
