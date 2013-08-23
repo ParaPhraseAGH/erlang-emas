@@ -9,11 +9,11 @@
 %% API functions
 %% ====================================================================
 
-totalTime() -> 10000.
+totalTime() -> 120000.
 %% @doc Rozmiar wektora pojedynczego osobnika
 problemSize() -> 40.
 %% @doc Ilosc wysp na ktorych generowana jest populacja
-islandsNr() -> 1.
+islandsNr() -> 2.
 %% @doc Poczatkowa wielkosc populacji
 populationSize() -> 100.
 
@@ -45,7 +45,7 @@ printStep() -> 1000.
 %% @doc Ilosc milisekund, ktore czeka supervisor wyspy na jakas wiadomosc. Jak czas minie zamyka wyspe.
 supervisorTimeout() -> 5000.
 %% @doc Ilosc milisekund, ktore czeka arena na jakas wiadomosc
-arenaTimeout() -> 1000.
+arenaTimeout() -> 2000.
 %% @doc Ilosc milisekund, ktore czeka agent na jakas wiadomosc
-procesTimeout() -> 3000.
+processTimeout() -> 3000.
 

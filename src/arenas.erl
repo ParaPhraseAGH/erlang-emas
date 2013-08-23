@@ -48,10 +48,10 @@ startBar(Supervisor) ->
 %% zgloszenie do krzyzowania/mutacji lub sygnal zamkniecia od supervisora.
 %% List1 jest lista agentow oczekujacych na pojawienie sie wystarczajacej
 %% liczby osobnikow w barze do rozpoczecia reprodukcji.
-bar(Supervisor,Waitline) ->
+bar(Supervisor,Waitlist) ->
   receive
     {Pid1,Ref1,Agent1} -> %{Solution,Fitness,Energy} = Agent,
-      case Waitline of
+      case Waitlist of
         [] -> bar(Supervisor,[{Pid1,Ref1,Agent1}]);
         [{Pid2,Ref2,Agent2}] ->
           [{_,_,NewEnergy1},{_,_,NewEnergy2},NewAgent1,NewAgent2] = evolution:doReproduce({Agent1,Agent2}),
@@ -61,12 +61,12 @@ bar(Supervisor,Waitline) ->
           bar(Supervisor,[])
       end;
     {finish,_Supervisor} ->
-      answer([{{Pid,Ref},0,0} || {Pid,Ref,_} <- Waitline]),
+      answer([{{Pid,Ref},0,0} || {Pid,Ref,_} <- Waitlist]),
       cleaner();
     _ ->
       io:format("Bar ~p dostal cos dziwnego~n",[self()])
   after config:arenaTimeout() ->
-    case Waitline of
+    case Waitlist of
       [] ->
         bar(Supervisor,[]);
       [{Pid,Ref,Agent}] ->
@@ -83,29 +83,29 @@ bar(Supervisor,Waitline) ->
 %% zgloszenie do walki lub sygnal zamkniecia od supervisora.
 %% List1 jest lista agentow oczekujacych na pojawienie sie wystarczajacej
 %% liczby osobnikow w ringu do rozpoczecia walk.
-ring(Waitline) ->
+ring(Waitlist) ->
   receive
     {Pid,Ref,{_Solution,Fitness,Energy}} ->
       Agent = {{Pid,Ref},Fitness,Energy},
-      case length(Waitline) == config:fightNumber() - 1 of
-        false -> ring([Agent|Waitline]);
+      case length(Waitlist) == config:fightNumber() - 1 of
+        false -> ring([Agent|Waitlist]);
         true ->
-          NewAgents = evolution:eachFightsAll([Agent|Waitline]),
+          NewAgents = evolution:eachFightsAll([Agent|Waitlist]),
           answer(NewAgents), % moze potrzebne flatten
           ring([])
       end;
     {finish,_Supervisor} ->
-      answer([{{P,R},0,0} || {{P,R},_,_} <- Waitline]), % wyslij wiadomosc konczaca rowniez do procesow w waitline
+      answer([{{P,R},0,0} || {{P,R},_,_} <- Waitlist]), % wyslij wiadomosc konczaca rowniez do procesow w waitline
       cleaner();
     _ ->
       io:format("Ring ~p dostal cos dziwnego~n",[self()])
   after config:arenaTimeout() ->
-    case length(Waitline) of
+    case length(Waitlist) of
       0 ->
         ring([]);
       _ ->
         io:format("Ring ~p daje do walki niepelna liczbe osobnikow!~n",[self()]),
-        Agents = evolution:eachFightsAll(Waitline),
+        Agents = evolution:eachFightsAll(Waitlist),
         answer(Agents),  % moze niepotrzebne flatten
         ring([])
     end
@@ -116,15 +116,40 @@ ring(Waitline) ->
 %% migracje albo konczy prace portu.
 port(Supervisor,AllSupervisors) ->
   receive
-    {Pid, Ref, emigration} ->
+    {Pid, HisRef, emigration} ->
       Index = random:uniform(length(AllSupervisors)),
       NewSupervisor = lists:nth(Index,AllSupervisors),
-      Supervisor ! {emigrated,Pid},
-      NewSupervisor ! {imigrated,Pid,Ref},
+      case emigrate(Supervisor,Pid) of
+        ok -> ok;
+        supervisorDown -> port(Supervisor,AllSupervisors)
+      end,
+      immigrate(NewSupervisor,Pid,HisRef),
       port(Supervisor,AllSupervisors);
     {finish,Supervisor} ->
       cleaner()
   end.
+
+immigrate(Supervisor,HisPid,HisRef) ->
+  Ref = erlang:monitor(process, Supervisor),
+  Supervisor ! {self(),Ref,immigrant,HisPid,HisRef},
+  receive
+    {Ref,ok} ->
+      erlang:demonitor(Ref, [flush]);
+    {'DOWN', Ref, process, Supervisor, _Reason} ->
+      exit(HisPid,finished)
+  end.
+
+emigrate(Supervisor,HisPid) ->
+  Ref = erlang:monitor(process, Supervisor),
+  Supervisor ! {self(),Ref,emigrant,HisPid},
+  receive
+    {Ref,ok} ->
+      erlang:demonitor(Ref, [flush]),
+      ok;
+    {'DOWN', Ref, process, Supervisor, _Reason} ->
+      supervisorDown
+  end.
+
 
 %% @spec answer(AgentList) -> ok
 %% @doc Funkcja wysyla wiadomosci do wszystkich agentow w agent list

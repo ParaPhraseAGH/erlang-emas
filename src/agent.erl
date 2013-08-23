@@ -37,7 +37,7 @@ start(Agent,Ring,Bar,Port) ->
 loop(Agent,Arenas) ->
   case misc_util:behavior(Agent) of
     death ->
-      dying;
+      exit(dying);
     reproduction ->
       {Solution,Fitness,_} = Agent,
       NewEnergy = call(Agent,Arenas#arenas.reproduction),
@@ -64,7 +64,7 @@ call(Msg,ArenaPid) ->
     {'DOWN', Ref, process, ArenaPid, Reason} ->
       io:format("Arena do ktorej chce pisac proces ~p nie istnieje!~n",[self()]),
       erlang:error(Reason)
-  after config:procesTimeout() -> % docelowo nie bedzie timeoutu
+  after config:processTimeout() -> % docelowo nie bedzie timeoutu
     io:format("Proces ~p nie doczekal sie odpowiedzi od areny ~p!~n",[self(),ArenaPid]),
     exit(timeout)
   end.

@@ -39,7 +39,6 @@ run(King,N,Instance) ->
 receiver(Counter,Best,FDs,Population,Arenas) ->
   receive
     {'EXIT',_FromPid,_Reason} ->
-      %io_util:write(dict:fetch(population,FDs),Population - 1),
       receiver(Counter,Best,FDs,Population - 1,Arenas);
     {newAgents,AgentList} ->
       [spawn_link(agent,start,[A|Arenas]) || A <- AgentList],
@@ -48,7 +47,7 @@ receiver(Counter,Best,FDs,Population,Arenas) ->
       io_util:write(dict:fetch(population,FDs),NewPopulation),
       Step = config:printStep(),
       if Counter == Step ->
-        %io:format("Fitness: ~p, Population: ~p~n",[Best,NewPopulation]),
+        io:format("Fitness: ~p, Population: ~p~n",[Best,NewPopulation]),
         NewCounter = 0;
       Counter /= Step ->
         NewCounter = Counter + 1
@@ -59,12 +58,14 @@ receiver(Counter,Best,FDs,Population,Arenas) ->
         io_util:write(dict:fetch(fitness,FDs),Result),
         receiver(NewCounter,Result,FDs,NewPopulation,Arenas)
       end;
-    {emigrated,Pid} ->
-      erlang:unlink(Pid),
+    {Pid,Ref,emigrant,HisPid} ->
+      erlang:unlink(HisPid),
+      Pid ! {Ref,ok},
       receiver(Counter,Best,FDs,Population - 1,Arenas);
-    {imigrated,Pid,Ref} ->
-      erlang:link(Pid),
-      Pid ! {Ref,Arenas},
+    {Pid,Ref,immigrant,HisPid,HisRef} ->
+      erlang:link(HisPid),
+      HisPid ! {HisRef,Arenas},
+      Pid ! {Ref,ok}, % send confirmation
       receiver(Counter,Best,FDs,Population + 1,Arenas);
     close ->
       Best
