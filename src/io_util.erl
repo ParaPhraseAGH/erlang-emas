@@ -13,8 +13,8 @@ write(FD,Value) ->
 
 prepareWriting(Path) ->
   file:make_dir(Path),
-  {ok, FitnessFD} = file:open(Path ++ "\\fitness.txt",[append,delayed_write,raw]),
-  {ok, PopulationFD} = file:open(Path ++ "\\population.txt",[append,delayed_write,raw]),
+  {ok, FitnessFD} = file:open(filename:join([Path,"fitness.txt"]),[append,delayed_write,raw]),
+  {ok, PopulationFD} = file:open(filename:join([Path,"population.txt"]),[append,delayed_write,raw]),
   dict:store(fitness,FitnessFD,
     dict:store(population,PopulationFD,
       dict:new())).
@@ -40,10 +40,11 @@ print(Fitness,Groups) ->
 genPath(AlgType,Problem,TTime,Islands) ->
   catch file:make_dir(AlgType),
   Time = TTime div 1000,
-  Path = AlgType ++ "\\"  ++ integer_to_list(Problem) ++ "_" ++ integer_to_list(Time) ++ "_" ++ integer_to_list(Islands),
+  Param = integer_to_list(Problem) ++ "_" ++ integer_to_list(Time) ++ "_" ++ integer_to_list(Islands),
+  Path = filename:join([AlgType, Param]),
   catch file:make_dir(Path),
   {ok,Instances} = file:list_dir(Path),
-  Path2 = Path ++ "\\" ++ assignName(Instances,0),
+  Path2 =  filename:join([Path,assignName(Instances,0)]),
   file:make_dir(Path2),
   Path2.
 

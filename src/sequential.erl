@@ -36,7 +36,7 @@ generate(ProblemSize) ->
 start(ProblemSize,Time,IslandsNr) ->
   Islands = [generate(ProblemSize) || _ <- lists:seq(1,IslandsNr)],
   Path = io_util:genPath("Sequential",ProblemSize,Time,IslandsNr),
-  FDs = [io_util:prepareWriting(Path ++ "\\isl" ++ integer_to_list(N)) || N <- lists:seq(1,IslandsNr)],
+  FDs = [io_util:prepareWriting(filename:join([Path,"isl" ++ integer_to_list(N)])) || N <- lists:seq(1,IslandsNr)],
   timer:send_after(Time,theEnd),
   loop(Islands,FDs).
 

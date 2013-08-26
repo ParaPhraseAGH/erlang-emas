@@ -14,7 +14,8 @@
 %% petle, w ktorej porusza sie proces.
 proces(Path,N,ProblemSize) ->
   random:seed(erlang:now()),
-  FDs = io_util:prepareWriting(Path ++ "\\isl" ++ integer_to_list(N)),
+  IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
+  FDs = io_util:prepareWriting(IslandPath),
   Solutions = [genetic:solution(ProblemSize) || _ <- lists:seq(1, config:populationSize())],
   Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
   loop(Agents,FDs).
