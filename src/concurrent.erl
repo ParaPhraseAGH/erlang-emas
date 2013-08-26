@@ -3,19 +3,20 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(concurrent).
--export([run/0]).
+-export([run/0, run/3]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-%% @spec run() -> ok
-%% @doc Funkcja uruchamiajaca algorytm dla podanych w config.erl parametrow
-run() ->
+run(ProblemSize,Time,Islands) ->
   init(),
-  {Time,_} = timer:tc(fun spawner/0, []),
+  {TotalTime,_} = timer:tc(fun spawner/3, [ProblemSize,Time,Islands]),
   cleanup(),
-  io:format("Total time:   ~p s~n",[Time/1000000]).
+  io:format("Total time:   ~p s~n",[TotalTime/1000000]).
+
+run() ->
+  run(40,5000,2).
 
 %% ====================================================================
 %% Internal functions
@@ -24,11 +25,11 @@ run() ->
 %% @spec spawner() -> float()
 %% @doc Funkcja spawnujaca procesy nadzorujace dla kazdej wyspy
 %% oraz czekajaca na koncowy wynik od nich.
-spawner() ->
-  Path = io_util:genPath("Concurrent"),
-  Supervisors = [spawn(conc_supervisor,run,[self(),X,Path]) || X <- lists:seq(1,config:islandsNr())],
-  respondToPorts(Supervisors,config:islandsNr()),
-  timer:sleep(config:totalTime()),
+spawner(ProblemSize,Time,Islands) ->
+  Path = io_util:genPath("Concurrent",ProblemSize,Time,Islands),
+  Supervisors = [spawn(conc_supervisor,run,[self(),X,Path,ProblemSize]) || X <- lists:seq(1,Islands)],
+  respondToPorts(Supervisors,Islands),
+  timer:sleep(Time),
   [Pid ! close || Pid <- Supervisors],
   finished.
 

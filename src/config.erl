@@ -10,14 +10,14 @@
 %% ====================================================================
 
 %% @doc Rozmiar wektora pojedynczego osobnika
-problemSize() -> 50.
+%problemSize() -> 50.
 %% @doc Czas wykonywania algorytmu
-totalTime() -> 5000.
+%totalTime() -> 5000.
 %% @doc Ilosc wysp na ktorych generowana jest populacja
-islandsNr() -> 4.
+%islandsNr() -> 4.
+
 %% @doc Poczatkowa wielkosc populacji
 populationSize() -> 100.
-
 %% @doc Energia poczatkowa osobnika.
 initialEnergy() -> 10.
 %% @doc Ilosc energii, powyzej ktorej osobnik sie reprodukuje

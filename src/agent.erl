@@ -3,7 +3,7 @@
 %% @doc Modul odpowiedzialny za logike pojedynczego agenta.
 
 -module(agent).
--export([start/3, start/4]).
+-export([start/4]).
 -record(arenas,{fight,reproduction,migration}).
 
 %% ====================================================================
@@ -13,17 +13,17 @@
 %% @spec start(RingPid,BarPid,PortPid) -> ok
 %% @doc Funkcja generujaca dane i startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac.
-start(Ring,Bar,Port) ->
+start(ProblemSize,Ring,Bar,Port) when is_integer(ProblemSize) ->
   random:seed(erlang:now()),
-  S = genetic:solution(),
+  S = genetic:solution(ProblemSize),
   Agent = {S,genetic:evaluation(S),config:initialEnergy()},
   Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
-  loop(Agent,Arenas).
+  loop(Agent,Arenas);
 
 %% @spec start(Agent,RingPid,BarPid,PortPid) -> ok
 %% @doc Funkcja startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac oraz dane agenta.
-start(Agent,Ring,Bar,Port) ->
+start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
   Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
   loop(Agent,Arenas).
 

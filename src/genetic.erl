@@ -3,7 +3,7 @@
 %% @doc Modul zawierajacy funkcje wykonujace operacje genetyczne
 
 -module(genetic).
--export([solution/0, evaluation/1, reproduction/1, reproduction/2]).
+-export([solution/1, evaluation/1, reproduction/1, reproduction/2]).
 
 %% ====================================================================
 %% API functions
@@ -11,8 +11,8 @@
 
 %% @spec solution() -> List
 %% @doc Funkcja generuje i zwraca losowego osobnika
-solution() ->
-  [-50 + random:uniform() * 100 || _ <- lists:seq(1, config:problemSize())].
+solution(ProblemSize) ->
+  [-50 + random:uniform() * 100 || _ <- lists:seq(1, ProblemSize)].
 
 %% @spec evaluation(List) -> float()
 %% @doc Funkcja przyjmuje osobnika, oblicza i zwraca jego fitness.

@@ -3,19 +3,20 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(hybrid).
--export([run/0]).
+-export([run/0, run/3]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-%% @spec run() -> ok
-%% @doc Funkcja uruchamiajaca algorytm dla wpisanych parametrow (config.erl)
-run() ->
-  init(),
-  {Time,{Result,Pids}} = timer:tc(fun spawner/0, []),
+run(ProblemSize,Time,Islands) ->
+  init(Time),
+  {TTime,{Result,Pids}} = timer:tc(fun spawner/3, [ProblemSize,Time,Islands]),
   cleanup(Pids),
-  io:format("Total time:   ~p s~nFitness:     ~p~n",[Time/1000000,Result]).
+  io:format("Total time:   ~p s~nFitness:     ~p~n",[TTime/1000000,Result]).
+
+run() ->
+  run(40,5000,2).
 
 %% ====================================================================
 %% Internal functions
@@ -24,9 +25,9 @@ run() ->
 %% @spec init() -> ok
 %% @doc Funkcja wykonujaca wszelkie operacje potrzebne przed uruchomieniem
 %% algorytmu.
-init() ->
+init(Time) ->
   register(supervisor,self()),
-  timer:send_after(config:totalTime(),theEnd).
+  timer:send_after(Time,theEnd).
 
 %% @spec cleanup(List) -> ok
 %% @doc Funkcja sprzatajaca po zakonczonym algorytmie, dostajaca jako
@@ -40,9 +41,9 @@ cleanup(Pids) ->
 %% @spec spawner(int()) -> {float(),List}
 %% @doc Funkcja spawnujaca wyspy, ktorych ilosc jest okreslona w argumencie.
 %% Zwracany jest wynik obliczen i lista Pid.
-spawner() ->
-  Path = io_util:genPath("Hybrid"),
-  PidsRefs = [spawn_monitor(hybrid_island,proces,[Path,X]) || X <- lists:seq(1,config:islandsNr())],
+spawner(ProblemSize,Time,Islands) ->
+  Path = io_util:genPath("Hybrid",ProblemSize,Time,Islands),
+  PidsRefs = [spawn_monitor(hybrid_island,proces,[Path,X,ProblemSize]) || X <- lists:seq(1,Islands)],
   {Pids,_} = lists:unzip(PidsRefs),
   receiver(Pids,-999999).
 

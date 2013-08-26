@@ -2,7 +2,7 @@
 %% @version 1.0
 
 -module(io_util).
--export([print/1, prepareWriting/1, closeFiles/1, write/2, writeIslands/2, print/2, genPath/1]).
+-export([print/1, prepareWriting/1, closeFiles/1, write/2, writeIslands/2, print/2, genPath/4]).
 
 %% ====================================================================
 %% API functions
@@ -37,13 +37,10 @@ print(Fitness,Groups) ->
   io:format("~nProcess: ~p, Fitness: ~p~n",[self(),Fitness]),
   printMoreStats(Groups).
 
-genPath(AlgType) ->
-  Problem = config:problemSize(),
-  Time = config:totalTime() div 1000,
-  Islands = config:islandsNr(),
-  Param = integer_to_list(Problem) ++ "_" ++ integer_to_list(Time) ++ "_" ++ integer_to_list(Islands),
-  catch file:make_dir(Param),
-  Path = Param ++ "\\" ++ AlgType,
+genPath(AlgType,Problem,TTime,Islands) ->
+  catch file:make_dir(AlgType),
+  Time = TTime div 1000,
+  Path = AlgType ++ "\\"  ++ integer_to_list(Problem) ++ "_" ++ integer_to_list(Time) ++ "_" ++ integer_to_list(Islands),
   catch file:make_dir(Path),
   {ok,Instances} = file:list_dir(Path),
   Path2 = Path ++ "\\" ++ assignName(Instances,0),

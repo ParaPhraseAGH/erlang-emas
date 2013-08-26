@@ -3,7 +3,7 @@
 %% @doc Modul odpowiedzialny za logike pojedynczej wyspy.
 
 -module(hybrid_island).
--export([proces/2]).
+-export([proces/3]).
 
 %% ====================================================================
 %% API functions
@@ -12,10 +12,10 @@
 %% @spec proces() -> loop(List)
 %% @doc Funkcja generujaca dane poczatkowe, ktora pod koniec uruchamia
 %% petle, w ktorej porusza sie proces.
-proces(Path,N) ->
+proces(Path,N,ProblemSize) ->
   random:seed(erlang:now()),
   FDs = io_util:prepareWriting(Path ++ "\\isl" ++ integer_to_list(N)),
-  Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
+  Solutions = [genetic:solution(ProblemSize) || _ <- lists:seq(1, config:populationSize())],
   Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
   loop(Agents,FDs).
 
