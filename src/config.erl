@@ -10,11 +10,11 @@
 %% ====================================================================
 
 %% @doc Rozmiar wektora pojedynczego osobnika
-problemSize() -> 40.
+problemSize() -> 50.
 %% @doc Czas wykonywania algorytmu
 totalTime() -> 5000.
 %% @doc Ilosc wysp na ktorych generowana jest populacja
-islandsNr() -> 2.
+islandsNr() -> 4.
 %% @doc Poczatkowa wielkosc populacji
 populationSize() -> 100.
 

@@ -32,9 +32,8 @@ generate() ->
 %% Zwracany jest koncowy wynik.
 start() ->
   Islands = [generate() || _ <- lists:seq(1,config:islandsNr())],
-  Instance = "instancja",
-  file:make_dir(Instance),
-  FDs = [io_util:prepareWriting(Instance ++ "\\" ++ integer_to_list(N)) || N <- lists:seq(1,config:islandsNr())],
+  Path = io_util:genPath("Sequential"),
+  FDs = [io_util:prepareWriting(Path ++ "\\isl" ++ integer_to_list(N)) || N <- lists:seq(1,config:islandsNr())],
   timer:send_after(config:totalTime(),theEnd),
   loop(Islands,FDs).
 

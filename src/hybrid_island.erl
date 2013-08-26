@@ -12,9 +12,9 @@
 %% @spec proces() -> loop(List)
 %% @doc Funkcja generujaca dane poczatkowe, ktora pod koniec uruchamia
 %% petle, w ktorej porusza sie proces.
-proces(Instancja,N) ->
+proces(Path,N) ->
   random:seed(erlang:now()),
-  FDs = io_util:prepareWriting(Instancja ++ "\\" ++ integer_to_list(N)),
+  FDs = io_util:prepareWriting(Path ++ "\\isl" ++ integer_to_list(N)),
   Solutions = [genetic:solution() || _ <- lists:seq(1, config:populationSize())],
   Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
   loop(Agents,FDs).

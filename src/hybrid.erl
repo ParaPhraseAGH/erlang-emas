@@ -9,12 +9,11 @@
 %% API functions
 %% ====================================================================
 
-%% @spec run(int()) -> ok
+%% @spec run() -> ok
 %% @doc Funkcja uruchamiajaca algorytm dla wpisanych parametrow (config.erl)
 run() ->
-  Instancja = "instancja",
-  init(Instancja),
-  {Time,{Result,Pids}} = timer:tc(fun spawner/1, [Instancja]),
+  init(),
+  {Time,{Result,Pids}} = timer:tc(fun spawner/0, []),
   cleanup(Pids),
   io:format("Total time:   ~p s~nFitness:     ~p~n",[Time/1000000,Result]).
 
@@ -25,10 +24,9 @@ run() ->
 %% @spec init() -> ok
 %% @doc Funkcja wykonujaca wszelkie operacje potrzebne przed uruchomieniem
 %% algorytmu.
-init(Instancja) ->
+init() ->
   register(supervisor,self()),
-  timer:send_after(config:totalTime(),theEnd),
-  file:make_dir(Instancja).
+  timer:send_after(config:totalTime(),theEnd).
 
 %% @spec cleanup(List) -> ok
 %% @doc Funkcja sprzatajaca po zakonczonym algorytmie, dostajaca jako
@@ -42,8 +40,9 @@ cleanup(Pids) ->
 %% @spec spawner(int()) -> {float(),List}
 %% @doc Funkcja spawnujaca wyspy, ktorych ilosc jest okreslona w argumencie.
 %% Zwracany jest wynik obliczen i lista Pid.
-spawner(Instancja) ->
-  PidsRefs = [spawn_monitor(hybrid_island,proces,[Instancja,X]) || X <- lists:seq(1,config:islandsNr())],
+spawner() ->
+  Path = io_util:genPath("Hybrid"),
+  PidsRefs = [spawn_monitor(hybrid_island,proces,[Path,X]) || X <- lists:seq(1,config:islandsNr())],
   {Pids,_} = lists:unzip(PidsRefs),
   receiver(Pids,-999999).
 

@@ -21,7 +21,7 @@ run(King,N,Path) ->
   Bar = spawn(arenas,startBar,[self()]),
   Arenas = [Ring,Bar,Port],
   [spawn_link(agent,start,Arenas) || _ <- lists:seq(1,config:populationSize())],
-  FDs = io_util:prepareWriting(Path ++ "\\" ++ integer_to_list(N)),
+  FDs = io_util:prepareWriting(Path ++ "\\isl" ++ integer_to_list(N)),
   Result = receiver(0,-99999,FDs,config:populationSize(),Arenas), % obliczanie wyniku
   Bar ! Ring ! Port ! {finish,self()},
   io:format("Island ~p best fitness: ~p~n",[N,Result]),
