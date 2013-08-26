@@ -12,9 +12,8 @@
 %% @spec run() -> ok
 %% @doc Funkcja uruchamiajaca algorytm dla podanych w config.erl parametrow
 run() ->
-  Instance = "instancja",
-  init(Instance),
-  {Time,_} = timer:tc(fun spawner/1, [Instance]),
+  init(),
+  {Time,_} = timer:tc(fun spawner/0, []),
   cleanup(),
   io:format("Total time:   ~p s~n",[Time/1000000]).
 
@@ -25,8 +24,9 @@ run() ->
 %% @spec spawner() -> float()
 %% @doc Funkcja spawnujaca procesy nadzorujace dla kazdej wyspy
 %% oraz czekajaca na koncowy wynik od nich.
-spawner(Instance) ->
-  Supervisors = [spawn(conc_supervisor,run,[self(),X,Instance]) || X <- lists:seq(1,config:islandsNr())],
+spawner() ->
+  Path = io_util:genPath("Concurrent"),
+  Supervisors = [spawn(conc_supervisor,run,[self(),X,Path]) || X <- lists:seq(1,config:islandsNr())],
   respondToPorts(Supervisors,config:islandsNr()),
   timer:sleep(config:totalTime()),
   [Pid ! close || Pid <- Supervisors],
@@ -46,8 +46,8 @@ respondToPorts(Supervisors,NoIslands) ->
     timeout
   end.
 
-init(Instance) ->
-  file:make_dir(Instance).
+init() ->
+  nothing.
 
 cleanup() ->
   misc_util:clearInbox().

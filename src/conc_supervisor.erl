@@ -14,14 +14,14 @@
 %% tzw. krola, czyli procesu spawnujacego wyspy i czekajacego na wynik (zwykle shell).
 %% Funkcja spawnuje areny i agentow, czeka na wiadomosci oraz odsyla
 %% koncowy wynik do krola. Na koniec nastepuje zamkniecie aren i sprzatanie.
-run(King,N,Instance) ->
+run(King,N,Path) ->
   process_flag(trap_exit, true),
   Port = spawn(arenas,startPort,[self(),King]),
   Ring = spawn(arenas,startRing,[self()]),
   Bar = spawn(arenas,startBar,[self()]),
   Arenas = [Ring,Bar,Port],
   [spawn_link(agent,start,Arenas) || _ <- lists:seq(1,config:populationSize())],
-  FDs = io_util:prepareWriting(Instance ++ "\\" ++ integer_to_list(N)),
+  FDs = io_util:prepareWriting(Path ++ "\\" ++ integer_to_list(N)),
   Result = receiver(0,-99999,FDs,config:populationSize(),Arenas), % obliczanie wyniku
   Bar ! Ring ! Port ! {finish,self()},
   io:format("Island ~p best fitness: ~p~n",[N,Result]),
