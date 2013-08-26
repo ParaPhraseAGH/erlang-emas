@@ -9,9 +9,10 @@
 %% API functions
 %% ====================================================================
 
-totalTime() -> 5000.
 %% @doc Rozmiar wektora pojedynczego osobnika
 problemSize() -> 40.
+%% @doc Czas wykonywania algorytmu
+totalTime() -> 5000.
 %% @doc Ilosc wysp na ktorych generowana jest populacja
 islandsNr() -> 2.
 %% @doc Poczatkowa wielkosc populacji

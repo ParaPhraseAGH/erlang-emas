@@ -47,7 +47,7 @@ receiver(Counter,Best,FDs,Population,Arenas) ->
       io_util:write(dict:fetch(population,FDs),NewPopulation),
       Step = config:printStep(),
       if Counter == Step ->
-        %io:format("Fitness: ~p, Population: ~p~n",[Best,NewPopulation]),
+        io:format("Fitness: ~p, Population: ~p~n",[Best,NewPopulation]),
         NewCounter = 0;
       Counter /= Step ->
         NewCounter = Counter + 1
