@@ -9,7 +9,7 @@
 %% API functions
 %% ====================================================================
 
-totalTime() -> 120000.
+totalTime() -> 5000.
 %% @doc Rozmiar wektora pojedynczego osobnika
 problemSize() -> 40.
 %% @doc Ilosc wysp na ktorych generowana jest populacja
@@ -35,10 +35,10 @@ mutationChance() -> 0.75.
 %% @doc Prawdopodobienstwo skrzyzowania osobnikow
 recombinationChance() -> 0.3.
 %% @doc Prawdopodobienstwo migracji dowolnego osobnika o niezerowej energii na inna wyspe
-migrationProbability() -> 0.75.
+migrationProbability() -> 0.01.
 
 %% @doc Liczba agentow, na ktorych czeka ring aby rozpoczac walke (kazdy z kazdym)
-fightNumber() -> 2.
+fightNumber() -> 40.
 
 %% @doc Co ile generacji wypisywany jest fitness
 printStep() -> 1000.
