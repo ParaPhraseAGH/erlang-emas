@@ -23,9 +23,9 @@ run(King,N,Path,ProblemSize) ->
   [spawn_link(agent,start,[ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
   IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
   FDs = io_util:prepareWriting(IslandPath),
-  Result = receiver(0,-99999,FDs,config:populationSize(),Arenas), % obliczanie wyniku
+  _Result = receiver(0,-99999,FDs,config:populationSize(),Arenas), % obliczanie wyniku
   Bar ! Ring ! Port ! {finish,self()},
-  io:format("Island ~p best fitness: ~p~n",[N,Result]),
+  %io:format("Island ~p best fitness: ~p~n",[N,_Result]),
   io_util:closeFiles(FDs),
   exit(killAllProcesses).
 
@@ -48,7 +48,7 @@ receiver(Counter,Best,FDs,Population,Arenas) ->
       io_util:write(dict:fetch(population,FDs),NewPopulation),
       Step = config:printStep(),
       if Counter == Step ->
-        io:format("Fitness: ~p, Population: ~p~n",[Best,NewPopulation]),
+        %io:format("Fitness: ~p, Population: ~p~n",[Best,NewPopulation]),
         NewCounter = 0;
       Counter /= Step ->
         NewCounter = Counter + 1

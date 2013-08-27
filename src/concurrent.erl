@@ -3,7 +3,7 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(concurrent).
--export([run/0, run/3]).
+-export([run/0, run/1, run/3]).
 
 %% ====================================================================
 %% API functions
@@ -11,9 +11,14 @@
 
 run(ProblemSize,Time,Islands) ->
   init(),
-  {TotalTime,_} = timer:tc(fun spawner/3, [ProblemSize,Time,Islands]),
-  cleanup(),
-  io:format("Total time:   ~p s~n",[TotalTime/1000000]).
+  {_Time,_} = timer:tc(fun spawner/3, [ProblemSize,Time,Islands]),
+  cleanup().
+  %io:format("Total time:   ~p s~n",[_Time/1000000]).
+
+run([A,B,C]) ->
+  run(list_to_integer(A),
+    list_to_integer(B),
+      list_to_integer(C)).
 
 run() ->
   run(40,5000,2).

@@ -15,9 +15,9 @@ run() ->
 
 run(ProblemSize,Time,Islands) ->
   random:seed(erlang:now()),
-  {TotalTime,{Result,FDs}} = timer:tc(fun start/3, [ProblemSize,Time,Islands]),
-  [io_util:closeFiles(FDDict) || FDDict <- FDs],
-  io:format("Total time:   ~p s~nFitness:     ~p~n",[TotalTime/1000000,Result]).
+  {_Time,{_Result,FDs}} = timer:tc(fun start/3, [ProblemSize,Time,Islands]),
+  [io_util:closeFiles(FDDict) || FDDict <- FDs].
+  %io:format("Total time:   ~p s~nFitness:     ~p~n",[_Time/1000000,_Result]).
 
 
 %% ====================================================================
