@@ -3,7 +3,7 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(concurrent).
--export([run/0, run/1, run/3]).
+-export([run/0, run/1, run/3, init/0]).
 
 %% ====================================================================
 %% API functions

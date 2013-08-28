@@ -3,7 +3,7 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(sequential).
--export([run/3, run/0]).
+-export([run/3, run/0, run/1]).
 
 %% ====================================================================
 %% API functions
@@ -12,6 +12,11 @@
 
 run() ->
   run(40,5000,2).
+
+run([A,B,C]) ->
+  run(list_to_integer(A),
+    list_to_integer(B),
+    list_to_integer(C)).
 
 run(ProblemSize,Time,Islands) ->
   random:seed(erlang:now()),
