@@ -12,7 +12,8 @@
 run(ProblemSize,Time,Islands) ->
   init(Time),
   {_Time,{_Result,Pids}} = timer:tc(fun spawner/3, [ProblemSize,Time,Islands]),
-  cleanup(Pids).
+  cleanup(Pids),
+  ok.
   %io:format("Total time:   ~p s~nFitness:     ~p~n",[_Time/1000000,_Result]).
 
 run([A,B,C]) ->
