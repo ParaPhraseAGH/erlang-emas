@@ -3,7 +3,7 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(sequential).
--export([run/3, run/0, run/1]).
+-export([run/4, run/0, run/1]).
 
 %% ====================================================================
 %% API functions
@@ -11,19 +11,21 @@
 
 
 run() ->
-  run(40,5000,2).
+  file:make_dir("tmp"),
+  run(40,5000,2,"tmp").
 
-run([A,B,C]) ->
+run([A,B,C,D]) ->
   run(list_to_integer(A),
     list_to_integer(B),
-    list_to_integer(C)).
+    list_to_integer(C),
+    list_to_integer(D)).
 
-run(ProblemSize,Time,Islands) ->
+run(ProblemSize,Time,Islands,Path) ->
   random:seed(erlang:now()),
-  {_Time,{_Result,FDs}} = timer:tc(fun start/3, [ProblemSize,Time,Islands]),
+  {_Time,{_Result,FDs}} = timer:tc(fun start/4, [ProblemSize,Time,Islands,Path]),
   [io_util:closeFiles(FDDict) || FDDict <- FDs],
+  %io:format("Total time:   ~p s~nFitness:     ~p~n",[_Time/1000000,_Result]),
   ok.
-  %io:format("Total time:   ~p s~nFitness:     ~p~n",[_Time/1000000,_Result]).
 
 
 %% ====================================================================
@@ -39,9 +41,9 @@ generate(ProblemSize) ->
 %% @spec start() -> float()
 %% @doc Funkcja tworzaca odpowiednia ilosc wysp i przechodzaca do glownej petli.
 %% Zwracany jest koncowy wynik.
-start(ProblemSize,Time,IslandsNr) ->
+start(ProblemSize,Time,IslandsNr,Path) ->
   Islands = [generate(ProblemSize) || _ <- lists:seq(1,IslandsNr)],
-  Path = io_util:genPath("Sequential",ProblemSize,Time,IslandsNr),
+  %Path = io_util:genPath("Sequential",ProblemSize,Time,IslandsNr),
   FDs = [io_util:prepareWriting(filename:join([Path,"isl" ++ integer_to_list(N)])) || N <- lists:seq(1,IslandsNr)],
   timer:send_after(Time,theEnd),
   loop(Islands,FDs).
