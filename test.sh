@@ -1,11 +1,11 @@
 #/bin/bash
 
 ## ilosc wykonanych testow dla kazdej konfiguracji
-N=30
+N=2
 ## dlugosc wektora problemu
-Problem=50
+Problem=10
 ## czas obliczania
-Time=60000
+Time=100
 ## ilosc rdzeni
 TotalCores=`cat /proc/cpuinfo | grep processor | wc -l`
 
@@ -40,15 +40,13 @@ function setCores {
     done
 }
 cd bin
+echo TotalCores
 for (( cores=2; cores<=8; cores = cores*2 ))
 do
     setCores $cores
-    for (( island=2; island<=8; island = island*2 ))
-        do
-            concurrent $Problem $Time $island
-            sequential $Problem $Time $island
-            hybrid $Problem $Time $island
-        done
+    concurrent $Problem $Time 2
+    sequential $Problem $Time 2
+    hybrid $Problem $Time 2
 done
 ## na koniec wlacz wszystkie rdzenie
 setCores TotalCores
