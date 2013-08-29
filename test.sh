@@ -1,7 +1,7 @@
 #/bin/bash
 
 ## ilosc wykonanych testow dla kazdej konfiguracji
-N=2
+N=3
 ## dlugosc wektora problemu
 Problem=10
 ## czas obliczania
@@ -12,19 +12,26 @@ TotalCores=`cat /proc/cpuinfo | grep processor | wc -l`
 function concurrent {
    for (( i=0; i<N; i++ ))
    do
-   	erl -noshell -run concurrent run $1 $2 $3 -run init stop
+    Path=$4"/instance"$i
+    mkdir -p $Path
+   	erl -noshell -run concurrent run $1 $2 $3 $Path -run init stop
    done
 }
 function hybrid {
    for (( i=0; i<N; i++ ))
    do
-   	erl -noshell -run hybrid run $1 $2 $3 -run init stop
+    Path=$4"/instance"$i
+    mkdir -p $Path
+   	erl -noshell -run hybrid run $1 $2 $3 $Path -run init stop
    done
 }
 function sequential {
    for (( i=0; i<N; i++ ))
    do
-   	erl -noshell -run sequential run $1 $2 $3 -run init stop
+    Path=$4"/instance"$i
+    mkdir -p $Path
+   	erl -noshell -run sequential run $1 $2 $3 $Path -run init stop
+   	(( seqInstance++ ))
    done
 }
 function setCores {
@@ -40,13 +47,15 @@ function setCores {
     done
 }
 cd bin
-echo TotalCores
 for (( cores=2; cores<=8; cores = cores*2 ))
 do
-    setCores $cores
-    concurrent $Problem $Time 2
-    sequential $Problem $Time 2
-    hybrid $Problem $Time 2
+    #setCores $cores
+    for (( island=2; island<=8; island = island*2 ))
+    do
+        concurrent $Problem $Time $island "Concurrent/"$island"_"$cores
+        sequential $Problem $Time $island "Sequential/"$island"_"$cores
+        hybrid $Problem $Time $island "Hybrid/"$island"_"$cores
+    done
 done
 ## na koniec wlacz wszystkie rdzenie
-setCores TotalCores
+#setCores TotalCores

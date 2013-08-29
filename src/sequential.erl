@@ -17,8 +17,7 @@ run() ->
 run([A,B,C,D]) ->
   run(list_to_integer(A),
     list_to_integer(B),
-    list_to_integer(C),
-    list_to_integer(D)).
+    list_to_integer(C),D).
 
 run(ProblemSize,Time,Islands,Path) ->
   random:seed(erlang:now()),
