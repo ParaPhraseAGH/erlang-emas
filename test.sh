@@ -31,7 +31,6 @@ function sequential {
     Path=$4"/instance"$i
     mkdir -p $Path
    	erl -noshell -run sequential run $1 $2 $3 $Path -run init stop
-   	(( seqInstance++ ))
    done
 }
 function setCores {
