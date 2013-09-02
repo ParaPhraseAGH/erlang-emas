@@ -18,8 +18,10 @@ function runModel {
 }
 
 cd bin
-for cores in 0x00000010 0x00000170 0x00000255 do
-    for (( island=2; island<=8; island = island*2 )) do
+for cores in 0x0000000A 0x000000AA 0x000000FF
+do
+    for island in 2 4 8
+    do
         runModel $cores concurrent $Problem $Time $island "Concurrent/"$island"_"$cores
         runModel $cores sequential $Problem $Time $island "Sequential/"$island"_"$cores
         runModel $cores hybrid $Problem $Time $island "Hybrid/"$island"_"$cores
