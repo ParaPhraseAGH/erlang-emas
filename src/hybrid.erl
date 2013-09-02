@@ -11,7 +11,7 @@
 
 run(ProblemSize,Time,Islands,Path) ->
   init(Time),
-  {_Time,{_Result,Pids}} = timer:tc(fun spawner/4, [ProblemSize,Time,Islands,Path]),
+  {_Time,Pids} = timer:tc(fun spawner/4, [ProblemSize,Time,Islands,Path]),
   cleanup(Pids),
   ok.
   %io:format("Total time:   ~p s~nFitness:     ~p~n",[_Time/1000000,_Result]).
@@ -23,7 +23,7 @@ run([A,B,C,D]) ->
 
 run() ->
   file:make_dir("tmp"),
-  run(40,5000,2,"tmp").
+  run(40,5000,3,"tmp").
 
 %% ====================================================================
 %% Internal functions
@@ -52,30 +52,24 @@ spawner(ProblemSize,_Time,Islands,Path) ->
   %Path = io_util:genPath("Hybrid",ProblemSize,Time,Islands),
   PidsRefs = [spawn_monitor(hybrid_island,proces,[Path,X,ProblemSize]) || X <- lists:seq(1,Islands)],
   {Pids,_} = lists:unzip(PidsRefs),
-  receiver(Pids,-999999).
+  receiver(Pids).
 
 %% @spec receiver(List1) -> {float() | timeout,List2}
 %% @doc Funkcja odbierajaca wiadomosci od wysp (z wynikami) i obslugujaca je.
 %% Zwracany jest koncowy wynik wraz z lista uruchomionych procesow.
-receiver(Pids,BestRes) ->
+receiver(Pids) ->
   receive
-    {result,Result} ->
-      if Result =< BestRes ->
-        receiver(Pids,BestRes);
-      Result > BestRes ->
-        receiver(Pids,Result)
-      end;
     {agent,_From,Agent} ->
       Index = random:uniform(length(Pids)),
       lists:nth(Index, Pids) ! {agent,self(),Agent},
-      receiver(Pids,BestRes);
+      receiver(Pids);
     theEnd ->
-      {BestRes,Pids};
+      Pids;
     {'DOWN',_Ref,process,Pid,Reason} ->
       io:format("Proces ~p zakonczyl sie z powodu ~p~n",[Pid,Reason]),
       {NewPid,_Ref} = spawn_monitor(hybrid_island,proces,[]),
       io:format("Stawiam kolejna wyspe o Pid ~p~n",[NewPid]),
-      receiver([NewPid|lists:delete(Pid,Pids)],BestRes)
+      receiver([NewPid|lists:delete(Pid,Pids)])
   after config:supervisorTimeout() ->
     {timeout,Pids}
   end.

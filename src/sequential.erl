@@ -45,6 +45,7 @@ start(ProblemSize,Time,IslandsNr,Path) ->
   %Path = io_util:genPath("Sequential",ProblemSize,Time,IslandsNr),
   FDs = [io_util:prepareWriting(filename:join([Path,"isl" ++ integer_to_list(N)])) || N <- lists:seq(1,IslandsNr)],
   timer:send_after(Time,theEnd),
+  timer:send_after(config:writeInterval(),write),
   loop(Islands,FDs).
 
 %% @spec loop(List1) -> float()
@@ -52,6 +53,10 @@ start(ProblemSize,Time,IslandsNr,Path) ->
 %% wynik jest zwracany.
 loop(Islands,FDs) ->
   receive
+    write ->
+      io_util:writeIslands(FDs,Islands),
+      timer:send_after(config:writeInterval(),write),
+      loop(Islands,FDs);
     theEnd ->
       Best = lists:max([misc_util:result(I) || I <- Islands]),
       {Best,FDs}
@@ -60,7 +65,6 @@ loop(Islands,FDs) ->
     Groups = [misc_util:groupBy(fun misc_util:behavior_noMig/1, I) || I <- IslandsMigrated],
     NewGroups = [lists:map(fun evolution:sendToWork/1,I) || I <- Groups],
     NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- NewGroups],
-    io_util:writeIslands(FDs,NewIslands),
     %io_util:print(lists:max([misc_util:result(I) || I <- NewIslands])),
     loop(NewIslands,FDs)
   end.

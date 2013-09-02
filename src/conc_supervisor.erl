@@ -23,7 +23,8 @@ run(King,N,Path,ProblemSize) ->
   [spawn_link(agent,start,[ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
   IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
   FDs = io_util:prepareWriting(IslandPath),
-  _Result = receiver(0,-99999,FDs,config:populationSize(),Arenas), % obliczanie wyniku
+  timer:send_after(config:writeInterval(),write),
+  _Result = receiver(-99999,FDs,config:populationSize(),Arenas), % obliczanie wyniku
   Bar ! Ring ! Port ! {finish,self()},
   %io:format("Island ~p best fitness: ~p~n",[N,_Result]),
   io_util:closeFiles(FDs),
@@ -37,37 +38,33 @@ run(King,N,Path,ProblemSize) ->
 %% @doc Funkcja odbierajaca wiadomosci. Moga to byc meldunki o wyniku
 %% od baru lub rozkaz zamkniecia wyspy od krola. Argumentem jest licznik
 %% odliczajacy kroki do wypisywania, a zwracany jest koncowy wynik.
-receiver(Counter,Best,FDs,Population,Arenas) ->
+receiver(Best,FDs,Population,Arenas) ->
   receive
     {'EXIT',_FromPid,_Reason} ->
-      receiver(Counter,Best,FDs,Population - 1,Arenas);
+      receiver(Best,FDs,Population - 1,Arenas);
     {newAgents,AgentList} ->
       [spawn_link(agent,start,[A|Arenas]) || A <- AgentList],
       Result = misc_util:result(AgentList),
       NewPopulation = Population + length(AgentList),
-      io_util:write(dict:fetch(population,FDs),NewPopulation),
-      Step = config:printStep(),
-      if Counter == Step ->
-        %io:format("Fitness: ~p, Population: ~p~n",[Best,NewPopulation]),
-        NewCounter = 0;
-      Counter /= Step ->
-        NewCounter = Counter + 1
-      end,
       if Best > Result ->
-        receiver(NewCounter,Best,FDs,NewPopulation,Arenas);
+        receiver(Best,FDs,NewPopulation,Arenas);
       Best =< Result ->
-        io_util:write(dict:fetch(fitness,FDs),Result),
-        receiver(NewCounter,Result,FDs,NewPopulation,Arenas)
+        receiver(Result,FDs,NewPopulation,Arenas)
       end;
     {Pid,Ref,emigrant,HisPid} ->
       erlang:unlink(HisPid),
       Pid ! {Ref,ok},
-      receiver(Counter,Best,FDs,Population - 1,Arenas);
+      receiver(Best,FDs,Population - 1,Arenas);
     {Pid,Ref,immigrant,HisPid,HisRef} ->
       erlang:link(HisPid),
       HisPid ! {HisRef,Arenas},
       Pid ! {Ref,ok}, % send confirmation
-      receiver(Counter,Best,FDs,Population + 1,Arenas);
+      receiver(Best,FDs,Population + 1,Arenas);
+    write ->
+      io_util:write(dict:fetch(fitness,FDs),Best),
+      io_util:write(dict:fetch(population,FDs),Population),
+      timer:send_after(config:writeInterval(),write),
+      receiver(Best,FDs,Population,Arenas);
     close ->
       Best
   after config:supervisorTimeout() ->

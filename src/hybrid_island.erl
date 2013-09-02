@@ -18,6 +18,7 @@ proces(Path,N,ProblemSize) ->
   FDs = io_util:prepareWriting(IslandPath),
   Solutions = [genetic:solution(ProblemSize) || _ <- lists:seq(1, config:populationSize())],
   Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
+  timer:send_after(config:writeInterval(),write),
   loop(Agents,FDs).
 
 %% ====================================================================
@@ -29,6 +30,11 @@ proces(Path,N,ProblemSize) ->
 %% kolejnego wyniku i opcjonalnie wyslanie go do supervisora.
 loop(Agents,FDs) ->
   receive
+    write ->
+      io_util:write(dict:fetch(fitness,FDs),misc_util:result(Agents)),
+      io_util:write(dict:fetch(population,FDs),length(Agents)),
+      timer:send_after(config:writeInterval(),write),
+      loop(Agents,FDs);
     {agent,_Pid,A} ->
       loop([A|Agents],FDs);
     {finish,_Pid} ->
@@ -37,14 +43,6 @@ loop(Agents,FDs) ->
     Groups = misc_util:groupBy(fun misc_util:behavior/1, Agents),
     NewGroups = [evolution:sendToWork(G) || G <- Groups],
     NewAgents = misc_util:shuffle(lists:flatten(NewGroups)),
-    Result = misc_util:result(NewAgents),
-    io_util:write(dict:fetch(fitness,FDs),Result),
-    io_util:write(dict:fetch(population,FDs),length(NewAgents)),
-    if Result /= islandEmpty ->
-      whereis(supervisor) ! {result,Result};
-      Result == islandEmpty ->
-        donothing
-    end,
     %io_util:print(Result,Groups),
     loop(NewAgents,FDs)
   end.

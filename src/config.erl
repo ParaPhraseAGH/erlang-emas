@@ -41,6 +41,8 @@ migrationProbability() -> 0.01.
 %% @doc Liczba agentow, na ktorych czeka ring aby rozpoczac walke (kazdy z kazdym)
 fightNumber() -> 40.
 
+%% @doc Co ile milisekund wpisywany jest wynik do pliku
+writeInterval() -> 1000.
 %% @doc Co ile generacji wypisywany jest fitness
 printStep() -> 1000.
 %% @doc Ilosc milisekund, ktore czeka supervisor wyspy na jakas wiadomosc. Jak czas minie zamyka wyspe.
