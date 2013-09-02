@@ -70,21 +70,49 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
 %% ktorzy powinni ulec przesiedleniu, dokonywana migracja i zwracana
 %% przetworzona lista wysp.
 doMigrate(Islands) ->
-  EmigrantsNr = config:migrationProbability() * config:populationSize(),
-  if EmigrantsNr == 0 ->
-    Islands;
-    EmigrantsNr < 1 ->
-      case random:uniform() < EmigrantsNr of
-        true -> migrate(1,Islands);
-        false -> Islands
-      end;
-    EmigrantsNr >= 1 ->
-      migrate(trunc(EmigrantsNr),Islands)
-  end.
+  {Gathered,NewIslands} = gather(Islands,[],[]),
+  Shuffled = misc_util:shuffle(Gathered),
+  append(Shuffled,NewIslands,[],length(Shuffled) div length(NewIslands)).
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+
+append(Immigrants,[Island],Acc,_) ->
+  if Immigrants == [] ->
+    NewIsland = Island;
+  Immigrants /= [] ->
+    NewIsland = [Immigrants|Island]
+  end,
+  [lists:flatten(NewIsland)|Acc];
+append(Immigrants,[Island|T],Acc,N) ->
+  {A,NewImmigrants} = lists:split(N,Immigrants),
+  if A == [] ->
+    NewIslands = [Island|Acc];
+  A /= [] ->
+    NewIslands = [lists:flatten([A|Island])|Acc]
+  end,
+  append(NewImmigrants,T,NewIslands,N).
+
+gather([],Islands,Emigrants) ->
+  {Emigrants,Islands};
+gather([I|T],Acc,Emigrants) ->
+  N = config:migrationProbability() * length(I),
+  if N == 0 ->
+    gather(T,[I|Acc],Emigrants);
+  N < 1 ->
+    case random:uniform() < N of
+      true ->
+        {NewEmigrants,NewIsland} = lists:split(1,I),
+        gather(T,[NewIsland|Acc],[NewEmigrants|Emigrants]);
+      false ->
+        gather(T,[I|Acc],Emigrants)
+    end;
+  N >= 1 ->
+    {NewEmigrants,NewIsland} = lists:split(trunc(N),I),
+    gather(T,[NewIsland|Acc],[NewEmigrants|Emigrants])
+  end.
+
 
 %% @spec oneFightsRest(A,ToFight,Fought) -> [A2,Rest]
 %% @doc Funkcja uruchamiajaca funkcje fightTwo dla agenta A oraz
@@ -94,14 +122,6 @@ oneFightsRest(Agent,[],Fought) -> {Agent,Fought};
 oneFightsRest(Agent,[H|ToFight],Fought) ->
   [NewAgent,NewH]  = doFight({Agent,H}),
   oneFightsRest(NewAgent,ToFight,[NewH|Fought]).
-
-%% @spec migrate(int(),List1) -> List2
-%% @doc Funkcja przesiedlacjaca N osobnikow z kazdej wyspy na inna
-%% (moze to byc ta sama wyspa). Zwracana jest przetworzona lista wysp.
-migrate(N,Islands) ->
-  {Agents,NewIslands} = lists:unzip([lists:split(N,I)|| I <- Islands, I /= []]),
-  Shuffled = misc_util:shuffle(lists:append(Agents)),
-  misc_util:multiAppend(N,Shuffled,NewIslands).
 
 %% @spec optionalPairs(List1,List2) -> List3
 %% @doc Funkcja dzielaca podana liste agentow na pary. Tail recursion.

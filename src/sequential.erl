@@ -3,7 +3,7 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(sequential).
--export([run/4, run/0, run/1]).
+-export([run/4, run/0, run/1, generate/1]).
 
 %% ====================================================================
 %% API functions
