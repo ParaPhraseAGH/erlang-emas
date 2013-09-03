@@ -55,6 +55,7 @@ loop(Islands,FDs) ->
   receive
     write ->
       io_util:writeIslands(FDs,Islands),
+      io_util:printSeq(Islands),
       timer:send_after(config:writeInterval(),write),
       loop(Islands,FDs);
     theEnd ->

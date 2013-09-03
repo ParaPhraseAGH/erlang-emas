@@ -63,6 +63,7 @@ receiver(Best,FDs,Population,Arenas) ->
     write ->
       io_util:write(dict:fetch(fitness,FDs),Best),
       io_util:write(dict:fetch(population,FDs),Population),
+      io:format("Island ~p Fitness ~p Population ~p~n",[self(),Best,Population]),
       timer:send_after(config:writeInterval(),write),
       receiver(Best,FDs,Population,Arenas);
     close ->

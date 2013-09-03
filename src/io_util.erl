@@ -2,7 +2,7 @@
 %% @version 1.0
 
 -module(io_util).
--export([print/1, prepareWriting/1, closeFiles/1, write/2, writeIslands/2, print/2, genPath/4]).
+-export([printSeq/1, prepareWriting/1, closeFiles/1, write/2, writeIslands/2, print/2, genPath/4]).
 
 %% ====================================================================
 %% API functions
@@ -28,10 +28,10 @@ writeIslands([FD|FDs],[I|Islands]) ->
   write(dict:fetch(population,FD),length(I)),
   writeIslands(FDs,Islands).
 
-%% @spec print(float()) -> ok
-%% @doc Funkcja wypisujaca fitness na ekran
-print(Fitness) ->
-  io:format("~nProcess: ~p, Fitness: ~p~n",[self(),Fitness]).
+printSeq([]) -> ok;
+printSeq([Island|T]) ->
+  io:format("Island ~p Fitness ~p Population ~p Energy ~p~n",[length(T),misc_util:result(Island),length(Island),sumEnergy(Island)]),
+  printSeq(T).
 
 print(Fitness,Groups) ->
   io:format("~nProcess: ~p, Fitness: ~p~n",[self(),Fitness]),

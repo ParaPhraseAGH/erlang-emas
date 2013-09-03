@@ -72,27 +72,35 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
 doMigrate(Islands) ->
   {Gathered,NewIslands} = gather(Islands,[],[]),
   Shuffled = misc_util:shuffle(Gathered),
-  append(Shuffled,NewIslands,[],length(Shuffled) div length(NewIslands)).
+  append(Shuffled,NewIslands,[]).
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
-append(Immigrants,[Island],Acc,_) ->
+append(Immigrants,[Island],Acc) ->
   if Immigrants == [] ->
     NewIsland = Island;
-  Immigrants /= [] ->
-    NewIsland = [Immigrants|Island]
+    Immigrants /= [] ->
+      NewIsland = [Immigrants|Island]
   end,
   [lists:flatten(NewIsland)|Acc];
-append(Immigrants,[Island|T],Acc,N) ->
-  {A,NewImmigrants} = lists:split(N,Immigrants),
-  if A == [] ->
-    NewIslands = [Island|Acc];
-  A /= [] ->
-    NewIslands = [lists:flatten([A|Island])|Acc]
-  end,
-  append(NewImmigrants,T,NewIslands,N).
+append(Immigrants,[Island|T],Acc) ->
+  N = length(Immigrants) / length([Island|T]),
+  if N < 1 ->
+    case random:uniform() < N of
+      true ->
+        {A,NewImmigrants} = lists:split(1,Immigrants),
+        NewIslands = [lists:append(A,Island)|Acc],
+        append(NewImmigrants,T,NewIslands);
+      false ->
+        append(Immigrants,T,[Island|Acc])
+    end;
+  N >= 1 ->
+    {A,NewImmigrants} = lists:split(trunc(N),Immigrants),
+    NewIslands = [lists:append(A,Island)|Acc],
+    append(NewImmigrants,T,NewIslands)
+  end.
 
 gather([],Islands,Emigrants) ->
   {Emigrants,Islands};
@@ -103,8 +111,8 @@ gather([I|T],Acc,Emigrants) ->
   N < 1 ->
     case random:uniform() < N of
       true ->
-        {NewEmigrants,NewIsland} = lists:split(1,I),
-        gather(T,[NewIsland|Acc],[NewEmigrants|Emigrants]);
+        {[NewEmigrant],NewIsland} = lists:split(1,I), % length(I) > 0 because N > 0
+        gather(T,[NewIsland|Acc],[NewEmigrant|Emigrants]);
       false ->
         gather(T,[I|Acc],Emigrants)
     end;
