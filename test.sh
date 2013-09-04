@@ -1,11 +1,11 @@
 #/bin/bash
 
 ## ilosc wykonanych testow dla kazdej konfiguracji
-N=5
+N=3
 ## dlugosc wektora problemu
 Problem=20
 ## czas obliczania
-Time=10000
+Time=6000
 ## ilosc rdzeni
 TotalCores=`cat /proc/cpuinfo | grep processor | wc -l`
 
@@ -18,13 +18,13 @@ function runModel {
    done
 }
 
-cd bin
+cd ebin
 for cores in 0x0000000A 0x000000AA 0x000000FF
 do
     for island in 2 4 8
     do
-        #runModel $cores concurrent $Problem $Time $island "Concurrent/"$island"_"$cores
+        runModel $cores concurrent $Problem $Time $island "Concurrent/"$island"_"$cores
         runModel $cores sequential $Problem $Time $island "Sequential/"$island"_"$cores
-        #runModel $cores hybrid $Problem $Time $island "Hybrid/"$island"_"$cores
+        runModel $cores hybrid $Problem $Time $island "Hybrid/"$island"_"$cores
     done
 done

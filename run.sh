@@ -17,7 +17,7 @@ function runModel {
    done
 }
 
-cd bin
+cd ebin
 for cores in 0x0000000A 0x000000AA 0x000000FF
 do
     for island in 2 4 8
