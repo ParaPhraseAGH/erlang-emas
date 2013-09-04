@@ -33,7 +33,7 @@ loop(Agents,FDs) ->
     write ->
       io_util:write(dict:fetch(fitness,FDs),misc_util:result(Agents)),
       io_util:write(dict:fetch(population,FDs),length(Agents)),
-      io:format("Island ~p Fitness ~p Population ~p~n",[self(),misc_util:result(Agents),length(Agents)]),
+      %io:format("Island ~p Fitness ~p Population ~p~n",[self(),misc_util:result(Agents),length(Agents)]),
       timer:send_after(config:writeInterval(),write),
       loop(Agents,FDs);
     {agent,_Pid,A} ->
@@ -44,6 +44,5 @@ loop(Agents,FDs) ->
     Groups = misc_util:groupBy(fun misc_util:behavior/1, Agents),
     NewGroups = [evolution:sendToWork(G) || G <- Groups],
     NewAgents = misc_util:shuffle(lists:flatten(NewGroups)),
-    %io_util:print(Result,Groups),
     loop(NewAgents,FDs)
   end.

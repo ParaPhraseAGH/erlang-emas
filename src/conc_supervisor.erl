@@ -26,7 +26,6 @@ run(King,N,Path,ProblemSize) ->
   timer:send_after(config:writeInterval(),write),
   _Result = receiver(-99999,FDs,config:populationSize(),Arenas), % obliczanie wyniku
   Bar ! Ring ! Port ! {finish,self()},
-  %io:format("Island ~p best fitness: ~p~n",[N,_Result]),
   io_util:closeFiles(FDs),
   exit(killAllProcesses).
 
@@ -53,7 +52,7 @@ receiver(Best,FDs,Population,Arenas) ->
       end;
     {Pid,Ref,emigrant,HisPid} ->
       erlang:unlink(HisPid),
-      Pid ! {Ref,ok},
+      Pid ! {Ref,ok}, % send confirmation
       receiver(Best,FDs,Population - 1,Arenas);
     {Pid,Ref,immigrant,HisPid,HisRef} ->
       erlang:link(HisPid),
@@ -63,7 +62,7 @@ receiver(Best,FDs,Population,Arenas) ->
     write ->
       io_util:write(dict:fetch(fitness,FDs),Best),
       io_util:write(dict:fetch(population,FDs),Population),
-      io:format("Island ~p Fitness ~p Population ~p~n",[self(),Best,Population]),
+      %io:format("Island ~p Fitness ~p Population ~p~n",[self(),Best,Population]),
       timer:send_after(config:writeInterval(),write),
       receiver(Best,FDs,Population,Arenas);
     close ->

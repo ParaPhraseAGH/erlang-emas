@@ -40,7 +40,7 @@ init(Time) ->
 %% @doc Funkcja sprzatajaca po zakonczonym algorytmie, dostajaca jako
 %% argument liste uruchomionych ciagle procesow.
 cleanup(Pids) ->
-  ok = misc_util:rambo(Pids),
+  [Pid ! {finish,self()} || Pid <- Pids],
   misc_util:checkIfDead(Pids),
   misc_util:clearInbox(),
   unregister(supervisor).

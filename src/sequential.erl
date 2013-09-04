@@ -55,7 +55,7 @@ loop(Islands,FDs) ->
   receive
     write ->
       io_util:writeIslands(FDs,Islands),
-      io_util:printSeq(Islands),
+      %io_util:printSeq(Islands),
       timer:send_after(config:writeInterval(),write),
       loop(Islands,FDs);
     theEnd ->
@@ -66,7 +66,6 @@ loop(Islands,FDs) ->
     Groups = [misc_util:groupBy(fun misc_util:behavior_noMig/1, I) || I <- IslandsMigrated],
     NewGroups = [lists:map(fun evolution:sendToWork/1,I) || I <- Groups],
     NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- NewGroups],
-    %io_util:print(lists:max([misc_util:result(I) || I <- NewIslands])),
     loop(NewIslands,FDs)
   end.
 

@@ -2,8 +2,7 @@
 %% @version 1.0
 
 -module(misc_util).
--export([groupBy/2, shuffle/1, behavior/1, behavior_noMig/1, multiAppend/3,
-  rambo/1, checkIfDead/1, clearInbox/0, result/1]).
+-export([groupBy/2, shuffle/1, behavior/1, behavior_noMig/1, checkIfDead/1, clearInbox/0, result/1]).
 
 %% ====================================================================
 %% API functions
@@ -38,7 +37,7 @@ behavior({_, _, Energy}) ->
              end
   end.
 
-%% @spec behavior(Agent) -> death | reproduction | fight
+%% @spec behavior_noMig(Agent) -> death | reproduction | fight
 %% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie
 %% jego energii.
 behavior_noMig({_,_,0}) ->
@@ -49,24 +48,8 @@ behavior_noMig({_, _, Energy}) ->
     false -> fight
   end.
 
-%% @spec multiAppend(int(),List1,List2) -> List3
-%% @doc Funkcja dorzucajaca N agentow z List1 do kazdej z wysp w List2.
-%% Zwracana jest lista wysp z dodanymi agentami.
-multiAppend(_,[],_) -> [];
-multiAppend(N,Shuffled,[I|Rest]) ->
-  {Immigrants,Tail} = lists:split(N,Shuffled),
-  [lists:append(I,Immigrants) | multiAppend(N,Tail,Rest)].
-
-%% @spec rambo(List1) -> ok
-%% @doc Funkcja zabijajaca wszystko, co znajdzie na przeslanej liscie.
-rambo([])->
-  ok;
-rambo([H|T]) ->
-  H ! {finish,self()},
-  rambo(T).
-
 %% @spec checkIfDead(List1) -> ok
-%% @doc Funkcja upewniajaca sie, ze wszystkie wyspy zostaly zakonczone
+%% @doc Funkcja upewniajaca sie, ze wszystkie monitorowane procesy zostaly zakonczone
 checkIfDead([]) ->
   ok;
 checkIfDead(Pids) ->
@@ -74,7 +57,7 @@ checkIfDead(Pids) ->
     {'DOWN',_Ref,process,Pid,_Reason} ->
       checkIfDead(lists:delete(Pid,Pids))
   after 1000 ->
-    io:format("Nie wszystkie wyspy sie zakonczyly~n"),
+    io:format("Not all dead~n"),
     timeout
   end.
 
