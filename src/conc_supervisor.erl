@@ -3,18 +3,18 @@
 %% @doc Modul odpowiedzialny za logike pojedynczej wyspy.
 
 -module(conc_supervisor).
--export([run/4, sendAgents/2, unlinkAgent/2, linkAgent/3, close/1]).
+-behaviour(gen_server).
+-export([start/4, sendAgents/2, unlinkAgent/2, linkAgent/3, close/1,
+  init/1, terminate/2, handle_call/3, handle_cast/2, handle_info/2, code_change/3]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-%% @spec run(Pid) -> ok
-%% @doc Funkcja uruchamiajaca supervisora dla wyspy. Argumentem jest pid
-%% tzw. krola, czyli procesu spawnujacego wyspy i czekajacego na wynik (zwykle shell).
-%% Funkcja spawnuje areny i agentow, czeka na wiadomosci oraz odsyla
-%% koncowy wynik do krola. Na koniec nastepuje zamkniecie aren i sprzatanie.
-run(King,N,Path,ProblemSize) ->
+start(King,N,Path,ProblemSize) ->
+  gen_server:start(?MODULE,[King,N,Path,ProblemSize],[]).
+
+init([King,N,Path,ProblemSize]) ->
   process_flag(trap_exit, true),
   Port = spawn(arenas,startPort,[self(),King]),
   Ring = spawn(arenas,startRing,[self()]),
@@ -24,77 +24,52 @@ run(King,N,Path,ProblemSize) ->
   IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
   FDs = io_util:prepareWriting(IslandPath),
   timer:send_after(config:writeInterval(),write),
-  _Result = receiver(-99999,FDs,config:populationSize(),Arenas), % obliczanie wyniku
-  [arenas:close(Pid) || Pid <- [Bar,Ring,Port]],
+  {ok,{-99999,FDs,config:populationSize(),Arenas},config:supervisorTimeout()}.
+
+terminate(_Reason,{_Best,FDs,_,Arenas}) ->
+  [arenas:close(Pid) || Pid <- Arenas],
   io_util:closeFiles(FDs),
   exit(killAllProcesses).
 
 sendAgents(Pid,Agents) ->
-  Pid ! {newAgents,Agents}.
+  gen_server:cast(Pid,{newAgents,Agents}).
 
 unlinkAgent(Pid,AgentPid) ->
-  Ref = erlang:monitor(process, Pid),
-  Pid ! {self(),Ref,emigrant,AgentPid},
-  receive
-    {Ref,ok} ->
-      erlang:demonitor(Ref, [flush]),
-      ok;
-    {'DOWN', Ref, process, Pid, _Reason} ->
-      supervisorDown
-  end.
+  catch gen_server:call(Pid,{emigrant,AgentPid}).
 
 linkAgent(Pid,AgentPid,AgentRef) ->
-  Ref = erlang:monitor(process, Pid),
-  Pid ! {self(),Ref,immigrant,AgentPid,AgentRef},
-  receive
-    {Ref,ok} ->
-      erlang:demonitor(Ref, [flush]);
-    {'DOWN', Ref, process, Pid, _Reason} ->
-      exit(AgentPid,finished)
-  end.
+  catch gen_server:call(Pid,{immigrant,AgentPid,AgentRef}).
+
+handle_call({emigrant,AgentPid},_From,{Best,FDs,Population,Arenas}) ->
+  erlang:unlink(AgentPid),
+  {reply,ok,{Best,FDs,Population - 1,Arenas}};
+handle_call({immigrant,AgentPid,AgentRef},_From,{Best,FDs,Population,Arenas}) ->
+  erlang:link(AgentPid),
+  AgentPid ! {AgentRef,Arenas},
+  {reply,ok,{Best,FDs,Population + 1,Arenas}}.
+
+
+handle_cast({newAgents,AgentList},{Best,FDs,Population,Arenas}) ->
+  [spawn_link(agent,start,[A|Arenas]) || A <- AgentList],
+  Result = misc_util:result(AgentList),
+  NewPopulation = Population + length(AgentList),
+  {noreply,{lists:max([Result,Best]),FDs,NewPopulation,Arenas},config:supervisorTimeout()}.
+
+handle_info({'EXIT',_,_},{Best,FDs,Population,Arenas}) ->
+  {noreply,{Best,FDs,Population - 1,Arenas},config:supervisorTimeout()};
+handle_info(write,{Best,FDs,Population,Arenas}) ->
+  io_util:write(dict:fetch(fitness,FDs),Best),
+  io_util:write(dict:fetch(population,FDs),Population),
+  %io:format("Island ~p Fitness ~p Population ~p~n",[self(),Best,Population]),
+  timer:send_after(config:writeInterval(),write),
+  {noreply,{Best,FDs,Population,Arenas},config:supervisorTimeout()};
+handle_info(timeout,State) ->
+  {stop,timeout,State};
+handle_info(close,State) ->
+  {stop,normal,State}.
 
 close(Pid) ->
-  Pid ! close.
+  gen_server:cast(Pid,close).
 
-%% ====================================================================
-%% Internal functions
-%% ====================================================================
-
-%% @spec receiver(int) -> float()
-%% @doc Funkcja odbierajaca wiadomosci. Moga to byc meldunki o wyniku
-%% od baru lub rozkaz zamkniecia wyspy od krola. Argumentem jest licznik
-%% odliczajacy kroki do wypisywania, a zwracany jest koncowy wynik.
-receiver(Best,FDs,Population,Arenas) ->
-  receive
-    {'EXIT',_FromPid,_Reason} ->
-      receiver(Best,FDs,Population - 1,Arenas);
-    {newAgents,AgentList} ->
-      [spawn_link(agent,start,[A|Arenas]) || A <- AgentList],
-      Result = misc_util:result(AgentList),
-      NewPopulation = Population + length(AgentList),
-      if Best > Result ->
-        receiver(Best,FDs,NewPopulation,Arenas);
-      Best =< Result ->
-        receiver(Result,FDs,NewPopulation,Arenas)
-      end;
-    {Pid,Ref,emigrant,HisPid} ->
-      erlang:unlink(HisPid),
-      Pid ! {Ref,ok}, % send confirmation
-      receiver(Best,FDs,Population - 1,Arenas);
-    {Pid,Ref,immigrant,HisPid,HisRef} ->
-      erlang:link(HisPid),
-      HisPid ! {HisRef,Arenas},
-      Pid ! {Ref,ok}, % send confirmation
-      receiver(Best,FDs,Population + 1,Arenas);
-    write ->
-      io_util:write(dict:fetch(fitness,FDs),Best),
-      io_util:write(dict:fetch(population,FDs),Population),
-      %io:format("Island ~p Fitness ~p Population ~p~n",[self(),Best,Population]),
-      timer:send_after(config:writeInterval(),write),
-      receiver(Best,FDs,Population,Arenas);
-    close ->
-      Best
-  after config:supervisorTimeout() ->
-    io:format("Timeout na wyspie ~p~n",[self()]),
-    exit(timeout)
-  end.
+code_change(_OldVsn,State,_Extra) ->
+  {ok, State}.

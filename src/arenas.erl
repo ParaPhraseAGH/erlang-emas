@@ -131,9 +131,12 @@ port(Supervisor,AllSupervisors) ->
       NewSupervisor = lists:nth(Index,AllSupervisors),
       case conc_supervisor:unlinkAgent(Supervisor,Pid) of
         ok -> ok;
-        supervisorDown -> port(Supervisor,AllSupervisors)
+        _ -> port(Supervisor,AllSupervisors)
       end,
-      conc_supervisor:linkAgent(NewSupervisor,Pid,HisRef),
+      case conc_supervisor:linkAgent(NewSupervisor,Pid,HisRef) of
+        ok -> ok;
+        _ ->  exit(Pid,finished)
+      end,
       port(Supervisor,AllSupervisors);
     {finish,Supervisor} ->
       cleaner()

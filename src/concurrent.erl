@@ -3,27 +3,27 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(concurrent).
--export([run/0, run/1, run/4, getAddresses/1]).
+-export([start/0, start/1, start/4, getAddresses/1]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-run(ProblemSize,Time,Islands,Path) ->
+start(ProblemSize,Time,Islands,Path) ->
   init(),
   {_Time,_} = timer:tc(fun spawner/4, [ProblemSize,Time,Islands,Path]),
   cleanup(),
   ok.
   %io:format("Total time:   ~p s~n",[_Time/1000000]).
 
-run([A,B,C,D]) ->
-  run(list_to_integer(A),
+start([A,B,C,D]) ->
+  start(list_to_integer(A),
     list_to_integer(B),
       list_to_integer(C),D).
 
-run() ->
+start() ->
   file:make_dir("tmp"),
-  run(40,60000,2,"tmp").
+  start(40,5000,2,"tmp").
 
 getAddresses(Pid) ->
   Ref = erlang:monitor(process, Pid),
@@ -49,7 +49,7 @@ getAddresses(Pid) ->
 %% oraz czekajaca na koncowy wynik od nich.
 spawner(ProblemSize,Time,Islands,Path) ->
   %Path = io_util:genPath("Concurrent",ProblemSize,Time,Islands),
-  Supervisors = [spawn(conc_supervisor,run,[self(),X,Path,ProblemSize]) || X <- lists:seq(1,Islands)],
+  Supervisors = [conc_supervisor:start(self(),X,Path,ProblemSize) || X <- lists:seq(1,Islands)],
   giveAddresses(Supervisors,Islands),
   timer:sleep(Time),
   [conc_supervisor:close(Pid) || Pid <- Supervisors],
