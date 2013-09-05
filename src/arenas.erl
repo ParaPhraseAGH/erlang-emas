@@ -2,7 +2,7 @@
 %% @version 1.0
 
 -module(arenas).
--export([startBar/1, startRing/1, startPort/2]).
+-export([startBar/1, startRing/1, startPort/2, call/2, close/1]).
 
 %% ====================================================================
 %% API functions
@@ -19,25 +19,35 @@ startRing(_Supervisor) ->
 %% krola o liste supervisorow, a pozniej nastepuje czekanie na odpowiedz.
 startPort(Supervisor,King) ->
   random:seed(erlang:now()),
-  Ref = erlang:monitor(process, King),
-  King ! {self(),Ref,getAdresses},
-  receive
-    {Ref,AllSupervisors} ->
-      erlang:demonitor(Ref, [flush]),
-      port(Supervisor,AllSupervisors);
-    {'DOWN', Ref, process, King, Reason} ->
-      io:format("The king is dead, long live the king!~n",[]),
-      erlang:error(Reason)
-  after 1000 ->
-    io:format("Port ~p nie dostal wiadomosci z adresami~n",[self()]),
-    timeout
-  end.
+  AllSupervisors = concurrent:getAddresses(King),
+  port(Supervisor,AllSupervisors).
 
 %% @spec start(SupervisorPid) -> ok
 %% @doc Funkcja startujaca bar.
 startBar(Supervisor) ->
   random:seed(erlang:now()),
   bar(Supervisor,[]).
+
+%% @spec call(Message,ArenaPid) -> Answer
+%% @doc Funkcja wysyla podana wiadomosc do danej areny i zwraca otrzymana
+%% odpowiedz.
+call(Msg,ArenaPid) ->
+  Ref = erlang:monitor(process, ArenaPid),
+  ArenaPid ! {self(), Ref, Msg},
+  receive
+    {Ref, Ans} ->
+      erlang:demonitor(Ref, [flush]),
+      Ans;
+    {'DOWN', Ref, process, ArenaPid, Reason} ->
+      io:format("Arena do ktorej chce pisac proces ~p nie istnieje!~n",[self()]),
+      erlang:error(Reason)
+  after config:processTimeout() -> % docelowo nie bedzie timeoutu
+    io:format("Proces ~p nie doczekal sie odpowiedzi od areny ~p!~n",[self(),ArenaPid]),
+    exit(timeout)
+  end.
+
+close(Pid) ->
+  Pid ! {finish,self()}.
 
 %% ====================================================================
 %% Internal functions
@@ -57,7 +67,7 @@ bar(Supervisor,Waitlist) ->
           [{_,_,NewEnergy1},{_,_,NewEnergy2},NewAgent1,NewAgent2] = evolution:doReproduce({Agent1,Agent2}),
           Pid1 ! {Ref1,NewEnergy1},
           Pid2 ! {Ref2,NewEnergy2},
-          Supervisor ! {newAgents,[NewAgent1,NewAgent2]},
+          conc_supervisor:sendAgents(Supervisor,[NewAgent1,NewAgent2]),
           bar(Supervisor,[])
       end;
     {finish,_Supervisor} ->
@@ -73,7 +83,7 @@ bar(Supervisor,Waitlist) ->
         io:format("Bar ~p reprodukuje pojedynczego osobnika!~n",[self()]),
         [{_,_,NewEnergy},NewAgent] = evolution:doReproduce({Agent}),
         Pid ! {Ref,NewEnergy},
-        Supervisor ! {newAgents,[NewAgent]},
+        conc_supervisor:sendAgents(Supervisor,[NewAgent]),
         bar(Supervisor,[])
     end
   end.
@@ -119,35 +129,14 @@ port(Supervisor,AllSupervisors) ->
     {Pid, HisRef, emigration} ->
       Index = random:uniform(length(AllSupervisors)),
       NewSupervisor = lists:nth(Index,AllSupervisors),
-      case emigrate(Supervisor,Pid) of
+      case conc_supervisor:unlinkAgent(Supervisor,Pid) of
         ok -> ok;
         supervisorDown -> port(Supervisor,AllSupervisors)
       end,
-      immigrate(NewSupervisor,Pid,HisRef),
+      conc_supervisor:linkAgent(NewSupervisor,Pid,HisRef),
       port(Supervisor,AllSupervisors);
     {finish,Supervisor} ->
       cleaner()
-  end.
-
-immigrate(Supervisor,HisPid,HisRef) ->
-  Ref = erlang:monitor(process, Supervisor),
-  Supervisor ! {self(),Ref,immigrant,HisPid,HisRef},
-  receive
-    {Ref,ok} ->
-      erlang:demonitor(Ref, [flush]);
-    {'DOWN', Ref, process, Supervisor, _Reason} ->
-      exit(HisPid,finished)
-  end.
-
-emigrate(Supervisor,HisPid) ->
-  Ref = erlang:monitor(process, Supervisor),
-  Supervisor ! {self(),Ref,emigrant,HisPid},
-  receive
-    {Ref,ok} ->
-      erlang:demonitor(Ref, [flush]),
-      ok;
-    {'DOWN', Ref, process, Supervisor, _Reason} ->
-      supervisorDown
   end.
 
 

@@ -3,7 +3,7 @@
 %% @doc Modul odpowiedzialny za logike pojedynczej wyspy.
 
 -module(conc_supervisor).
--export([run/4]).
+-export([run/4, sendAgents/2, unlinkAgent/2, linkAgent/3, close/1]).
 
 %% ====================================================================
 %% API functions
@@ -25,9 +25,36 @@ run(King,N,Path,ProblemSize) ->
   FDs = io_util:prepareWriting(IslandPath),
   timer:send_after(config:writeInterval(),write),
   _Result = receiver(-99999,FDs,config:populationSize(),Arenas), % obliczanie wyniku
-  Bar ! Ring ! Port ! {finish,self()},
+  [arenas:close(Pid) || Pid <- [Bar,Ring,Port]],
   io_util:closeFiles(FDs),
   exit(killAllProcesses).
+
+sendAgents(Pid,Agents) ->
+  Pid ! {newAgents,Agents}.
+
+unlinkAgent(Pid,AgentPid) ->
+  Ref = erlang:monitor(process, Pid),
+  Pid ! {self(),Ref,emigrant,AgentPid},
+  receive
+    {Ref,ok} ->
+      erlang:demonitor(Ref, [flush]),
+      ok;
+    {'DOWN', Ref, process, Pid, _Reason} ->
+      supervisorDown
+  end.
+
+linkAgent(Pid,AgentPid,AgentRef) ->
+  Ref = erlang:monitor(process, Pid),
+  Pid ! {self(),Ref,immigrant,AgentPid,AgentRef},
+  receive
+    {Ref,ok} ->
+      erlang:demonitor(Ref, [flush]);
+    {'DOWN', Ref, process, Pid, _Reason} ->
+      exit(AgentPid,finished)
+  end.
+
+close(Pid) ->
+  Pid ! close.
 
 %% ====================================================================
 %% Internal functions

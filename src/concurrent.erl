@@ -3,7 +3,7 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(concurrent).
--export([run/0, run/1, run/4]).
+-export([run/0, run/1, run/4, getAddresses/1]).
 
 %% ====================================================================
 %% API functions
@@ -25,6 +25,21 @@ run() ->
   file:make_dir("tmp"),
   run(40,60000,2,"tmp").
 
+getAddresses(Pid) ->
+  Ref = erlang:monitor(process, Pid),
+  Pid ! {self(),Ref,getAdresses},
+  receive
+    {Ref,AllSupervisors} ->
+      erlang:demonitor(Ref, [flush]),
+      AllSupervisors;
+    {'DOWN', Ref, process, Pid, Reason} ->
+      io:format("The king is dead, long live the king!~n",[]),
+      erlang:error(Reason)
+  after 1000 ->
+    io:format("Port ~p nie dostal wiadomosci z adresami~n",[self()]),
+    erlang:error(timeout)
+  end.
+
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
@@ -35,20 +50,20 @@ run() ->
 spawner(ProblemSize,Time,Islands,Path) ->
   %Path = io_util:genPath("Concurrent",ProblemSize,Time,Islands),
   Supervisors = [spawn(conc_supervisor,run,[self(),X,Path,ProblemSize]) || X <- lists:seq(1,Islands)],
-  respondToPorts(Supervisors,Islands),
+  giveAddresses(Supervisors,Islands),
   timer:sleep(Time),
-  [Pid ! close || Pid <- Supervisors],
+  [conc_supervisor:close(Pid) || Pid <- Supervisors],
   finished.
 
-%% @spec respondToPorts(List1,int()) -> ok
+%% @spec giveAdresses(List1,int()) -> ok
 %% @doc Funkcja odpowiada wszystkim portom wysylajac im liste wszystkich aren.
 %% Po poinformowaniu wszystkich portow (liczba podana w arg), funkcja zwraca ok.
-respondToPorts(_,0) -> ok;
-respondToPorts(Supervisors,NoIslands) ->
+giveAddresses(_,0) -> ok;
+giveAddresses(Supervisors,NoIslands) ->
   receive
     {Pid,Ref,getAdresses} ->
       Pid ! {Ref,Supervisors},
-      respondToPorts(Supervisors,NoIslands - 1)
+      giveAddresses(Supervisors,NoIslands - 1)
   after config:supervisorTimeout() ->
     erlang:error(noMsgFromPorts),
     timeout

@@ -40,31 +40,13 @@ loop(Agent,Arenas) ->
       exit(dying);
     reproduction ->
       {Solution,Fitness,_} = Agent,
-      NewEnergy = call(Agent,Arenas#arenas.reproduction),
+      NewEnergy = arenas:call(Agent,Arenas#arenas.reproduction),
       loop({Solution,Fitness,NewEnergy},Arenas);
     fight ->
       {Solution,Fitness,_} = Agent,
-      NewEnergy = call(Agent,Arenas#arenas.fight),
+      NewEnergy = arenas:call(Agent,Arenas#arenas.fight),
       loop({Solution,Fitness,NewEnergy},Arenas);
     migration ->
-      [Ring,Bar,Port] = call(emigration,Arenas#arenas.migration),
+      [Ring,Bar,Port] = arenas:call(emigration,Arenas#arenas.migration),
       loop(Agent,#arenas{fight = Ring, reproduction = Bar, migration = Port})
-  end.
-
-%% @spec call(Message,ArenaPid) -> Answer
-%% @doc Funkcja wysyla podana wiadomosc do danej areny i zwraca otrzymana
-%% odpowiedz.
-call(Msg,ArenaPid) ->
-  Ref = erlang:monitor(process, ArenaPid),
-  ArenaPid ! {self(), Ref, Msg},
-  receive
-    {Ref, Ans} ->
-      erlang:demonitor(Ref, [flush]),
-      Ans;
-    {'DOWN', Ref, process, ArenaPid, Reason} ->
-      io:format("Arena do ktorej chce pisac proces ~p nie istnieje!~n",[self()]),
-      erlang:error(Reason)
-  after config:processTimeout() -> % docelowo nie bedzie timeoutu
-    io:format("Proces ~p nie doczekal sie odpowiedzi od areny ~p!~n",[self(),ArenaPid]),
-    exit(timeout)
   end.
