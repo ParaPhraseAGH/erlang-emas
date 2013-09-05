@@ -22,7 +22,7 @@ sendToWork({migration,Agents}) ->
   case Agents of
     [] -> [];
     [H|T] ->
-      whereis(supervisor) ! {agent,self(),H},
+      hybrid:sendAgent(H),
       sendToWork({migration,T})
   end.
 

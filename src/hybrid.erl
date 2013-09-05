@@ -3,7 +3,7 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(hybrid).
--export([run/0, run/1, run/4]).
+-export([run/0, run/1, run/4, sendAgent/1]).
 
 %% ====================================================================
 %% API functions
@@ -25,6 +25,9 @@ run() ->
   file:make_dir("tmp"),
   run(40,5000,3,"tmp").
 
+sendAgent(Agent) ->
+  whereis(?MODULE) ! {agent,self(),Agent}.
+
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
@@ -33,24 +36,24 @@ run() ->
 %% @doc Funkcja wykonujaca wszelkie operacje potrzebne przed uruchomieniem
 %% algorytmu.
 init(Time) ->
-  register(supervisor,self()),
+  register(?MODULE,self()),
   timer:send_after(Time,theEnd).
 
 %% @spec cleanup(List) -> ok
 %% @doc Funkcja sprzatajaca po zakonczonym algorytmie, dostajaca jako
 %% argument liste uruchomionych ciagle procesow.
 cleanup(Pids) ->
-  [Pid ! {finish,self()} || Pid <- Pids],
+  [hybrid_island:close(Pid) || Pid <- Pids],
   misc_util:checkIfDead(Pids),
   misc_util:clearInbox(),
-  unregister(supervisor).
+  unregister(?MODULE).
 
 %% @spec spawner(int()) -> {float(),List}
 %% @doc Funkcja spawnujaca wyspy, ktorych ilosc jest okreslona w argumencie.
 %% Zwracany jest wynik obliczen i lista Pid.
 spawner(ProblemSize,_Time,Islands,Path) ->
   %Path = io_util:genPath("Hybrid",ProblemSize,Time,Islands),
-  PidsRefs = [spawn_monitor(hybrid_island,proces,[Path,X,ProblemSize]) || X <- lists:seq(1,Islands)],
+  PidsRefs = [spawn_monitor(hybrid_island,start,[Path,X,ProblemSize]) || X <- lists:seq(1,Islands)],
   {Pids,_} = lists:unzip(PidsRefs),
   receiver(Pids).
 
@@ -61,7 +64,7 @@ receiver(Pids) ->
   receive
     {agent,_From,Agent} ->
       Index = random:uniform(length(Pids)),
-      lists:nth(Index, Pids) ! {agent,self(),Agent},
+      hybrid_island:sendAgent(lists:nth(Index, Pids),Agent),
       receiver(Pids);
     theEnd ->
       Pids;
