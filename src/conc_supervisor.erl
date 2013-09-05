@@ -53,7 +53,9 @@ handle_cast({newAgents,AgentList},{Best,FDs,Population,Arenas}) ->
   [spawn_link(agent,start,[A|Arenas]) || A <- AgentList],
   Result = misc_util:result(AgentList),
   NewPopulation = Population + length(AgentList),
-  {noreply,{lists:max([Result,Best]),FDs,NewPopulation,Arenas},config:supervisorTimeout()}.
+  {noreply,{lists:max([Result,Best]),FDs,NewPopulation,Arenas},config:supervisorTimeout()};
+handle_cast(close,State) ->
+  {stop,normal,State}.
 
 handle_info({'EXIT',_,_},{Best,FDs,Population,Arenas}) ->
   {noreply,{Best,FDs,Population - 1,Arenas},config:supervisorTimeout()};
@@ -64,9 +66,7 @@ handle_info(write,{Best,FDs,Population,Arenas}) ->
   timer:send_after(config:writeInterval(),write),
   {noreply,{Best,FDs,Population,Arenas},config:supervisorTimeout()};
 handle_info(timeout,State) ->
-  {stop,timeout,State};
-handle_info(close,State) ->
-  {stop,normal,State}.
+  {stop,timeout,State}.
 
 close(Pid) ->
   gen_server:cast(Pid,close).
