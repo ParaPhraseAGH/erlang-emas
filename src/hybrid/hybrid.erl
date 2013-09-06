@@ -32,8 +32,7 @@ sendAgent(Agent) ->
 %% algorytmu.
 init([ProblemSize,Time,Islands,Path]) ->
   timer:send_after(Time,theEnd),
-  PidsRefs = [spawn_monitor(hybrid_island,start,[Path,X,ProblemSize]) || X <- lists:seq(1,Islands)],
-  {Pids,_} = lists:unzip(PidsRefs),
+  Pids = [spawn_link(hybrid_island,start,[Path,X,ProblemSize]) || X <- lists:seq(1,Islands)],
   {ok,Pids,config:supervisorTimeout()}.
 
 handle_call(_,_,State) ->
@@ -44,11 +43,6 @@ handle_cast({agent,_From,Agent},Pids) ->
   hybrid_island:sendAgent(lists:nth(Index, Pids),Agent),
   {noreply,Pids,config:supervisorTimeout()}.
 
-handle_info({'DOWN',_Ref,process,Pid,Reason},Pids) ->
-  io:format("Proces ~p zakonczyl sie z powodu ~p~n",[Pid,Reason]),
-  {NewPid,_Ref} = spawn_monitor(hybrid_island,proces,[]),
-  io:format("Stawiam kolejna wyspe o Pid ~p~n",[NewPid]),
-  {noreply,[NewPid|lists:delete(Pid,Pids)],config:supervisorTimeout()};
 handle_info(timeout,Pids) ->
   {stop,timeout,Pids};
 handle_info(theEnd,Pids) ->
@@ -56,7 +50,7 @@ handle_info(theEnd,Pids) ->
 
 terminate(_Reason,Pids) ->
   [hybrid_island:close(Pid) || Pid <- Pids],
-  misc_util:checkIfDead(Pids),
+  timer:sleep(100), % zeby wszystkie wiadomosci z agentami zdazyly jeszcze dojsc
   misc_util:clearInbox().
 
 code_change(_OldVsn,State,_Extra) ->
