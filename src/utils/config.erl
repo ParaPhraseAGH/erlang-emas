@@ -47,6 +47,8 @@ writeInterval() -> 1000.
 printStep() -> 1000.
 %% @doc Ilosc milisekund, ktore czeka supervisor wyspy na jakas wiadomosc. Jak czas minie zamyka wyspe.
 supervisorTimeout() -> 5000.
+%% @doc Ilosc milisekund, ktore czeka topology na jakas wiadomosc
+topologyTimeout() -> 10000.
 %% @doc Ilosc milisekund, ktore czeka arena na jakas wiadomosc
 arenaTimeout() -> 2000.
 %% @doc Ilosc milisekund, ktore czeka agent na jakas wiadomosc
