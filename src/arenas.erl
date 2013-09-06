@@ -129,13 +129,9 @@ port(Supervisor,AllSupervisors) ->
     {Pid, HisRef, emigration} ->
       Index = random:uniform(length(AllSupervisors)),
       NewSupervisor = lists:nth(Index,AllSupervisors),
-      case conc_supervisor:unlinkAgent(Supervisor,Pid) of
-        ok -> ok;
-        _ -> port(Supervisor,AllSupervisors)
-      end,
-      case conc_supervisor:linkAgent(NewSupervisor,Pid,HisRef) of
-        ok -> ok;
-        _ ->  exit(Pid,finished)
+      case {conc_supervisor:unlinkAgent(Supervisor,Pid),conc_supervisor:linkAgent(NewSupervisor,Pid,HisRef)} of
+        {ok,ok} -> ok;
+        _ -> exit(Pid,finished)
       end,
       port(Supervisor,AllSupervisors);
     {finish,Supervisor} ->
