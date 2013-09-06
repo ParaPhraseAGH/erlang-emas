@@ -3,26 +3,29 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(sequential).
--export([run/4, run/0, run/1, generate/1]).
+-export([start/5, start/0, start/1, generate/1]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
 
-run() ->
+start() ->
   file:make_dir("tmp"),
-  run(40,5000,2,"tmp").
+  start(40,5000,2,mesh,"tmp").
 
-run([A,B,C,D]) ->
-  run(list_to_integer(A),
+start([A,B,C,D,E]) ->
+  start(list_to_integer(A),
     list_to_integer(B),
-    list_to_integer(C),D).
+    list_to_integer(C),
+    list_to_atom(D),E).
 
-run(ProblemSize,Time,Islands,Path) ->
+start(ProblemSize,Time,Islands,Topology,Path) ->
   random:seed(erlang:now()),
-  {_Time,{_Result,FDs}} = timer:tc(fun start/4, [ProblemSize,Time,Islands,Path]),
+  misc_util:clearInbox(),
+  {_Time,{_Result,FDs}} = timer:tc(fun init/5, [ProblemSize,Time,Islands,Topology,Path]),
   [io_util:closeFiles(FDDict) || FDDict <- FDs],
+  topology:close(),
   %io:format("Total time:   ~p s~nFitness:     ~p~n",[_Time/1000000,_Result]),
   ok.
 
@@ -40,12 +43,13 @@ generate(ProblemSize) ->
 %% @spec start() -> float()
 %% @doc Funkcja tworzaca odpowiednia ilosc wysp i przechodzaca do glownej petli.
 %% Zwracany jest koncowy wynik.
-start(ProblemSize,Time,IslandsNr,Path) ->
+init(ProblemSize,Time,IslandsNr,Topology,Path) ->
   Islands = [generate(ProblemSize) || _ <- lists:seq(1,IslandsNr)],
   %Path = io_util:genPath("Sequential",ProblemSize,Time,IslandsNr),
   FDs = [io_util:prepareWriting(filename:join([Path,"isl" ++ integer_to_list(N)])) || N <- lists:seq(1,IslandsNr)],
   timer:send_after(Time,theEnd),
   timer:send_after(config:writeInterval(),write),
+  topology:start_link(IslandsNr,Topology),
   loop(Islands,FDs).
 
 %% @spec loop(List1) -> float()
@@ -55,7 +59,7 @@ loop(Islands,FDs) ->
   receive
     write ->
       io_util:writeIslands(FDs,Islands),
-      %io_util:printSeq(Islands),
+      io_util:printSeq(Islands),
       timer:send_after(config:writeInterval(),write),
       loop(Islands,FDs);
     theEnd ->

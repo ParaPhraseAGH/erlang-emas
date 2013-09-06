@@ -127,8 +127,9 @@ ring(Waitlist) ->
 port(Supervisor,AllSupervisors) ->
   receive
     {Pid, HisRef, emigration} ->
-      Index = random:uniform(length(AllSupervisors)),
-      NewSupervisor = lists:nth(Index,AllSupervisors),
+      IslandFrom = misc_util:index(Supervisor,AllSupervisors),
+      IslandTo = topology:getDestination(IslandFrom),
+      NewSupervisor = lists:nth(IslandTo,AllSupervisors),
       case {conc_supervisor:unlinkAgent(Supervisor,Pid),conc_supervisor:linkAgent(NewSupervisor,Pid,HisRef)} of
         {ok,ok} -> ok;
         _ -> exit(Pid,finished)

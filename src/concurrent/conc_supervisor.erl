@@ -63,7 +63,7 @@ handle_info({'EXIT',_,_},{Best,FDs,Population,Arenas}) ->
 handle_info(write,{Best,FDs,Population,Arenas}) ->
   io_util:write(dict:fetch(fitness,FDs),Best),
   io_util:write(dict:fetch(population,FDs),Population),
-  %io:format("Island ~p Fitness ~p Population ~p~n",[self(),Best,Population]),
+  io:format("Island ~p Fitness ~p Population ~p~n",[self(),Best,Population]),
   timer:send_after(config:writeInterval(),write),
   {noreply,{Best,FDs,Population,Arenas},config:supervisorTimeout()};
 handle_info(timeout,State) ->

@@ -2,7 +2,7 @@
 %% @version 1.0
 
 -module(misc_util).
--export([groupBy/2, shuffle/1, behavior/1, behavior_noMig/1, checkIfDead/1, clearInbox/0, result/1]).
+-export([groupBy/2, shuffle/1, behavior/1, behavior_noMig/1, checkIfDead/1, clearInbox/0, result/1, index/2]).
 
 %% ====================================================================
 %% API functions
@@ -70,6 +70,9 @@ clearInbox() ->
     ok
   end.
 
+index(Elem,List) ->
+  index(Elem,List,1).
+
 %% @spec result(List1) -> float() | islandEmpty
 %% @doc Funkcja okreslajaca najlepszy wynik na podstawie przeslanej listy agentow
 result(Agents) ->
@@ -82,3 +85,11 @@ result(Agents) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+
+index(Elem,[Elem|_],Inc) ->
+  Inc;
+index(_,[],_) ->
+  notFound;
+index(Elem,[_|T],Inc) ->
+  index(Elem,T,Inc+1).
+

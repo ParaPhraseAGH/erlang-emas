@@ -39,7 +39,7 @@ loop(Agents,FDs) ->
     write ->
       io_util:write(dict:fetch(fitness,FDs),misc_util:result(Agents)),
       io_util:write(dict:fetch(population,FDs),length(Agents)),
-      %io:format("Island ~p Fitness ~p Population ~p~n",[self(),misc_util:result(Agents),length(Agents)]),
+      io:format("Island ~p Fitness ~p Population ~p~n",[self(),misc_util:result(Agents),length(Agents)]),
       timer:send_after(config:writeInterval(),write),
       loop(Agents,FDs);
     {agent,_Pid,A} ->

@@ -3,27 +3,32 @@
 %% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
 
 -module(concurrent).
--export([start/0, start/1, start/4, getAddresses/1]).
+-export([start/0, start/1, start/5, getAddresses/1]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-start(ProblemSize,Time,Islands,Path) ->
-  init(),
-  {_Time,_} = timer:tc(fun spawner/4, [ProblemSize,Time,Islands,Path]),
-  cleanup(),
-  ok.
-  %io:format("Total time:   ~p s~n",[_Time/1000000]).
+start(ProblemSize,Time,Islands,Topology,Path) ->
+  %Path = io_util:genPath("Concurrent",ProblemSize,Time,Islands),
+  misc_util:clearInbox(),
+  topology:start_link(Islands,Topology),
+  SupervisorsWithOk = [ conc_supervisor:start(self(),X,Path,ProblemSize) || X <- lists:seq(1,Islands)],
+  Supervisors = [Pid || {ok,Pid} <- SupervisorsWithOk],
+  giveAddresses(Supervisors,Islands),
+  timer:sleep(Time),
+  [conc_supervisor:close(Pid) || Pid <- Supervisors],
+  topology:close().
 
-start([A,B,C,D]) ->
+start([A,B,C,D,E]) ->
   start(list_to_integer(A),
     list_to_integer(B),
-      list_to_integer(C),D).
+      list_to_integer(C),
+        list_to_atom(D),E).
 
 start() ->
   file:make_dir("tmp"),
-  start(40,5000,2,"tmp").
+  start(40,5000,2,mesh,"tmp").
 
 getAddresses(Pid) ->
   Ref = erlang:monitor(process, Pid),
@@ -44,18 +49,6 @@ getAddresses(Pid) ->
 %% Internal functions
 %% ====================================================================
 
-%% @spec spawner() -> float()
-%% @doc Funkcja spawnujaca procesy nadzorujace dla kazdej wyspy
-%% oraz czekajaca na koncowy wynik od nich.
-spawner(ProblemSize,Time,Islands,Path) ->
-  %Path = io_util:genPath("Concurrent",ProblemSize,Time,Islands),
-  SupervisorsWithOk = [ conc_supervisor:start(self(),X,Path,ProblemSize) || X <- lists:seq(1,Islands)],
-  Supervisors = [Pid || {ok,Pid} <- SupervisorsWithOk],
-  giveAddresses(Supervisors,Islands),
-  timer:sleep(Time),
-  [conc_supervisor:close(Pid) || Pid <- Supervisors],
-  finished.
-
 %% @spec giveAdresses(List1,int()) -> ok
 %% @doc Funkcja odpowiada wszystkim portom wysylajac im liste wszystkich aren.
 %% Po poinformowaniu wszystkich portow (liczba podana w arg), funkcja zwraca ok.
@@ -69,9 +62,3 @@ giveAddresses(Supervisors,NoIslands) ->
     erlang:error(noMsgFromPorts),
     timeout
   end.
-
-init() ->
-  nothing.
-
-cleanup() ->
-  misc_util:clearInbox().

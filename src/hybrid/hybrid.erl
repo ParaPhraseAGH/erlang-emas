@@ -4,25 +4,27 @@
 
 -module(hybrid).
 -behaviour(gen_server).
--export([sendAgent/1, start/4, start/1, start/0,
+-export([sendAgent/1, start/5, start/1, start/0,
   init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-start(ProblemSize,Time,Islands,Path) ->
-  {ok, _} = gen_server:start({local,?MODULE}, ?MODULE, [ProblemSize,Time,Islands,Path], []),
+start(ProblemSize,Time,Islands,Topology,Path) ->
+  {ok, _} = gen_server:start({local,?MODULE}, ?MODULE, [ProblemSize,Time,Islands,Topology,Path], []),
   timer:sleep(Time).
 
-start([A,B,C,D]) ->
+start([A,B,C,D,E]) ->
   start(list_to_integer(A),
     list_to_integer(B),
-    list_to_integer(C),D).
+    list_to_integer(C),
+    list_to_atom(D),
+    E).
 
 start() ->
   file:make_dir("tmp"),
-  start(40,5000,3,"tmp").
+  start(40,5000,3,mesh,"tmp").
 
 sendAgent(Agent) ->
   gen_server:cast(whereis(?MODULE), {agent,self(),Agent}).
@@ -30,17 +32,19 @@ sendAgent(Agent) ->
 %% @spec init() -> ok
 %% @doc Funkcja wykonujaca wszelkie operacje potrzebne przed uruchomieniem
 %% algorytmu.
-init([ProblemSize,Time,Islands,Path]) ->
+init([ProblemSize,Time,Islands,Topology,Path]) ->
   timer:send_after(Time,theEnd),
+  topology:start_link(Islands,Topology),
   Pids = [spawn_link(hybrid_island,start,[Path,X,ProblemSize]) || X <- lists:seq(1,Islands)],
   {ok,Pids,config:supervisorTimeout()}.
 
 handle_call(_,_,State) ->
   {noreply,State}.
 
-handle_cast({agent,_From,Agent},Pids) ->
-  Index = random:uniform(length(Pids)),
-  hybrid_island:sendAgent(lists:nth(Index, Pids),Agent),
+handle_cast({agent,From,Agent},Pids) ->
+  IslandFrom = misc_util:index(From,Pids),
+  IslandTo = topology:getDestination(IslandFrom),
+  hybrid_island:sendAgent(lists:nth(IslandTo, Pids),Agent),
   {noreply,Pids,config:supervisorTimeout()}.
 
 handle_info(timeout,Pids) ->
@@ -50,8 +54,7 @@ handle_info(theEnd,Pids) ->
 
 terminate(_Reason,Pids) ->
   [hybrid_island:close(Pid) || Pid <- Pids],
-  timer:sleep(100), % zeby wszystkie wiadomosci z agentami zdazyly jeszcze dojsc
-  misc_util:clearInbox().
+  topology:close().
 
 code_change(_OldVsn,State,_Extra) ->
   {ok, State}.

@@ -36,13 +36,15 @@ handle_call({destination,X}, _From, State) ->
         true -> X + 1;
         false -> X - 1
       end,
-      if NewIsland == 0 ->
-        N;
-      NewIsland == N + 1 ->
-        1
+      case NewIsland - 1 of
+        -1 -> N;
+        N -> 1;
+        _ -> NewIsland
       end;
     mesh ->
-      random:uniform(N)
+      random:uniform(N);
+    _ ->
+      erlang:error(wrongTopology)
   end,
   {reply, Ans ,State}.
 

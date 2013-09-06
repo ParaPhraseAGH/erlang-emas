@@ -2,7 +2,7 @@
 %% @version 1.0
 
 -module(evolution).
--export([sendToWork/1, doReproduce/1, doFight/1, doMigrate/1, eachFightsAll/1]).
+-export([sendToWork/1, doReproduce/1, doFight/1, doMigrate/1, eachFightsAll/1, insertAppend/3]).
 
 %% ====================================================================
 %% API functions
@@ -71,36 +71,24 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
 %% przetworzona lista wysp.
 doMigrate(Islands) ->
   {Gathered,NewIslands} = gather(Islands,[],[]),
-  Shuffled = misc_util:shuffle(Gathered),
-  append(Shuffled,NewIslands,[]).
+  append(Gathered,lists:reverse(NewIslands)).
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
-append(Immigrants,[Island],Acc) ->
-  if Immigrants == [] ->
-    NewIsland = Island;
-    Immigrants /= [] ->
-      NewIsland = [Immigrants|Island]
-  end,
-  [lists:flatten(NewIsland)|Acc];
-append(Immigrants,[Island|T],Acc) ->
-  N = length(Immigrants) / length([Island|T]),
-  if N < 1 ->
-    case random:uniform() < N of
-      true ->
-        {A,NewImmigrants} = lists:split(1,Immigrants),
-        NewIslands = [lists:append(A,Island)|Acc],
-        append(NewImmigrants,T,NewIslands);
-      false ->
-        append(Immigrants,T,[Island|Acc])
-    end;
-  N >= 1 ->
-    {A,NewImmigrants} = lists:split(trunc(N),Immigrants),
-    NewIslands = [lists:append(A,Island)|Acc],
-    append(NewImmigrants,T,NewIslands)
-  end.
+append([],Islands) -> Islands;
+append([{Immigrants,From}|T],Islands) ->
+  Destination = topology:getDestination(From),
+  NewIslands = insertAppend(Immigrants,Destination,Islands),
+  append(T,NewIslands).
+
+insertAppend(_,_,[]) ->
+  erlang:error(wrongIndex);
+insertAppend(Elem,1,[H|T]) ->
+  [lists:append(Elem,H)|T];
+insertAppend(Elem,Index,[H|T]) ->
+  [H|insertAppend(Elem,Index - 1,T)].
 
 gather([],Islands,Emigrants) ->
   {Emigrants,Islands};
@@ -111,14 +99,14 @@ gather([I|T],Acc,Emigrants) ->
   N < 1 ->
     case random:uniform() < N of
       true ->
-        {[NewEmigrant],NewIsland} = lists:split(1,I), % length(I) > 0 because N > 0
-        gather(T,[NewIsland|Acc],[NewEmigrant|Emigrants]);
+        {NewEmigrant,NewIsland} = lists:split(1,I), % length(I) > 0 because N > 0
+        gather(T,[NewIsland|Acc],[{NewEmigrant,length(Acc)+1}|Emigrants]);
       false ->
         gather(T,[I|Acc],Emigrants)
     end;
   N >= 1 ->
     {NewEmigrants,NewIsland} = lists:split(trunc(N),I),
-    gather(T,[NewIsland|Acc],[NewEmigrants|Emigrants])
+    gather(T,[NewIsland|Acc],[{NewEmigrants,length(Acc)+1}|Emigrants])
   end.
 
 
