@@ -28,8 +28,7 @@ init([King,N,Path,ProblemSize]) ->
 
 terminate(_Reason,{_Best,FDs,_,Arenas}) ->
   [arenas:close(Pid) || Pid <- Arenas],
-  io_util:closeFiles(FDs),
-  exit(killAllProcesses).
+  io_util:closeFiles(FDs).
 
 sendAgents(Pid,Agents) ->
   gen_server:cast(Pid,{newAgents,Agents}).
@@ -39,6 +38,7 @@ unlinkAgent(Pid,AgentPid) ->
 
 linkAgent(Pid,AgentPid,AgentRef) ->
   catch gen_server:call(Pid,{immigrant,AgentPid,AgentRef}).
+
 
 handle_call({emigrant,AgentPid},_From,{Best,FDs,Population,Arenas}) ->
   erlang:unlink(AgentPid),
@@ -56,6 +56,7 @@ handle_cast({newAgents,AgentList},{Best,FDs,Population,Arenas}) ->
   {noreply,{lists:max([Result,Best]),FDs,NewPopulation,Arenas},config:supervisorTimeout()};
 handle_cast(close,State) ->
   {stop,normal,State}.
+
 
 handle_info({'EXIT',_,_},{Best,FDs,Population,Arenas}) ->
   {noreply,{Best,FDs,Population - 1,Arenas},config:supervisorTimeout()};

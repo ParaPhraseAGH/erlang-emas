@@ -49,7 +49,8 @@ getAddresses(Pid) ->
 %% oraz czekajaca na koncowy wynik od nich.
 spawner(ProblemSize,Time,Islands,Path) ->
   %Path = io_util:genPath("Concurrent",ProblemSize,Time,Islands),
-  Supervisors = [conc_supervisor:start(self(),X,Path,ProblemSize) || X <- lists:seq(1,Islands)],
+  SupervisorsWithOk = [ conc_supervisor:start(self(),X,Path,ProblemSize) || X <- lists:seq(1,Islands)],
+  Supervisors = [Pid || {ok,Pid} <- SupervisorsWithOk],
   giveAddresses(Supervisors,Islands),
   timer:sleep(Time),
   [conc_supervisor:close(Pid) || Pid <- Supervisors],
