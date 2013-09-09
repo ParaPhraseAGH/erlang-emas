@@ -39,12 +39,10 @@ recombinationChance() -> 0.3.
 migrationProbability() -> 0.0001.
 
 %% @doc Liczba agentow, na ktorych czeka ring aby rozpoczac walke (kazdy z kazdym)
-fightNumber() -> 30.
+fightNumber() -> 2.
 
 %% @doc Co ile milisekund wpisywany jest wynik do pliku
 writeInterval() -> 1000.
-%% @doc Co ile generacji wypisywany jest fitness
-printStep() -> 1000.
 %% @doc Ilosc milisekund, ktore czeka supervisor wyspy na jakas wiadomosc. Jak czas minie zamyka wyspe.
 supervisorTimeout() -> 5000.
 %% @doc Ilosc milisekund, ktore czeka topology na jakas wiadomosc

@@ -4,7 +4,7 @@
 
 -module(conc_supervisor).
 -behaviour(gen_server).
--export([start/4, sendAgents/2, unlinkAgent/2, linkAgent/3, close/1,
+-export([start/4, sendAgents/2, unlinkAgent/2, linkAgent/2, close/1,
   init/1, terminate/2, handle_call/3, handle_cast/2, handle_info/2, code_change/3]).
 
 %% ====================================================================
@@ -12,11 +12,14 @@
 %% ====================================================================
 
 start(King,N,Path,ProblemSize) ->
-  gen_server:start(?MODULE,[King,N,Path,ProblemSize],[]).
+  {ok,Pid} = gen_server:start(?MODULE,[King,N,Path,ProblemSize],[]),
+  Pid.
 
 init([King,N,Path,ProblemSize]) ->
+  random:seed(erlang:now()),
   process_flag(trap_exit, true),
-  Port = spawn(arenas,startPort,[self(),King]),
+  %Port = spawn(arenas,startPort,[self(),King]),
+  {ok,Port} = port:start(self(),King),
   Ring = spawn(arenas,startRing,[self()]),
   Bar = spawn(arenas,startBar,[self()]),
   Arenas = [Ring,Bar,Port],
@@ -24,28 +27,31 @@ init([King,N,Path,ProblemSize]) ->
   IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
   FDs = io_util:prepareWriting(IslandPath),
   timer:send_after(config:writeInterval(),write),
-  {ok,{-99999,FDs,config:populationSize(),Arenas},config:supervisorTimeout()}.
+  {ok,{-999999999,FDs,config:populationSize(),Arenas},config:supervisorTimeout()}.
 
-terminate(_Reason,{_Best,FDs,_,Arenas}) ->
-  [arenas:close(Pid) || Pid <- Arenas],
+terminate(_Reason,{_Best,FDs,_,[Ring,Bar,Port]}) ->
+  port:close(Port),
+  [arenas:close(Pid) || Pid <- [Ring,Bar]],
   io_util:closeFiles(FDs).
 
 sendAgents(Pid,Agents) ->
   gen_server:cast(Pid,{newAgents,Agents}).
 
 unlinkAgent(Pid,AgentPid) ->
-  catch gen_server:call(Pid,{emigrant,AgentPid}).
+  gen_server:call(Pid,{emigrant,AgentPid}).
 
-linkAgent(Pid,AgentPid,AgentRef) ->
-  catch gen_server:call(Pid,{immigrant,AgentPid,AgentRef}).
+linkAgent(Pid,AgentFrom) ->
+  gen_server:call(Pid,{immigrant,AgentFrom}).
 
 
 handle_call({emigrant,AgentPid},_From,{Best,FDs,Population,Arenas}) ->
   erlang:unlink(AgentPid),
   {reply,ok,{Best,FDs,Population - 1,Arenas}};
-handle_call({immigrant,AgentPid,AgentRef},_From,{Best,FDs,Population,Arenas}) ->
+handle_call({immigrant,AgentFrom},_From,{Best,FDs,Population,Arenas}) ->
+  {AgentPid,_} = AgentFrom,
   erlang:link(AgentPid),
-  AgentPid ! {AgentRef,Arenas},
+  %AgentPid ! {AgentRef,Arenas},
+  gen_server:reply(AgentFrom,Arenas),
   {reply,ok,{Best,FDs,Population + 1,Arenas}}.
 
 

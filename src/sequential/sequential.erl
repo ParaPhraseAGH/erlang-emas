@@ -26,8 +26,7 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
   {_Time,{_Result,FDs}} = timer:tc(fun init/5, [ProblemSize,Time,Islands,Topology,Path]),
   [io_util:closeFiles(FDDict) || FDDict <- FDs],
   topology:close(),
-  %io:format("Total time:   ~p s~nFitness:     ~p~n",[_Time/1000000,_Result]),
-  ok.
+  io:format("Total time:   ~p s~nFitness:     ~p~n",[_Time/1000000,_Result]).
 
 
 %% ====================================================================

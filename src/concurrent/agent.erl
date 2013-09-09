@@ -24,6 +24,7 @@ start(ProblemSize,Ring,Bar,Port) when is_integer(ProblemSize) ->
 %% @doc Funkcja startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac oraz dane agenta.
 start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
+  random:seed(erlang:now()),
   Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
   loop(Agent,Arenas).
 
@@ -47,6 +48,6 @@ loop(Agent,Arenas) ->
       NewEnergy = arenas:call(Agent,Arenas#arenas.fight),
       loop({Solution,Fitness,NewEnergy},Arenas);
     migration ->
-      [Ring,Bar,Port] = arenas:call(emigration,Arenas#arenas.migration),
+      [Ring,Bar,Port] = port:call(Arenas#arenas.migration), %arenas:call(emigration,Arenas#arenas.migration),
       loop(Agent,#arenas{fight = Ring, reproduction = Bar, migration = Port})
   end.
