@@ -1,7 +1,6 @@
-%% Copyright
+%% @author jstypka <jasieek@student.agh.edu.pl>
+%% @version 1.0
 -module(bar).
--author("Jan").
-
 -behaviour(gen_server).
 
 %% API

@@ -1,7 +1,6 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
 -module(port).
-
 -behaviour(gen_server).
 
 %% API

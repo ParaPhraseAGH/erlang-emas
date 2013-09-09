@@ -20,7 +20,8 @@ init([King,N,Path,ProblemSize]) ->
   process_flag(trap_exit, true),
   %Port = spawn(arenas,startPort,[self(),King]),
   {ok,Port} = port:start(self(),King),
-  Ring = spawn(arenas,startRing,[self()]),
+  %Ring = spawn(arenas,startRing,[self()]),
+  {ok,Ring} = ring:start(),
   %Bar = spawn(arenas,startBar,[self()]),
   {ok,Bar} = bar:start(self()),
   Arenas = [Ring,Bar,Port],
@@ -33,7 +34,7 @@ init([King,N,Path,ProblemSize]) ->
 terminate(_Reason,{_Best,FDs,_,[Ring,Bar,Port]}) ->
   port:close(Port),
   bar:close(Bar),
-  arenas:close(Ring),
+  ring:close(Ring),
   io_util:closeFiles(FDs).
 
 sendAgents(Pid,Agents) ->
