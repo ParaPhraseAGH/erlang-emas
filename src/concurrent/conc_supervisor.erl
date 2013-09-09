@@ -21,7 +21,8 @@ init([King,N,Path,ProblemSize]) ->
   %Port = spawn(arenas,startPort,[self(),King]),
   {ok,Port} = port:start(self(),King),
   Ring = spawn(arenas,startRing,[self()]),
-  Bar = spawn(arenas,startBar,[self()]),
+  %Bar = spawn(arenas,startBar,[self()]),
+  {ok,Bar} = bar:start(self()),
   Arenas = [Ring,Bar,Port],
   [spawn_link(agent,start,[ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
   IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
@@ -31,7 +32,8 @@ init([King,N,Path,ProblemSize]) ->
 
 terminate(_Reason,{_Best,FDs,_,[Ring,Bar,Port]}) ->
   port:close(Port),
-  [arenas:close(Pid) || Pid <- [Ring,Bar]],
+  bar:close(Bar),
+  arenas:close(Ring),
   io_util:closeFiles(FDs).
 
 sendAgents(Pid,Agents) ->

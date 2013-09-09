@@ -41,7 +41,7 @@ loop(Agent,Arenas) ->
       exit(dying);
     reproduction ->
       {Solution,Fitness,_} = Agent,
-      NewEnergy = arenas:call(Agent,Arenas#arenas.reproduction),
+      NewEnergy = bar:call(Arenas#arenas.reproduction,Agent),%arenas:call(Agent,Arenas#arenas.reproduction),
       loop({Solution,Fitness,NewEnergy},Arenas);
     fight ->
       {Solution,Fitness,_} = Agent,
