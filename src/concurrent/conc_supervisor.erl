@@ -18,6 +18,11 @@ start(King,N,Path,ProblemSize) ->
   {ok,Pid} = gen_server:start(?MODULE,[King,N,Path,ProblemSize],[]),
   Pid.
 
+-record(state, {best = -999999.9 :: float(),
+                fds :: dict(),
+                population = config:populationSize() :: pos_integer(),
+                arenas :: [pid()]}).
+
 init([King,N,Path,ProblemSize]) ->
   random:seed(erlang:now()),
   process_flag(trap_exit, true),
@@ -29,13 +34,14 @@ init([King,N,Path,ProblemSize]) ->
   IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
   FDs = io_util:prepareWriting(IslandPath),
   timer:send_after(config:writeInterval(),write),
-  {ok,{-999999999,FDs,config:populationSize(),Arenas},config:supervisorTimeout()}.
+  {ok,#state{fds = FDs, arenas = Arenas},config:supervisorTimeout()}.
 
-terminate(_Reason,{_Best,FDs,_,[Ring,Bar,Port]}) ->
+terminate(_Reason,State) ->
+  [Ring,Bar,Port] = State#state.arenas,
   port:close(Port),
   bar:close(Bar),
   ring:close(Ring),
-  io_util:closeFiles(FDs).
+  io_util:closeFiles(State#state.fds).
 
 -spec sendAgents(pid(),[agent()]) -> ok.
 sendAgents(Pid,Agents) ->
@@ -53,34 +59,37 @@ linkAgent(Pid,AgentFrom) ->
 close(Pid) ->
   gen_server:cast(Pid,close).
 
-handle_call({emigrant,AgentPid},_From,{Best,FDs,Population,Arenas}) ->
+handle_call({emigrant,AgentPid},_From,State) ->
   erlang:unlink(AgentPid),
-  {reply,ok,{Best,FDs,Population - 1,Arenas}};
-handle_call({immigrant,AgentFrom},_From,{Best,FDs,Population,Arenas}) ->
+  Population = State#state.population,
+  {reply,ok,State#state{population = Population - 1}};
+handle_call({immigrant,AgentFrom},_From,State) ->
   {AgentPid,_} = AgentFrom,
   erlang:link(AgentPid),
-  %AgentPid ! {AgentRef,Arenas},
-  gen_server:reply(AgentFrom,Arenas),
-  {reply,ok,{Best,FDs,Population + 1,Arenas}}.
+  gen_server:reply(AgentFrom,State#state.arenas),
+  Population = State#state.population,
+  {reply,ok,State#state{population = Population + 1}}.
 
 
-handle_cast({newAgents,AgentList},{Best,FDs,Population,Arenas}) ->
-  [spawn_link(agent,start,[A|Arenas]) || A <- AgentList],
+handle_cast({newAgents,AgentList},State) ->
+  [spawn_link(agent,start,[A|State#state.arenas]) || A <- AgentList],
   Result = misc_util:result(AgentList),
-  NewPopulation = Population + length(AgentList),
-  {noreply,{lists:max([Result,Best]),FDs,NewPopulation,Arenas},config:supervisorTimeout()};
+  NewPopulation = State#state.population + length(AgentList),
+  Best = State#state.best,
+  {noreply,State#state{best = lists:max([Result,Best]), population = NewPopulation},config:supervisorTimeout()};
 handle_cast(close,State) ->
   {stop,normal,State}.
 
 
-handle_info({'EXIT',_,_},{Best,FDs,Population,Arenas}) ->
-  {noreply,{Best,FDs,Population - 1,Arenas},config:supervisorTimeout()};
-handle_info(write,{Best,FDs,Population,Arenas}) ->
-  io_util:write(dict:fetch(fitness,FDs),Best),
-  io_util:write(dict:fetch(population,FDs),Population),
-  io:format("Island ~p Fitness ~p Population ~p~n",[self(),Best,Population]),
+handle_info({'EXIT',_,_},State) ->
+  Population = State#state.population,
+  {noreply,State#state{population = Population - 1},config:supervisorTimeout()};
+handle_info(write,State) ->
+  io_util:write(dict:fetch(fitness,State#state.fds),State#state.best),
+  io_util:write(dict:fetch(population,State#state.fds),State#state.population),
+  io:format("Island ~p Fitness ~p Population ~p~n",[self(),State#state.best,State#state.population]),
   timer:send_after(config:writeInterval(),write),
-  {noreply,{Best,FDs,Population,Arenas},config:supervisorTimeout()};
+  {noreply,State,config:supervisorTimeout()};
 handle_info(timeout,State) ->
   {stop,timeout,State}.
 
