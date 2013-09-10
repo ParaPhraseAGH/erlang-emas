@@ -5,28 +5,30 @@
 -module(genetic).
 -export([solution/1, evaluation/1, reproduction/1, reproduction/2]).
 
+-type solution() :: [float()].
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-%% @spec solution() -> List
+-spec solution(integer()) -> solution().
 %% @doc Funkcja generuje i zwraca losowego osobnika
 solution(ProblemSize) ->
   [-50 + random:uniform() * 100 || _ <- lists:seq(1, ProblemSize)].
 
-%% @spec evaluation(List) -> float()
+-spec evaluation(solution()) -> float().
 %% @doc Funkcja przyjmuje osobnika, oblicza i zwraca jego fitness.
 evaluation(S) ->
     - lists:foldl(fun(X, Sum) -> Sum + 10 + X*X - 10*math:cos(2*math:pi()*X) end , 0.0, S).
 
-%% @spec reproduction(List1) -> List2
+-spec reproduction(solution()) -> solution().
 %% @doc Funkcja reprodukcji dla pojedynczego osobnika (tylko mutacja).
 reproduction(S) ->
   case random:uniform() < config:mutationChance() of
     true -> mutateSolution(S);
     false -> S
   end.
-%% @spec reproduction(List1,List2) -> List3
+-spec reproduction(solution(),solution()) -> [solution()].
 %% @doc Funkcja reprodukcji dla dwoch osobnikow (mutacja + krzyzowanie).
 reproduction(S1, S2) ->
   {R1, R2} = case random:uniform() < config:recombinationChance() of
@@ -47,17 +49,17 @@ reproduction(S1, S2) ->
 %% Internal functions
 %% ====================================================================
 
-%% @spec recombineSolutions(List1,List2) -> {List3,List4}
+-spec recombineSolutions(solution(),solution()) -> {solution(),solution()}.
 %% @doc Funkcja krzyzujaca dwa osobniki
 recombineSolutions(S1, S2) ->
   lists:unzip([ {recombineFeatures(F1, F2), recombineFeatures(F2, F1)} || {F1, F2} <- lists:zip(S1,S2)]).
 
-%% @spec recombineFeatures(float(),float()) -> float()
+-spec recombineFeatures(float(),float()) -> float().
 %% @doc Funkcja odpowiedzialna za skrzyzowanie dwoch pojedynczych genow (floatow).
 recombineFeatures(F1, F2) ->
   erlang:min(F1, F2) + random:uniform() * (erlang:max(F1, F2) - erlang:min(F1, F2)).
 
-%% @spec mutateSolution(List1) -> List2
+-spec mutateSolution(solution()) -> solution().
 %% @doc Funkcja mutujaca podanego osobnika
 mutateSolution(S) ->
   [ case random:uniform() < config:mutationRate() of
@@ -66,7 +68,7 @@ mutateSolution(S) ->
     end
     || F <- S ].
 
-%% @spec mutateFeature(float()) -> float()
+-spec mutateFeature(float()) -> float().
 %% @doc Funkcja mutujaca konkretny gen
 mutateFeature(F) ->
   Range = config:mutationRange() * case random:uniform() of

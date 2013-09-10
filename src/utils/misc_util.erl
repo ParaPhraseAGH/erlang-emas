@@ -4,11 +4,15 @@
 -module(misc_util).
 -export([groupBy/2, shuffle/1, behavior/1, behavior_noMig/1, checkIfDead/1, clearInbox/0, result/1, index/2]).
 
+-type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+-type task() :: death | fight | reproduction | migration.
+-type groups() :: [{task(),[agent()]}].
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-%% @spec groupBy(function(),List1) -> List2
+-spec groupBy(fun(),[agent()]) -> groups().
 %% @doc Funkcja grupujaca agentow do krotek przy pomocy funkcji F.
 %% Zwracana jest lista w formie [{migration,[A1,A2]},{fight,[A3,A4,A5]}]
 groupBy(F, L) ->
@@ -17,13 +21,13 @@ groupBy(F, L) ->
       dict:append(K, V, D)
     end , dict:new(), [ {F(X), X} || X <- L ])).
 
-%% @spec shuffle(List1) -> List2
+-spec shuffle(list()) -> list().
 %% @doc Funkcja mieszajaca podana liste.
 shuffle(L) ->
   Rand = [{random:uniform(), N} || N <- L],
   [X||{_,X} <- lists:sort(Rand)].
 
-%% @spec behavior(Agent) -> death | migration | reproduction | fight
+-spec behavior(agent()) -> task().
 %% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie
 %% jego energii.
 behavior({_,_,0}) ->
@@ -37,7 +41,7 @@ behavior({_, _, Energy}) ->
              end
   end.
 
-%% @spec behavior_noMig(Agent) -> death | reproduction | fight
+-spec behavior_noMig(agent()) -> death | reproduction | fight.
 %% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie
 %% jego energii.
 behavior_noMig({_,_,0}) ->
@@ -48,7 +52,7 @@ behavior_noMig({_, _, Energy}) ->
     false -> fight
   end.
 
-%% @spec checkIfDead(List1) -> ok
+-spec checkIfDead([pid()]) -> ok.
 %% @doc Funkcja upewniajaca sie, ze wszystkie monitorowane procesy zostaly zakonczone
 checkIfDead([]) ->
   ok;
@@ -61,7 +65,7 @@ checkIfDead(Pids) ->
     timeout
   end.
 
-%% @spec clearInbox() -> ok
+-spec clearInbox() -> ok.
 %% @doc Funkcja czyszczaca skrzynke.
 clearInbox() ->
   receive
@@ -70,10 +74,11 @@ clearInbox() ->
     ok
   end.
 
+-spec index(term(),[term()]) -> integer().
 index(Elem,List) ->
   index(Elem,List,1).
 
-%% @spec result(List1) -> float() | islandEmpty
+-spec result([agent()]) -> float() | islandEmpty.
 %% @doc Funkcja okreslajaca najlepszy wynik na podstawie przeslanej listy agentow
 result(Agents) ->
   case Agents of
@@ -86,6 +91,7 @@ result(Agents) ->
 %% Internal functions
 %% ====================================================================
 
+-spec index(term(),[term()],integer()) -> integer().
 index(Elem,[Elem|_],Inc) ->
   Inc;
 index(_,[],_) ->

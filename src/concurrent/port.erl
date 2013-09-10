@@ -28,7 +28,7 @@ close(Pid) ->
 
 init(Args) ->
   random:seed(erlang:now()),
-  self() ! Args, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i
+  self() ! Args, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
   {ok, #state{mySupervisor = undefined, allSupervisors = undefined},config:arenaTimeout()}.
 
 handle_call(emigrate,{Pid,_},cleaning) ->

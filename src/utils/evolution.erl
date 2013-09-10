@@ -4,10 +4,15 @@
 -module(evolution).
 -export([sendToWork/1, doReproduce/1, doFight/1, doMigrate/1, eachFightsAll/1, insertAppend/3]).
 
+-type task() :: death | fight | reproduction | migration.
+-type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+-type island() :: [agent()].
+-type fighter() :: {term(), Fitness::float(), Energy::pos_integer()}.
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
+-spec sendToWork({task(),[agent()]}) -> [agent()].
 %% @spec sendToWork({atom(),List1}) -> List2
 %% @doc Funkcja dostaje atom precyzujacy klase agentow i ich liste,
 %% a nastepnie wykonuje odpowiednie operacje dla kazdej z klas.
@@ -26,7 +31,7 @@ sendToWork({migration,Agents}) ->
       sendToWork({migration,T})
   end.
 
-%% @spec eachFightsAll(List1) -> List2
+-spec eachFightsAll([fighter()]) -> [fighter()].
 %% @doc Funkcja uruchamiajaca funkcje fightTwo/2 dla kazdej roznej
 %% pary osobnikow w List1. List2 zawiera te wszystkie osobniki po walkach.
 eachFightsAll([]) -> [];
@@ -34,11 +39,10 @@ eachFightsAll([H|T]) ->
   {NewH,NewT} = oneFightsRest(H,T,[]),
   [NewH | eachFightsAll(NewT)].
 
-%% @spec doFight({Agent1}) -> [Agent2]
+-spec doFight({fighter()} | {fighter(),fighter()}) -> [fighter()].
 %% @doc Funkcja implementujaca logike "walki" pojedynczego agenta.
 %% Zwracany jest ten sam agent w liscie.
 doFight({A}) -> [A];
-%% @spec doFight({Agent1,Agent2}) -> [Agent3,Agent4]
 %% @doc Funkcja implementujaca logike walki dwoch agentow.
 %% Zwracana jest lista dwoch przetworzonych agentow.
 doFight({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
@@ -48,7 +52,7 @@ doFight({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
     end,
   [{SolA, EvA, EnA - AtoBtransfer}, {SolB, EvB, EnB + AtoBtransfer}].
 
-%% @spec doReproduce({Agent1}) -> List
+-spec doReproduce({agent()} | {agent(),agent()}) -> [agent()].
 %% @doc Funkcja implementujaca logike reprodukcji pojedynczego agenta.
 %% Zwracana jest dwojka agentow w liscie.
 doReproduce({{SolA, EvA, EnA}}) ->
@@ -56,7 +60,6 @@ doReproduce({{SolA, EvA, EnA}}) ->
   EvB = genetic:evaluation(SolB),
   AtoBtransfer = erlang:min(config:reproductionTransfer(), EnA),
   [{SolA, EvA, EnA - AtoBtransfer}, {SolB, EvB, AtoBtransfer}];
-%% @spec doReproduce({Agent1,Agent2}) -> [Agent3,Agent4,Agent5,Agent6]
 %% @doc Funkcja implementujaca logike reprodukcji dwoch agentow.
 %% Zwracanych jest czterech agentow w liscie.
 doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
@@ -65,7 +68,7 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
   [AtoCTransfer, BtoDTransfer] = [ erlang:min(config:reproductionTransfer(), E) || E <- [EnA, EnB] ],
   [{SolA, EvA, EnA - AtoCTransfer}, {SolB, EvB, EnB - BtoDTransfer}, {SolC, EvC, AtoCTransfer}, {SolD, EvD, BtoDTransfer}].
 
-%% @spec doMigrate(List1) -> List2
+-spec doMigrate([island()]) -> [island()].
 %% @doc Funkcja dokonujaca migracji. Wyznaczana jest liczba agentow,
 %% ktorzy powinni ulec przesiedleniu, dokonywana migracja i zwracana
 %% przetworzona lista wysp.
@@ -77,12 +80,14 @@ doMigrate(Islands) ->
 %% Internal functions
 %% ====================================================================
 
+-spec append([{[agent()],integer()}],[island()]) -> [island()].
 append([],Islands) -> Islands;
 append([{Immigrants,From}|T],Islands) ->
   Destination = topology:getDestination(From),
   NewIslands = insertAppend(Immigrants,Destination,Islands),
   append(T,NewIslands).
 
+-spec insertAppend([agent()],integer(),[island()]) -> [island()].
 insertAppend(_,_,[]) ->
   erlang:error(wrongIndex);
 insertAppend(Elem,1,[H|T]) ->
@@ -90,6 +95,7 @@ insertAppend(Elem,1,[H|T]) ->
 insertAppend(Elem,Index,[H|T]) ->
   [H|insertAppend(Elem,Index - 1,T)].
 
+-spec gather([island()],[island()],[{[agent()],integer()}]) -> {[{[agent()],integer()}],[island()]}.
 gather([],Islands,Emigrants) ->
   {Emigrants,Islands};
 gather([I|T],Acc,Emigrants) ->
@@ -110,7 +116,7 @@ gather([I|T],Acc,Emigrants) ->
   end.
 
 
-%% @spec oneFightsRest(A,ToFight,Fought) -> [A2,Rest]
+-spec oneFightsRest(fighter(),[fighter()],[fighter()]) -> {fighter(),[fighter()]}.
 %% @doc Funkcja uruchamiajaca funkcje fightTwo dla agenta A oraz
 %% kazdego osobnika z listy ToFight. Agenci po walce przechowywani sa
 %% w akumulatorze Fought i na koncu zwracani w krotce z agentem A po walkach.
@@ -119,7 +125,7 @@ oneFightsRest(Agent,[H|ToFight],Fought) ->
   [NewAgent,NewH]  = doFight({Agent,H}),
   oneFightsRest(NewAgent,ToFight,[NewH|Fought]).
 
-%% @spec optionalPairs(List1,List2) -> List3
+-spec optionalPairs([agent()],[{agent(),agent()}]) -> [{agent(),agent()} | {agent()}].
 %% @doc Funkcja dzielaca podana liste agentow na pary. Tail recursion.
 optionalPairs([],Acc) -> Acc;
 optionalPairs([A],Acc) -> [{A}|Acc];

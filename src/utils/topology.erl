@@ -1,9 +1,9 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
 -module(topology).
-
 -behaviour(gen_server).
 
+-type topology() :: mesh | ring.
 %% API
 -export([start_link/2, getDestination/1, close/0]).
 
@@ -12,12 +12,15 @@
   code_change/3]).
 
 %% API
+-spec start_link(integer(),topology()) -> {ok,pid()}.
 start_link(IslandsNr,Topology) ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [IslandsNr,Topology], []).
 
+-spec close() -> ok.
 close() ->
   gen_server:cast(whereis(?MODULE),close).
 
+-spec getDestination(integer()) -> integer().
 getDestination(X) ->
   gen_server:call(whereis(?MODULE),{destination,X}).
 
