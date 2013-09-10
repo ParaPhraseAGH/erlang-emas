@@ -3,6 +3,8 @@
 -module(bar).
 -behaviour(gen_server).
 
+-type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+
 %% API
 -export([start_link/1, start/1, call/2, close/1]).
 
@@ -11,15 +13,19 @@
   code_change/3]).
 
 %% API
+-spec start_link(pid()) -> {ok,pid()}.
 start_link(Supervisor) ->
   gen_server:start_link(?MODULE, [Supervisor], []).
 
+-spec start(pid()) -> {ok,pid()}.
 start(Supervisor) ->
   gen_server:start(?MODULE, [Supervisor], []).
 
+-spec call(pid(),agent()) -> Energy :: integer().
 call(Pid,Agent) ->
   gen_server:call(Pid,Agent).
 
+-spec close(pid()) -> ok.
 close(Pid) ->
   gen_server:cast(Pid,close).
 

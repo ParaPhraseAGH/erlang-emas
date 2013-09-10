@@ -9,6 +9,7 @@
 %% API functions
 %% ====================================================================
 
+-spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
 start(ProblemSize,Time,Islands,Topology,Path) ->
   %Path = io_util:genPath("Concurrent",ProblemSize,Time,Islands),
   misc_util:clearInbox(),
@@ -19,16 +20,19 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
   [conc_supervisor:close(Pid) || Pid <- Supervisors],
   topology:close().
 
+-spec start(list()) -> ok.
 start([A,B,C,D,E]) ->
   start(list_to_integer(A),
     list_to_integer(B),
       list_to_integer(C),
         list_to_atom(D),E).
 
+-spec start() -> ok.
 start() ->
   file:make_dir("tmp"),
   start(40,5000,2,mesh,"tmp").
 
+-spec getAddresses(pid()) -> [pid()].
 getAddresses(Pid) ->
   Ref = erlang:monitor(process, Pid),
   Pid ! {self(),Ref,getAdresses},
@@ -48,7 +52,7 @@ getAddresses(Pid) ->
 %% Internal functions
 %% ====================================================================
 
-%% @spec giveAdresses(List1,int()) -> ok
+-spec giveAddresses([pid()],integer()) -> ok.
 %% @doc Funkcja odpowiada wszystkim portom wysylajac im liste wszystkich aren.
 %% Po poinformowaniu wszystkich portow (liczba podana w arg), funkcja zwraca ok.
 giveAddresses(_,0) -> ok;

@@ -11,15 +11,19 @@
   code_change/3]).
 
 %% API
+-spec start_link(pid(),pid()) -> {ok,pid()}.
 start_link(Supervisor,King) ->
   gen_server:start_link(?MODULE, [Supervisor,King], []).
 
+-spec start(pid(),pid()) -> {ok,pid()}.
 start(Supervisor,King) ->
   gen_server:start(?MODULE, [Supervisor,King], []).
 
+-spec call(pid()) -> [pid()].
 call(Pid) ->
   gen_server:call(Pid,emigrate).
 
+-spec close(pid()) -> ok.
 close(Pid) ->
   gen_server:cast(Pid,close).
 
@@ -39,7 +43,7 @@ handle_call(emigrate, From, State) ->
   IslandFrom = misc_util:index(State#state.mySupervisor,State#state.allSupervisors),
   IslandTo = topology:getDestination(IslandFrom),
   NewSupervisor = lists:nth(IslandTo,State#state.allSupervisors),
-  case {conc_supervisor:unlinkAgent(State#state.mySupervisor,HisPid),conc_supervisor:linkAgent(NewSupervisor,From)} of
+  case catch {conc_supervisor:unlinkAgent(State#state.mySupervisor,HisPid),conc_supervisor:linkAgent(NewSupervisor,From)} of
     {ok,ok} -> migrationSuccessful;
     _ -> exit(HisPid,finished)
   end,

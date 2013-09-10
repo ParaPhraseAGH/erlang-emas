@@ -5,11 +5,13 @@
 -module(hybrid_island).
 -export([start/3, close/1, sendAgent/2]).
 
+-type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-%% @spec start() -> loop(List)
+-spec start(Path::string(), N::integer(), ProblemSize::integer()) -> ok.
 %% @doc Funkcja generujaca dane poczatkowe, ktora pod koniec uruchamia
 %% petle, w ktorej porusza sie proces.
 start(Path,N,ProblemSize) ->
@@ -21,9 +23,11 @@ start(Path,N,ProblemSize) ->
   timer:send_after(config:writeInterval(),write),
   loop(Agents,FDs).
 
+-spec close(pid()) -> {finish,pid()}.
 close(Pid) ->
   Pid ! {finish,self()}.
 
+-spec sendAgent(pid(),agent()) -> {agent,pid(),agent()}.
 sendAgent(Pid,Agent) ->
    Pid ! {agent,self(),Agent}.
 
@@ -31,7 +35,7 @@ sendAgent(Pid,Agent) ->
 %% Internal functions
 %% ====================================================================
 
-%% @spec loop(List1) -> loop(List2)
+-spec loop([agent()],dict()) -> ok.
 %% @doc Glowna petla procesu. Kazda iteracja powoduje obliczenie
 %% kolejnego wyniku i opcjonalnie wyslanie go do supervisora.
 loop(Agents,FDs) ->
@@ -45,7 +49,8 @@ loop(Agents,FDs) ->
     {agent,_Pid,A} ->
       loop([A|Agents],FDs);
     {finish,_Pid} ->
-      io_util:closeFiles(FDs)
+      io_util:closeFiles(FDs),
+      ok
   after 0 ->
     Groups = misc_util:groupBy(fun misc_util:behavior/1, Agents),
     NewGroups = [evolution:sendToWork(G) || G <- Groups],

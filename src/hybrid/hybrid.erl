@@ -7,14 +7,18 @@
 -export([sendAgent/1, start/5, start/1, start/0,
   init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
+-type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
+-spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
 start(ProblemSize,Time,Islands,Topology,Path) ->
   {ok, _} = gen_server:start({local,?MODULE}, ?MODULE, [ProblemSize,Time,Islands,Topology,Path], []),
   timer:sleep(Time).
 
+-spec start(list()) -> ok.
 start([A,B,C,D,E]) ->
   start(list_to_integer(A),
     list_to_integer(B),
@@ -22,10 +26,12 @@ start([A,B,C,D,E]) ->
     list_to_atom(D),
     E).
 
+-spec start() -> ok.
 start() ->
   file:make_dir("tmp"),
   start(40,5000,3,mesh,"tmp").
 
+-spec sendAgent(agent()) -> ok.
 sendAgent(Agent) ->
   gen_server:cast(whereis(?MODULE), {agent,self(),Agent}).
 

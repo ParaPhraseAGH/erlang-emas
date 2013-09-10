@@ -5,21 +5,26 @@
 -module(sequential).
 -export([start/5, start/0, start/1, generate/1]).
 
+-type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+-type island() :: [agent()].
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-
+-spec start() -> ok.
 start() ->
   file:make_dir("tmp"),
   start(40,5000,2,mesh,"tmp").
 
+-spec start(list()) -> ok.
 start([A,B,C,D,E]) ->
   start(list_to_integer(A),
     list_to_integer(B),
     list_to_integer(C),
     list_to_atom(D),E).
 
+-spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
 start(ProblemSize,Time,Islands,Topology,Path) ->
   random:seed(erlang:now()),
   misc_util:clearInbox(),
@@ -33,13 +38,13 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
 %% Internal functions
 %% ====================================================================
 
-%% @spec generate() -> List1
+-spec generate(pos_integer()) -> island().
 %% @doc Funkcja generujaca losowa liste agentow.
 generate(ProblemSize) ->
   Solutions = [genetic:solution(ProblemSize) || _ <- lists:seq(1, config:populationSize())],
   [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions].
 
-%% @spec start() -> float()
+-spec init(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> {float(),[dict()]}.
 %% @doc Funkcja tworzaca odpowiednia ilosc wysp i przechodzaca do glownej petli.
 %% Zwracany jest koncowy wynik.
 init(ProblemSize,Time,IslandsNr,Topology,Path) ->
@@ -51,7 +56,7 @@ init(ProblemSize,Time,IslandsNr,Topology,Path) ->
   topology:start_link(IslandsNr,Topology),
   loop(Islands,FDs).
 
-%% @spec loop(List1) -> float()
+-spec loop([island()],[dict()]) -> {float(),[dict()]}.
 %% @doc Glowa petla programu. Gdy osiagnieta zostanie pozadana precyzja,
 %% wynik jest zwracany.
 loop(Islands,FDs) ->

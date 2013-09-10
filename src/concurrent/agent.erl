@@ -6,11 +6,14 @@
 -export([start/4]).
 -record(arenas,{fight,reproduction,migration}).
 
+-type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+-type arenas() :: #arenas{}.
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-%% @spec start(RingPid,BarPid,PortPid) -> ok
+-spec start(pos_integer() | agent(), Ring::pid(), Bar::pid(), Port::pid()) -> no_return().
 %% @doc Funkcja generujaca dane i startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac.
 start(ProblemSize,Ring,Bar,Port) when is_integer(ProblemSize) ->
@@ -19,8 +22,6 @@ start(ProblemSize,Ring,Bar,Port) when is_integer(ProblemSize) ->
   Agent = {S,genetic:evaluation(S),config:initialEnergy()},
   Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
   loop(Agent,Arenas);
-
-%% @spec start(Agent,RingPid,BarPid,PortPid) -> ok
 %% @doc Funkcja startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac oraz dane agenta.
 start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
@@ -32,7 +33,7 @@ start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
 %% Internal functions
 %% ====================================================================
 
-%% @spec loop(Agent,Arenas) -> ok
+-spec loop(agent(),arenas()) -> no_return().
 %% @doc Funkcja cyklu zycia agenta. Jego zachowanie jest zalezne od jego
 %% energii. Rekurencja kreci sie w nieskonczonosc, poki energia nie osiagnie 0.
 loop(Agent,Arenas) ->
