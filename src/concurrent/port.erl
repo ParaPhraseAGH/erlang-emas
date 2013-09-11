@@ -1,16 +1,19 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
+%% @doc Modul areny migracji (portu).
 -module(port).
 -behaviour(gen_server).
 
 %% API
 -export([start_link/2, start/2, call/1, close/1]).
-
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
 
-%% API
+%% ====================================================================
+%% API functions
+%% ====================================================================
+
 -spec start_link(pid(),pid()) -> {ok,pid()}.
 start_link(Supervisor,King) ->
   gen_server:start_link(?MODULE, [Supervisor,King], []).
@@ -20,6 +23,7 @@ start(Supervisor,King) ->
   gen_server:start(?MODULE, [Supervisor,King], []).
 
 -spec call(pid()) -> [pid()].
+%% @doc Funkcja wysylajaca zgloszenie agenta do portu.
 call(Pid) ->
   gen_server:call(Pid,emigrate).
 
@@ -27,7 +31,9 @@ call(Pid) ->
 close(Pid) ->
   gen_server:cast(Pid,close).
 
-%% gen_server callbacks
+%% ====================================================================
+%% Callbacks
+%% ====================================================================
 -record(state, {mySupervisor,allSupervisors}).
 
 init(Args) ->

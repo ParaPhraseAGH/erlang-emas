@@ -1,6 +1,6 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.1
-%% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
+%% @doc Glowny modul modelu sekwencyjnego zawierajacy cala logike tej wersji aplikacji.
 
 -module(sequential).
 -export([start/5, start/0, start/1, generate/1]).
@@ -11,7 +11,6 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
-
 -spec start() -> ok.
 start() ->
   file:make_dir("tmp"),
@@ -33,13 +32,11 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
   topology:close(),
   io:format("Total time:   ~p s~nFitness:     ~p~n",[_Time/1000000,_Result]).
 
-
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-
 -spec generate(pos_integer()) -> island().
-%% @doc Funkcja generujaca losowa liste agentow.
+%% @doc Funkcja generujaca losowa populacje.
 generate(ProblemSize) ->
   Solutions = [genetic:solution(ProblemSize) || _ <- lists:seq(1, config:populationSize())],
   [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions].
@@ -57,8 +54,7 @@ init(ProblemSize,Time,IslandsNr,Topology,Path) ->
   loop(Islands,FDs).
 
 -spec loop([island()],[dict()]) -> {float(),[dict()]}.
-%% @doc Glowa petla programu. Gdy osiagnieta zostanie pozadana precyzja,
-%% wynik jest zwracany.
+%% @doc Glowa petla programu. Każda iteracja powoduje ewolucję nowej generacji osobnikow.
 loop(Islands,FDs) ->
   receive
     write ->

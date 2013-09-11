@@ -1,6 +1,6 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
-%% @doc Glowny modul aplikacji implementujacy logike procesu zarzadzajacego algorytmem.
+%% @doc Glowny modul modelu wspolbieznego algorytmu. Odpowiada za uruchomienie calego systemu oraz posprzatanie po wszystkim.
 
 -module(concurrent).
 -export([start/0, start/1, start/5, getAddresses/1]).
@@ -33,6 +33,8 @@ start() ->
   start(40,5000,2,mesh,"tmp").
 
 -spec getAddresses(pid()) -> [pid()].
+%% @doc Funkcja wysylajaca na podany w argumencie adres zapytanie
+%% o liste pid supervisorow. Zapytanie synchroniczne.
 getAddresses(Pid) ->
   Ref = erlang:monitor(process, Pid),
   Pid ! {self(),Ref,getAdresses},
@@ -44,7 +46,7 @@ getAddresses(Pid) ->
       io:format("The king is dead, long live the king!~n",[]),
       erlang:error(Reason)
   after 1000 ->
-    io:format("Port ~p nie dostal wiadomosci z adresami~n",[self()]),
+    io:format("Proces ~p nie dostal wiadomosci z adresami~n",[self()]),
     erlang:error(timeout)
   end.
 
@@ -53,7 +55,7 @@ getAddresses(Pid) ->
 %% ====================================================================
 
 -spec giveAddresses([pid()],integer()) -> ok.
-%% @doc Funkcja odpowiada wszystkim portom wysylajac im liste wszystkich aren.
+%% @doc Funkcja wysyla wszystkim portom pelna liste supervisorow.
 %% Po poinformowaniu wszystkich portow (liczba podana w arg), funkcja zwraca ok.
 giveAddresses(_,0) -> ok;
 giveAddresses(Supervisors,NoIslands) ->

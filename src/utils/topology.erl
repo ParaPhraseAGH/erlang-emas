@@ -1,17 +1,21 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
+%% @doc Serwer topology odpowiada za przechowywanie informacji o topologii wysp w systemie.
+%% Wyznacza rowniez miejsca docelowe migracji dla procesow.
 -module(topology).
 -behaviour(gen_server).
 
--type topology() :: mesh | ring.
 %% API
 -export([start_link/2, getDestination/1, close/0]).
-
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
 
-%% API
+-type topology() :: mesh | ring.
+
+%% ====================================================================
+%% API functions
+%% ====================================================================
 -spec start_link(integer(),topology()) -> {ok,pid()}.
 start_link(IslandsNr,Topology) ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [IslandsNr,Topology], []).
@@ -21,10 +25,14 @@ close() ->
   gen_server:cast(whereis(?MODULE),close).
 
 -spec getDestination(integer()) -> integer().
+%% @doc Funkcja komunikujaca sie synchronicznie z procesem topology i zwracajaca docelowa wyspe
+%%  na podstawie przeslanego argumentu
 getDestination(X) ->
   gen_server:call(whereis(?MODULE),{destination,X}).
 
-%% gen_server callbacks
+%% ====================================================================
+%% Callbacks
+%% ====================================================================
 -record(state, {n,topology}).
 
 init([IslandsNr,Topology]) ->

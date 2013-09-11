@@ -1,6 +1,6 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
-%% @doc Modul odpowiedzialny za logike pojedynczej wyspy.
+%% @doc Modul odpowiedzialny za logike pojedynczej wyspy w modelu hybrydowym.
 
 -module(hybrid_island).
 -export([start/3, close/1, sendAgent/2]).
@@ -10,10 +10,9 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
-
 -spec start(Path::string(), N::integer(), ProblemSize::integer()) -> ok.
-%% @doc Funkcja generujaca dane poczatkowe, ktora pod koniec uruchamia
-%% petle, w ktorej porusza sie proces.
+%% @doc Funkcja generujaca dane poczatkowe, ktora pod koniec uruchamia glowna
+%% petle procesu.
 start(Path,N,ProblemSize) ->
   random:seed(erlang:now()),
   IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
@@ -28,16 +27,16 @@ close(Pid) ->
   Pid ! {finish,self()}.
 
 -spec sendAgent(pid(),agent()) -> {agent,pid(),agent()}.
+%% @doc Funkcja za pomoca ktorej mozna przesylac wyspie imigrantow.
+%% Komunikacja asynchroniczna.
 sendAgent(Pid,Agent) ->
    Pid ! {agent,self(),Agent}.
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-
 -spec loop([agent()],dict()) -> ok.
-%% @doc Glowna petla procesu. Kazda iteracja powoduje obliczenie
-%% kolejnego wyniku i opcjonalnie wyslanie go do supervisora.
+%% @doc Glowna petla procesu. Kazda iteracja powoduje wytworzenie kolejnej generacji.
 loop(Agents,FDs) ->
   receive
     write ->

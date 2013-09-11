@@ -1,19 +1,19 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
-
+%% @doc Modul z funkcjami dotyczacymi ewolucji czyli przechodzenia jednej generacji w kolejna.
+%% Sa tu rowniez funkcje implementujace migracje miedzy wyspami
 -module(evolution).
 -export([sendToWork/1, doReproduce/1, doFight/1, doMigrate/1, eachFightsAll/1, insertAppend/3]).
 
 -type task() :: death | fight | reproduction | migration.
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type island() :: [agent()].
--type fighter() :: {term(), Fitness::float(), Energy::pos_integer()}.
+-type fighter() :: {term(), Fitness::float(), Energy::pos_integer()}. % agent niekoniecznie zawierajacy solution. Czasem jest zamiast tego podstawiany {Pid,Ref}, aby moc pozniej odeslac energie.
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
-
 -spec sendToWork({task(),[agent()]}) -> [agent()].
-%% @spec sendToWork({atom(),List1}) -> List2
 %% @doc Funkcja dostaje atom precyzujacy klase agentow i ich liste,
 %% a nastepnie wykonuje odpowiednie operacje dla kazdej z klas.
 %% Funkcja zwraca liste agentow po przetworzeniu.
@@ -32,8 +32,8 @@ sendToWork({migration,Agents}) ->
   end.
 
 -spec eachFightsAll([fighter()]) -> [fighter()].
-%% @doc Funkcja uruchamiajaca funkcje fightTwo/2 dla kazdej roznej
-%% pary osobnikow w List1. List2 zawiera te wszystkie osobniki po walkach.
+%% @doc Funkcja implementujaca walke "kazdy z kazdym" dla listy agentow w argumencie.
+%% Zwracana jest lista agentow po walkach.
 eachFightsAll([]) -> [];
 eachFightsAll([H|T]) ->
   {NewH,NewT} = oneFightsRest(H,T,[]),
@@ -54,7 +54,7 @@ doFight({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
 
 -spec doReproduce({agent()} | {agent(),agent()}) -> [agent()].
 %% @doc Funkcja implementujaca logike reprodukcji pojedynczego agenta.
-%% Zwracana jest dwojka agentow w liscie.
+%% Zwracanych jest dwoje agentow w liscie.
 doReproduce({{SolA, EvA, EnA}}) ->
   SolB = genetic:reproduction(SolA),
   EvB = genetic:evaluation(SolB),
@@ -69,9 +69,9 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
   [{SolA, EvA, EnA - AtoCTransfer}, {SolB, EvB, EnB - BtoDTransfer}, {SolC, EvC, AtoCTransfer}, {SolD, EvD, BtoDTransfer}].
 
 -spec doMigrate([island()]) -> [island()].
-%% @doc Funkcja dokonujaca migracji. Wyznaczana jest liczba agentow,
-%% ktorzy powinni ulec przesiedleniu, dokonywana migracja i zwracana
-%% przetworzona lista wysp.
+%% @doc Funkcja dokonujaca migracji dla algorytmu sekwencyjnego. Najpierw z kazdej wyspy pobierana jest statystyczna
+%% liczba agentow, ktorzy powinni ulec migracji. Dla kazdej grupy emigrantow wyznaczana jest wyspa docelowa
+%% i sa oni do niej dopisywani. Zwracana jest lista wysp po dokonanej mirgacji.
 doMigrate(Islands) ->
   {Gathered,NewIslands} = gather(Islands,[],[]),
   append(Gathered,lists:reverse(NewIslands)).
@@ -79,8 +79,8 @@ doMigrate(Islands) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-
 -spec append([{[agent()],integer()}],[island()]) -> [island()].
+%% @doc Funkcja dla kazdej grupy emigrantow z listy wyznacza wyspe docelowa oraz dokleja ich do tamtejszej populacji.
 append([],Islands) -> Islands;
 append([{Immigrants,From}|T],Islands) ->
   Destination = topology:getDestination(From),
@@ -88,6 +88,8 @@ append([{Immigrants,From}|T],Islands) ->
   append(T,NewIslands).
 
 -spec insertAppend([agent()],integer(),[island()]) -> [island()].
+%% @doc Funkcja dokleja (append) liste agentow w parametrze do wyspy znajdujacej sie pod podanych indeksem.
+%% Zwracana jest lista wysp po operacji.
 insertAppend(_,_,[]) ->
   erlang:error(wrongIndex);
 insertAppend(Elem,1,[H|T]) ->
@@ -96,6 +98,8 @@ insertAppend(Elem,Index,[H|T]) ->
   [H|insertAppend(Elem,Index - 1,T)].
 
 -spec gather([island()],[island()],[{[agent()],integer()}]) -> {[{[agent()],integer()}],[island()]}.
+%% @doc Funkcja wyznacza ile srednio agentow z danej populacji powinno emigrowac i przesuwa ich do specjalnej listy emigrantow.
+%% Zwracana jest wyznaczona lista emigrantow oraz uszczuplona lista wysp.
 gather([],Islands,Emigrants) ->
   {Emigrants,Islands};
 gather([I|T],Acc,Emigrants) ->
@@ -116,8 +120,8 @@ gather([I|T],Acc,Emigrants) ->
   end.
 
 
--spec oneFightsRest(fighter(),[fighter()],[fighter()]) -> {fighter(),[fighter()]}.
-%% @doc Funkcja uruchamiajaca funkcje fightTwo dla agenta A oraz
+-spec oneFightsRest(Agent::fighter(), ToFight::[fighter()], Fought::[fighter()]) -> {fighter(),[fighter()]}.
+%% @doc Funkcja uruchamiajaca funkcje doFight/1 dla agenta A oraz
 %% kazdego osobnika z listy ToFight. Agenci po walce przechowywani sa
 %% w akumulatorze Fought i na koncu zwracani w krotce z agentem A po walkach.
 oneFightsRest(Agent,[],Fought) -> {Agent,Fought};

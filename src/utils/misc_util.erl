@@ -1,8 +1,9 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
+%% @doc Modul z funkcjami pomocniczymi dla roznych wersji algorytmu.
 
 -module(misc_util).
--export([groupBy/2, shuffle/1, behavior/1, behavior_noMig/1, checkIfDead/1, clearInbox/0, result/1, index/2]).
+-export([groupBy/2, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, index/2]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type task() :: death | fight | reproduction | migration.
@@ -11,10 +12,9 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
-
 -spec groupBy(fun(),[agent()]) -> groups().
 %% @doc Funkcja grupujaca agentow do krotek przy pomocy funkcji F.
-%% Zwracana jest lista w formie [{migration,[A1,A2]},{fight,[A3,A4,A5]}]
+%% Zwracana jest lista w formie [{migration,[A1,A2]},{fight,[A3,A4,A5]},...]
 groupBy(F, L) ->
   dict:to_list(
     lists:foldr(fun({K,V}, D) ->
@@ -28,8 +28,7 @@ shuffle(L) ->
   [X||{_,X} <- lists:sort(Rand)].
 
 -spec behavior(agent()) -> task().
-%% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie
-%% jego energii.
+%% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie jego energii.
 behavior({_,_,0}) ->
   death;
 behavior({_, _, Energy}) ->
@@ -42,27 +41,13 @@ behavior({_, _, Energy}) ->
   end.
 
 -spec behavior_noMig(agent()) -> death | reproduction | fight.
-%% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie
-%% jego energii.
+%% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie jego energii.
 behavior_noMig({_,_,0}) ->
   death;
 behavior_noMig({_, _, Energy}) ->
   case Energy > config:reproductionThreshold() of
     true -> reproduction;
     false -> fight
-  end.
-
--spec checkIfDead([pid()]) -> ok.
-%% @doc Funkcja upewniajaca sie, ze wszystkie monitorowane procesy zostaly zakonczone
-checkIfDead([]) ->
-  ok;
-checkIfDead(Pids) ->
-  receive
-    {'DOWN',_Ref,process,Pid,_Reason} ->
-      checkIfDead(lists:delete(Pid,Pids))
-  after 1000 ->
-    io:format("Not all dead~n"),
-    timeout
   end.
 
 -spec clearInbox() -> ok.
@@ -75,6 +60,7 @@ clearInbox() ->
   end.
 
 -spec index(term(),[term()]) -> integer().
+%% @doc Funkcja wyznaczajaca indeks pod jakim znajduje sie dany element na podanej liscie.
 index(Elem,List) ->
   index(Elem,List,1).
 
@@ -87,11 +73,12 @@ result(Agents) ->
     _ ->
       lists:max([ Fitness || {_ ,Fitness, _} <- Agents])
   end.
+
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-
 -spec index(term(),[term()],integer()) -> integer().
+%% @doc Funkcja wyznaczajaca indeks pod jakim znajduje sie dany element na podanej liscie.
 index(Elem,[Elem|_],Inc) ->
   Inc;
 index(_,[],_) ->

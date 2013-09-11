@@ -10,7 +10,6 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
-
 -spec solution(integer()) -> solution().
 %% @doc Funkcja generuje i zwraca losowego osobnika
 solution(ProblemSize) ->
@@ -48,7 +47,6 @@ reproduction(S1, S2) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-
 -spec recombineSolutions(solution(),solution()) -> {solution(),solution()}.
 %% @doc Funkcja krzyzujaca dwa osobniki
 recombineSolutions(S1, S2) ->

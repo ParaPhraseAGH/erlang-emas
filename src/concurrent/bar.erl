@@ -1,18 +1,20 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
+%% @doc Modul areny reprodukcji (baru).
 -module(bar).
 -behaviour(gen_server).
 
--type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
-
 %% API
 -export([start_link/1, start/1, call/2, close/1]).
-
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
 
-%% API
+-type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+
+%% ====================================================================
+%% API functions
+%% ====================================================================
 -spec start_link(pid()) -> {ok,pid()}.
 start_link(Supervisor) ->
   gen_server:start_link(?MODULE, [Supervisor], []).
@@ -22,6 +24,7 @@ start(Supervisor) ->
   gen_server:start(?MODULE, [Supervisor], []).
 
 -spec call(pid(),agent()) -> Energy :: integer().
+%% @doc Funkcja wysylajaca zgloszenie agenta do baru
 call(Pid,Agent) ->
   gen_server:call(Pid,Agent).
 
@@ -29,7 +32,9 @@ call(Pid,Agent) ->
 close(Pid) ->
   gen_server:cast(Pid,close).
 
-%% gen_server callbacks
+%% ====================================================================
+%% Callbacks
+%% ====================================================================
 -record(state, {supervisor,waitlist=[]}).
 
 init([Supervisor]) ->
