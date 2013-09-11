@@ -13,7 +13,6 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
-
 -spec start_link(pid(),pid()) -> {ok,pid()}.
 start_link(Supervisor,King) ->
   gen_server:start_link(?MODULE, [Supervisor,King], []).
@@ -47,10 +46,13 @@ handle_call(emigrate,{Pid,_},cleaning) ->
 handle_call(emigrate, From, State) ->
   {HisPid, _} = From,
   IslandFrom = misc_util:index(State#state.mySupervisor,State#state.allSupervisors),
-  IslandTo = topology:getDestination(IslandFrom),
-  NewSupervisor = lists:nth(IslandTo,State#state.allSupervisors),
-  case catch {conc_supervisor:unlinkAgent(State#state.mySupervisor,HisPid),conc_supervisor:linkAgent(NewSupervisor,From)} of
-    {ok,ok} -> migrationSuccessful;
+  case catch topology:getDestination(IslandFrom) of
+    IslandTo when is_integer(IslandTo) ->
+      NewSupervisor = lists:nth(IslandTo,State#state.allSupervisors),
+      case catch {conc_supervisor:unlinkAgent(State#state.mySupervisor,HisPid),conc_supervisor:linkAgent(NewSupervisor,From)} of
+        {ok,ok} -> migrationSuccessful;
+        _ -> exit(HisPid,finished)
+      end;
     _ -> exit(HisPid,finished)
   end,
   {noreply,State,config:arenaTimeout()}.

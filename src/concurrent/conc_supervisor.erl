@@ -96,7 +96,7 @@ handle_info({'EXIT',_,_},State) ->
 handle_info(write,State) ->
   io_util:write(dict:fetch(fitness,State#state.fds),State#state.best),
   io_util:write(dict:fetch(population,State#state.fds),State#state.population),
-  io:format("Island ~p Fitness ~p Population ~p~n",[self(),State#state.best,State#state.population]),
+  %io:format("Island ~p Fitness ~p Population ~p~n",[self(),State#state.best,State#state.population]),
   timer:send_after(config:writeInterval(),write),
   {noreply,State,config:supervisorTimeout()};
 handle_info(timeout,State) ->

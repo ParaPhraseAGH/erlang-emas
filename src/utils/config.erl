@@ -48,7 +48,7 @@ supervisorTimeout() -> 5000.
 %% @doc Ilosc milisekund, ktore czeka topology na jakas wiadomosc
 topologyTimeout() -> 10000.
 %% @doc Ilosc milisekund, ktore czeka arena na jakas wiadomosc
-arenaTimeout() -> 2000.
+arenaTimeout() -> 3000.
 %% @doc Ilosc milisekund, ktore czeka agent na jakas wiadomosc
 processTimeout() -> 3000.
 

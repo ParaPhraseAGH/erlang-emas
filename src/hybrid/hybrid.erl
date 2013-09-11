@@ -1,7 +1,6 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.1
 %% @doc Glowny modul modelu hybrydowego. Uruchamia algorytm, zarzadza migracja i sprzata po wszystkim.
-
 -module(hybrid).
 -behaviour(gen_server).
 
