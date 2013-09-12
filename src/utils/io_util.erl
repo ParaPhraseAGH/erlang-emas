@@ -3,7 +3,7 @@
 %% @doc Modul z funkcjami dotyczacymi operacji wejscia/wyjscia (wypisywanie na ekran, zapis do pliku).
 
 -module(io_util).
--export([printSeq/1, prepareWriting/1, closeFiles/1, write/2, writeIslands/2, printMoreStats/1, genPath/4]).
+-export([printSeq/1, prepareWriting/1, closeFiles/1, write/2, writeIslands/2, printMoreStats/1, genPath/4, sumEnergy/1]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type island() :: [agent()].
@@ -50,6 +50,11 @@ printSeq([Island|T]) ->
   io:format("Island ~p Fitness ~p Population ~p Energy ~p~n",[length(T),misc_util:result(Island),length(Island),sumEnergy(Island)]),
   printSeq(T).
 
+-spec sumEnergy([agent()]) -> integer().
+%% @doc Funkcja oblicza sume energii w danej populacji.
+sumEnergy(Agents) ->
+  lists:foldr(fun({_,_,E},Acc) -> Acc + E end,0,Agents).
+
 -spec printMoreStats(groups()) -> any().
 %% @doc Funkcja wypisuje dodatkowe informacje na podstawie przeslanej
 %% struktury populacji.
@@ -88,8 +93,3 @@ assignName(Files,N) ->
     true -> assignName(Files,N+1);
     false -> Name
   end.
-
--spec sumEnergy([agent()]) -> integer().
-%% @doc Funkcja oblicza sume energii w danej populacji.
-sumEnergy(Agents) ->
-  lists:foldr(fun({_,_,E},Acc) -> Acc + E end,0,Agents).

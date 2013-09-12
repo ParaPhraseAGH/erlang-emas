@@ -3,7 +3,7 @@
 %% @doc Modul z funkcjami dotyczacymi ewolucji czyli przechodzenia jednej generacji w kolejna.
 %% Sa tu rowniez funkcje implementujace migracje miedzy wyspami
 -module(evolution).
--export([sendToWork/1, doReproduce/1, doFight/1, doMigrate/1, eachFightsAll/1, insertAppend/3]).
+-export([sendToWork/1, doReproduce/1, doFight/1, doMigrate/1, eachFightsAll/1, insertAppend/3, averageEmigration/1]).
 
 -type task() :: death | fight | reproduction | migration.
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
@@ -23,13 +23,13 @@ sendToWork({fight, Agents}) ->
   lists:flatmap(fun doFight/1, optionalPairs(Agents,[]));
 sendToWork({reproduction,Agents}) ->
   lists:flatmap(fun doReproduce/1, optionalPairs(Agents,[]));
-sendToWork({migration,Agents}) ->
-  case Agents of
-    [] -> [];
-    [H|T] ->
-      hybrid:sendAgent(H),
-      sendToWork({migration,T})
-  end.
+sendToWork({migration,[]}) ->
+  [];
+sendToWork({migration,[Agent|T]}) when tuple_size(Agent) == 3 ->
+  hybrid:sendAgent(Agent),
+  sendToWork({migration,T});
+sendToWork({migration,[{From,Agent}|T]}) ->
+  [{topology:getDestination(From),Agent} | sendToWork({migration,T})].
 
 -spec eachFightsAll([fighter()]) -> [fighter()].
 %% @doc Funkcja implementujaca walke "kazdy z kazdym" dla listy agentow w argumencie.
@@ -72,9 +72,22 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
 %% @doc Funkcja dokonujaca migracji dla algorytmu sekwencyjnego. Najpierw z kazdej wyspy pobierana jest statystyczna
 %% liczba agentow, ktorzy powinni ulec migracji. Dla kazdej grupy emigrantow wyznaczana jest wyspa docelowa
 %% i sa oni do niej dopisywani. Zwracana jest lista wysp po dokonanej mirgacji.
-doMigrate(Islands) ->
+doMigrate(Islands)->
   {Gathered,NewIslands} = gather(Islands,[],[]),
   append(Gathered,lists:reverse(NewIslands)).
+
+-spec averageEmigration([agent()]) -> integer().
+%% @doc Funkcja wyznacza statystyczna liczbe agentow do wyemigrowania z podanej populacji.
+averageEmigration(Population) ->
+  N = config:migrationProbability() * length(Population),
+  if N == 0 -> 0;
+    N < 1 ->
+      case random:uniform() < N of
+        true -> 1;
+        false -> 0
+      end;
+    N >=1 -> trunc(N)
+  end.
 
 %% ====================================================================
 %% Internal functions
@@ -103,22 +116,14 @@ insertAppend(Elem,Index,[H|T]) ->
 gather([],Islands,Emigrants) ->
   {Emigrants,Islands};
 gather([I|T],Acc,Emigrants) ->
-  N = config:migrationProbability() * length(I),
-  if N == 0 ->
-    gather(T,[I|Acc],Emigrants);
-  N < 1 ->
-    case random:uniform() < N of
-      true ->
-        {NewEmigrant,NewIsland} = lists:split(1,I), % length(I) > 0 because N > 0
-        gather(T,[NewIsland|Acc],[{NewEmigrant,length(Acc)+1}|Emigrants]);
-      false ->
-        gather(T,[I|Acc],Emigrants)
-    end;
-  N >= 1 ->
-    {NewEmigrants,NewIsland} = lists:split(trunc(N),I),
-    gather(T,[NewIsland|Acc],[{NewEmigrants,length(Acc)+1}|Emigrants])
+  N = averageEmigration(I),
+  case N of
+    0 ->
+      gather(T,[I|Acc],Emigrants);
+    _ ->
+      {NewEmigrants,NewIsland} = lists:split(N,I),
+      gather(T,[NewIsland|Acc],[{NewEmigrants,length(Acc)+1}|Emigrants])
   end.
-
 
 -spec oneFightsRest(Agent::fighter(), ToFight::[fighter()], Fought::[fighter()]) -> {fighter(),[fighter()]}.
 %% @doc Funkcja uruchamiajaca funkcje doFight/1 dla agenta A oraz

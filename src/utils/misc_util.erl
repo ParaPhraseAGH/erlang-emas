@@ -3,7 +3,7 @@
 %% @doc Modul z funkcjami pomocniczymi dla roznych wersji algorytmu.
 
 -module(misc_util).
--export([groupBy/2, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, index/2]).
+-export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, index/2]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type task() :: death | fight | reproduction | migration.
@@ -12,14 +12,14 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec groupBy(fun(),[agent()]) -> groups().
-%% @doc Funkcja grupujaca agentow do krotek przy pomocy funkcji F.
-%% Zwracana jest lista w formie [{migration,[A1,A2]},{fight,[A3,A4,A5]},...]
-groupBy(F, L) ->
+-spec groupBy([{term(),term()}]) -> groups().
+%% @doc Funkcja grupujaca krotki wg schematu:
+%% [{K1,V1},{K2,V2},...] -> [{K1,[V1,V3]},{K2,[V2,V4,V5]},...]
+groupBy(List) ->
   dict:to_list(
     lists:foldr(fun({K,V}, D) ->
       dict:append(K, V, D)
-    end , dict:new(), [ {F(X), X} || X <- L ])).
+    end , dict:new(), List)).
 
 -spec shuffle(list()) -> list().
 %% @doc Funkcja mieszajaca podana liste.
@@ -27,7 +27,7 @@ shuffle(L) ->
   Rand = [{random:uniform(), N} || N <- L],
   [X||{_,X} <- lists:sort(Rand)].
 
--spec behavior(agent()) -> task().
+-spec behavior(agent() | {agent(),pos_integer()}) -> task().
 %% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie jego energii.
 behavior({_,_,0}) ->
   death;
@@ -38,7 +38,9 @@ behavior({_, _, Energy}) ->
                true -> reproduction;
                false -> fight
              end
-  end.
+  end;
+behavior({_Island,Agent}) when is_tuple(Agent) ->
+  behavior(Agent).
 
 -spec behavior_noMig(agent()) -> death | reproduction | fight.
 %% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie jego energii.

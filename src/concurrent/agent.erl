@@ -18,8 +18,7 @@
 %% adresy aren do ktorych agent ma sie zglaszac.
 start(ProblemSize,Ring,Bar,Port) when is_integer(ProblemSize) ->
   random:seed(erlang:now()),
-  S = genetic:solution(ProblemSize),
-  Agent = {S,genetic:evaluation(S),config:initialEnergy()},
+  Agent = genetic:generateAgent(ProblemSize),
   Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
   loop(Agent,Arenas);
 %% @doc Funkcja startujaca danego agenta. W argumencie
