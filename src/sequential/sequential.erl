@@ -3,7 +3,7 @@
 %% @doc Glowny modul modelu sekwencyjnego zawierajacy cala logike tej wersji aplikacji.
 
 -module(sequential).
--export([start/5, start/0, start/1, generate/1]).
+-export([start/5, start/0, start/1]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type island() :: [agent()].
@@ -35,17 +35,11 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
--spec generate(pos_integer()) -> island().
-%% @doc Funkcja generujaca losowa populacje.
-generate(ProblemSize) ->
-  Solutions = [genetic:solution(ProblemSize) || _ <- lists:seq(1, config:populationSize())],
-  [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions].
-
 -spec init(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> {float(),[dict()]}.
 %% @doc Funkcja tworzaca odpowiednia ilosc wysp i przechodzaca do glownej petli.
 %% Zwracany jest koncowy wynik.
 init(ProblemSize,Time,IslandsNr,Topology,Path) ->
-  Islands = [generate(ProblemSize) || _ <- lists:seq(1,IslandsNr)],
+  Islands = [genetic:generate(ProblemSize) || _ <- lists:seq(1,IslandsNr)],
   %Path = io_util:genPath("Sequential",ProblemSize,Time,IslandsNr),
   FDs = [io_util:prepareWriting(filename:join([Path,"isl" ++ integer_to_list(N)])) || N <- lists:seq(1,IslandsNr)],
   timer:send_after(Time,theEnd),

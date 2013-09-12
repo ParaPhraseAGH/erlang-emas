@@ -17,8 +17,7 @@ start(Path,N,ProblemSize) ->
   random:seed(erlang:now()),
   IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
   FDs = io_util:prepareWriting(IslandPath),
-  Solutions = [genetic:solution(ProblemSize) || _ <- lists:seq(1, config:populationSize())],
-  Agents = [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions],
+  Agents = genetic:generate(ProblemSize),
   timer:send_after(config:writeInterval(),write),
   loop(Agents,FDs).
 

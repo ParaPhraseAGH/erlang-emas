@@ -3,7 +3,7 @@
 %% @doc Modul zawierajacy funkcje wykonujace operacje genetyczne
 
 -module(genetic).
--export([solution/1, evaluation/1, reproduction/1, reproduction/2]).
+-export([solution/1, evaluation/1, reproduction/1, reproduction/2, generate/1]).
 
 -type solution() :: [float()].
 
@@ -19,6 +19,12 @@ solution(ProblemSize) ->
 %% @doc Funkcja przyjmuje osobnika, oblicza i zwraca jego fitness.
 evaluation(S) ->
     - lists:foldl(fun(X, Sum) -> Sum + 10 + X*X - 10*math:cos(2*math:pi()*X) end , 0.0, S).
+
+-spec generate(pos_integer()) -> island().
+%% @doc Funkcja generujaca losowa populacje.
+generate(ProblemSize) ->
+  Solutions = [genetic:solution(ProblemSize) || _ <- lists:seq(1, config:populationSize())],
+  [ {S, genetic:evaluation(S), config:initialEnergy()} || S <- Solutions].
 
 -spec reproduction(solution()) -> solution().
 %% @doc Funkcja reprodukcji dla pojedynczego osobnika (tylko mutacja).
