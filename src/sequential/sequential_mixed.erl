@@ -48,22 +48,23 @@ loop(Population,FDs) ->
       Best = misc_util:result([A || {_,A} <- Population]),
       {Best,FDs}
   after 0 ->
-    Groups = misc_util:groupBy([{misc_util:behavior(Agent),Agent} || Agent <- Population]),
+    Groups = misc_util:groupBy([{misc_util:behavior(Agent),Agent} || Agent <- Population]),         % Groups = [{death,[{Home1,Agent1},{H2,A2}]},{fight,[...]}]
     {DeathMigration,FightReproduction} = lists:partition(fun({Atom,_}) -> lists:member(Atom,[death,migration]) end,Groups),
     DeadAndMigrated = [evolution:sendToWork(G) || G <- DeathMigration],
-    FRRegrouped = [{Job,misc_util:groupBy(AgentList)} || {Job,AgentList} <- FightReproduction],
-    Fighters = case lists:keyfind(fight,1,FRRegrouped) of
+    FRRegrouped = [{Job,misc_util:groupBy(AgentList)} || {Job,AgentList} <- FightReproduction],     % FRRegrouped = [{fight,[{H1,[A1,A2]},{H2,[A3,A5]},...]},{reproduction,[...]}]
+    Fighters = case lists:keyfind(fight,1,FRRegrouped) of                                           % w przyszlosci mozna zrobic fighterow i reproduktowcow w jednej liscie i operowac na list comprehensions
       {fight,FAgents} -> FAgents;
       false -> []
-    end,
+    end,                                                                                            % Fighters = [{H1,[A1,A2]},{H2,[A3,A5]},...]
     Reproducers = case lists:keyfind(reproduction,1,FRRegrouped) of
       {reproduction,RAgents} -> RAgents;
       false -> []
-    end,
-    AfterWork = lists:append([{Home,evolution:sendToWork({fight,AgentList})} || {Home,AgentList} <- Fighters],
-      [{Home,evolution:sendToWork({reproduction,AgentList})} || {Home,AgentList} <- Reproducers]),
-    Degrouped = [[{Home,A} || A <- List] || {Home,List} <- AfterWork],
-    NewAgents = misc_util:shuffle(lists:flatten(lists:append(DeadAndMigrated,Degrouped))),
+    end,                                                                                            % Reproducers = [{H1,[A1,A2]},{H2,[A3,A5]},...]
+    AfterFights = [{Home,evolution:sendToWork({fight,AgentList})} || {Home,AgentList} <- Fighters], % AfterFights = [{H1,[A1',A2']},{H2,[A3',A5']},...]
+    AfterReproductions = [{Home,evolution:sendToWork({reproduction,AgentList})} || {Home,AgentList} <- Reproducers],
+    AfterWork = lists:append(AfterFights,AfterReproductions),
+    Degrouped = [[{Home,A} || A <- List] || {Home,List} <- AfterWork],                              % Degrouped = [[{H1,A1'},{H1,A2'}],[{H2,A3'}...]
+    NewAgents = lists:flatten([DeadAndMigrated|Degrouped]),
     %io:format("Population: ~p~n",[NewAgents]),
-    loop(NewAgents,FDs)
+    loop(misc_util:shuffle(NewAgents),FDs)
   end.
