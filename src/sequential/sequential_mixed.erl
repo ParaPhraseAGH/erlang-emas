@@ -12,24 +12,15 @@
 %% ====================================================================
 -spec start() -> ok.
 start() ->
-  file:make_dir("tmp"),
-  start(40,5000,2,mesh,"tmp").
+  sequential:start(fun start/5).
 
 -spec start(list()) -> ok.
-start([A,B,C,D,E]) ->
-  start(list_to_integer(A),
-    list_to_integer(B),
-    list_to_integer(C),
-    list_to_atom(D),E).
+start(Args) ->
+  sequential:start(Args,fun start/5).
 
 -spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
 start(ProblemSize,Time,Islands,Topology,Path) ->
-  random:seed(erlang:now()),
-  misc_util:clearInbox(),
-  {_Time,{_Result,FDs}} = timer:tc(fun init/5, [ProblemSize,Time,Islands,Topology,Path]),
-  [io_util:closeFiles(FDDict) || FDDict <- FDs],
-  topology:close(),
-  io:format("Total time:   ~p s~nFitness:     ~p~n",[_Time/1000000,_Result]).
+  sequential:start(ProblemSize,Time,Islands,Topology,Path,fun init/5).
 
 %% ====================================================================
 %% Internal functions
@@ -39,11 +30,7 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
 %% Zwracany jest koncowy wynik.
 init(ProblemSize,Time,IslandsNr,Topology,Path) ->
   Population = lists:append([[{X,genetic:generateAgent(ProblemSize)} || _ <- lists:seq(1,config:populationSize())] || X <- lists:seq(1,IslandsNr)]),
-  FDs = [io_util:prepareWriting(filename:join([Path,"isl" ++ integer_to_list(N)])) || N <- lists:seq(1,IslandsNr)],
-  timer:send_after(Time,theEnd),
-  timer:send_after(config:writeInterval(),write),
-  topology:start_link(IslandsNr,Topology),
-  loop(Population,FDs).
+  sequential:init(Time,IslandsNr,Topology,Path,Population,fun loop/2).
 
 -spec loop([agent()],[dict()]) -> {float(),[dict()]}.
 %% @doc Glowa petla programu. Każda iteracja powoduje ewolucję nowej generacji osobnikow.
