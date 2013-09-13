@@ -30,7 +30,8 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
 %% Zwracany jest koncowy wynik.
 init(ProblemSize,Time,IslandsNr,Topology,Path) ->
   Population = lists:append([[{X,genetic:generateAgent(ProblemSize)} || _ <- lists:seq(1,config:populationSize())] || X <- lists:seq(1,IslandsNr)]),
-  sequential:init(Time,IslandsNr,Topology,Path,Population,fun loop/2).
+  FDs = sequential:init(Time,IslandsNr,Topology,Path),
+  loop(Population,FDs).
 
 -spec loop([agent()],[dict()]) -> {float(),[dict()]}.
 %% @doc Glowa petla programu. Każda iteracja powoduje ewolucję nowej generacji osobnikow.
@@ -66,4 +67,3 @@ loop(Population,FDs) ->
     %io:format("Population: ~p~n",[NewAgents]),
     loop(NewAgents,FDs)
   end.
-

@@ -1,9 +1,9 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.1
-%% @doc Glowny modul modelu sekwencyjnego zawierajacy cala logike tej wersji aplikacji.
+%% @doc Modul zawierajacy czesci wspolne dla roznych wersji algorytmu sekwencyjnego.
 
 -module(sequential).
--export([start/6, start/1, start/2, init/6]).
+-export([start/6, start/1, start/2, init/4]).
 
 %% ====================================================================
 %% API functions
@@ -29,12 +29,10 @@ start(ProblemSize,Time,Islands,Topology,Path,Fun) ->
   topology:close(),
   io:format("Total time:   ~p s~nFitness:     ~p~n",[_Time/1000000,_Result]).
 
--spec init(Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string(), Population::[term()],fun()) -> {float(),[dict()]}.
-%% @doc Funkcja dokonujaca podstawowych przygotowan i przechodzaca do glownej petli.
-%% Zwracany jest koncowy wynik.
-init(Time,IslandsNr,Topology,Path,Population,Loop) ->
-  FDs = [io_util:prepareWriting(filename:join([Path,"isl" ++ integer_to_list(N)])) || N <- lists:seq(1,IslandsNr)],
+-spec init(Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> [dict()].
+%% @doc Funkcja dokonujaca podstawowych przygotowan i zwracajaca liste slownikow deskryptorow.
+init(Time,IslandsNr,Topology,Path) ->
   timer:send_after(Time,theEnd),
   timer:send_after(config:writeInterval(),write),
   topology:start_link(IslandsNr,Topology),
-  Loop(Population,FDs).
+  [io_util:prepareWriting(filename:join([Path,"isl" ++ integer_to_list(N)])) || N <- lists:seq(1,IslandsNr)].
