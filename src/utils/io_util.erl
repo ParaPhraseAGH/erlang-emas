@@ -3,7 +3,7 @@
 %% @doc Modul z funkcjami dotyczacymi operacji wejscia/wyjscia (wypisywanie na ekran, zapis do pliku).
 
 -module(io_util).
--export([printSeq/1, prepareWriting/1, closeFiles/1, write/2, writeIslands/2, printMoreStats/1, genPath/4, sumEnergy/1]).
+-export([printSeq/1, prepareWriting/1, closeFiles/1, write/2, writeIslands/3, printMoreStats/1, genPath/4, sumEnergy/1, printArenas/1]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type island() :: [agent()].
@@ -33,15 +33,19 @@ prepareWriting(Path) ->
 closeFiles(FDs) ->
   [file:close(FD) || {_,FD} <- dict:to_list(FDs)].
 
--spec writeIslands([port()],[island()]) -> ok.
+-spec writeIslands([port()],[island()],float()) -> ok.
 %% @doc Funkcja dokonujaca zapisu do pliku dla modelu sekwencyjnego. W argumencie podawana jest lista wysp oraz
 %% lista slownikow z deskryptorow. Kolejnosc na liscie determinuje przyporzadkowanie wyspy do danego slownika,
 %% takze nie moze ona ulec zmianie podczas innych operacji na tych listach w algorytmie.
-writeIslands([],[]) -> ok;
-writeIslands([FD|FDs],[I|Islands]) ->
-  write(dict:fetch(fitness,FD),misc_util:result(I)),
+writeIslands([],[],_) -> ok;
+writeIslands([FD|FDs],[I|Islands],PreviousBest) ->
+  Fitness = case misc_util:result(I) of
+              islandEmpty -> PreviousBest;
+              X -> X
+            end,
+  write(dict:fetch(fitness,FD),Fitness),
   write(dict:fetch(population,FD),length(I)),
-  writeIslands(FDs,Islands).
+  writeIslands(FDs,Islands,PreviousBest).
 
 -spec printSeq([island()]) -> ok.
 %% @doc Funkcja wypisujaca na ekran podstawowe parametry dla modelu sekwencyjnego. W argumencie przesylana jest lista wysp.
@@ -53,7 +57,7 @@ printSeq([Island|T]) ->
 -spec sumEnergy([agent()]) -> integer().
 %% @doc Funkcja oblicza sume energii w danej populacji.
 sumEnergy(Agents) ->
-  lists:foldr(fun({_,_,E},Acc) -> Acc + E end,0,Agents).
+  lists:foldl(fun({_,_,E},Acc) -> Acc + E end,0,Agents).
 
 -spec printMoreStats(groups()) -> any().
 %% @doc Funkcja wypisuje dodatkowe informacje na podstawie przeslanej
@@ -65,6 +69,10 @@ printMoreStats(Groups) ->
   M = lists:flatten([X || {migration,X} <- Groups]),
   io:format("Dying: ~p    Fighting: ~p    Reproducing: ~p    Leaving: ~p~n",[length(D),length(F),length(R),length(M)]),
   io:format("Population: ~p, Energy: ~p~n",[length(D ++ M ++ F ++ R),sumEnergy(M ++ F ++ R)]).
+
+-spec printArenas([pid()]) -> ok.
+printArenas([Ring,Bar,Port]) ->
+  io:format("Supervisor: ~p~nRing: ~p~nBar: ~p~nPort: ~p~n~n",[self(),Ring,Bar,Port]).
 
 -spec genPath(string(),pos_integer(),pos_integer(),pos_integer()) -> string().
 %% @doc Funkcja generujaca sciezke dostepu wraz z nazwa folderu dla danego uruchomienia algorytmu. Wyznaczana jest sciezka

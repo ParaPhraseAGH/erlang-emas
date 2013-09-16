@@ -18,7 +18,7 @@ start(Path,N,ProblemSize) ->
   IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
   FDs = io_util:prepareWriting(IslandPath),
   Agents = genetic:generatePopulation(ProblemSize),
-  timer:send_after(config:writeInterval(),write),
+  timer:send_after(config:writeInterval(),{write,-99999}),
   loop(Agents,FDs).
 
 -spec close(pid()) -> {finish,pid()}.
@@ -38,11 +38,15 @@ sendAgent(Pid,Agent) ->
 %% @doc Glowna petla procesu. Kazda iteracja powoduje wytworzenie kolejnej generacji.
 loop(Agents,FDs) ->
   receive
-    write ->
-      io_util:write(dict:fetch(fitness,FDs),misc_util:result(Agents)),
+    {write,Last} ->
+      Fitness = case misc_util:result(Agents) of
+                  islandEmpty -> Last;
+                  X -> X
+                end,
+      io_util:write(dict:fetch(fitness,FDs),Fitness),
       io_util:write(dict:fetch(population,FDs),length(Agents)),
       io:format("Island ~p Fitness ~p Population ~p~n",[self(),misc_util:result(Agents),length(Agents)]),
-      timer:send_after(config:writeInterval(),write),
+      timer:send_after(config:writeInterval(),{write,Fitness}),
       loop(Agents,FDs);
     {agent,_Pid,A} ->
       loop([A|Agents],FDs);

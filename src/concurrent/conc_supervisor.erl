@@ -55,10 +55,11 @@ init([King,N,Path,ProblemSize]) ->
   {ok,Ring} = ring:start(),
   {ok,Bar} = bar:start(self()),
   Arenas = [Ring,Bar,Port],
+  io_util:printArenas(Arenas),
   [spawn_link(agent,start,[ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
   IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
   FDs = io_util:prepareWriting(IslandPath),
-  timer:send_after(config:writeInterval(),write),
+  timer:send_after(config:writeInterval(),{write,-99999}),
   {ok,#state{fds = FDs, arenas = Arenas},config:supervisorTimeout()}.
 
 terminate(_Reason,State) ->
@@ -93,11 +94,15 @@ handle_cast(close,State) ->
 handle_info({'EXIT',_,_},State) ->
   Population = State#state.population,
   {noreply,State#state{population = Population - 1},config:supervisorTimeout()};
-handle_info(write,State) ->
-  io_util:write(dict:fetch(fitness,State#state.fds),State#state.best),
+handle_info({write,Last},State) ->
+  Fitness = case State#state.best of
+   islandEmpty -> Last;
+   X -> X
+  end,
+  io_util:write(dict:fetch(fitness,State#state.fds),Fitness),
   io_util:write(dict:fetch(population,State#state.fds),State#state.population),
-  %io:format("Island ~p Fitness ~p Population ~p~n",[self(),State#state.best,State#state.population]),
-  timer:send_after(config:writeInterval(),write),
+  io:format("Island ~p Fitness ~p Population ~p~n",[self(),State#state.best,State#state.population]),
+  timer:send_after(config:writeInterval(),{write,Fitness}),
   {noreply,State,config:supervisorTimeout()};
 handle_info(timeout,State) ->
   {stop,timeout,State}.

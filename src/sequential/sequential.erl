@@ -33,6 +33,6 @@ start(ProblemSize,Time,Islands,Topology,Path,Fun) ->
 %% @doc Funkcja dokonujaca podstawowych przygotowan i zwracajaca liste slownikow deskryptorow.
 init(Time,IslandsNr,Topology,Path) ->
   timer:send_after(Time,theEnd),
-  timer:send_after(config:writeInterval(),write),
+  timer:send_after(config:writeInterval(),{write,-99999}),
   topology:start_link(IslandsNr,Topology),
   [io_util:prepareWriting(filename:join([Path,"isl" ++ integer_to_list(N)])) || N <- lists:seq(1,IslandsNr)].

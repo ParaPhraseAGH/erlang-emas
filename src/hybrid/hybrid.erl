@@ -31,7 +31,7 @@ start([A,B,C,D,E]) ->
 -spec start() -> ok.
 start() ->
   file:make_dir("tmp"),
-  start(40,5000,3,mesh,"tmp").
+  start(40,5000,2,mesh,"tmp").
 
 -spec sendAgent(agent()) -> ok.
 %% @doc Funkcja za pomocą której wyspa może wyslac agenta supervisorowi.

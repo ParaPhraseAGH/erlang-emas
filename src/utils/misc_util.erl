@@ -17,7 +17,7 @@
 %% [{K1,V1},{K2,V2},...] -> [{K1,[V1,V3]},{K2,[V2,V4,V5]},...]
 groupBy(List) ->
   dict:to_list(
-    lists:foldr(fun({K,V}, D) ->
+    lists:foldl(fun({K,V}, D) ->
       dict:append(K, V, D)
     end , dict:new(), List)).
 
