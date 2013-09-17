@@ -45,7 +45,7 @@ handle_call(emigrate,{Pid,_},cleaning) ->
   {noreply,cleaning,config:arenaTimeout()};
 handle_call(emigrate, From, State) ->
   {HisPid, _} = From,
-  IslandFrom = misc_util:index(State#state.mySupervisor,State#state.allSupervisors),
+  IslandFrom = misc_util:find(State#state.mySupervisor,State#state.allSupervisors),
   case catch topology:getDestination(IslandFrom) of
     IslandTo when is_integer(IslandTo) ->
       NewSupervisor = lists:nth(IslandTo,State#state.allSupervisors),

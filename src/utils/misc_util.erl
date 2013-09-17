@@ -3,7 +3,7 @@
 %% @doc Modul z funkcjami pomocniczymi dla roznych wersji algorytmu.
 
 -module(misc_util).
--export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, index/2]).
+-export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type task() :: death | fight | reproduction | migration.
@@ -52,6 +52,25 @@ behavior_noMig({_, _, Energy}) ->
     false -> fight
   end.
 
+-spec averageNumber(float(),[term()]) -> integer().
+%% @doc Funkcja wyznacza statystyczna liczbe elementow, ktore podlegaja jakiejs operacji z danym prawdopodobienstwem
+averageNumber(Probability,List) ->
+  N = Probability * length(List),
+  if N == 0 -> 0;
+    N < 1 ->
+      case random:uniform() < N of
+        true -> 1;
+        false -> 0
+      end;
+    N >=1 -> trunc(N)
+  end.
+
+-spec mapIndex(Elem::term(), Index::integer(), List::[term()], F::fun()) -> [term()].
+%% @doc Funkcja wykonuje funkcje F na elemencie listy List o indeksie Index oraz parametrze Elem.
+%% Wynik tej funkcji jest podmieniany jako nowy element o tym indeksie.
+mapIndex(Elem,Index,List,F) ->
+  mapIndex(Elem,Index,List,F,[]).
+
 -spec clearInbox() -> ok.
 %% @doc Funkcja czyszczaca skrzynke.
 clearInbox() ->
@@ -61,10 +80,10 @@ clearInbox() ->
     ok
   end.
 
--spec index(term(),[term()]) -> integer().
+-spec find(term(),[term()]) -> integer().
 %% @doc Funkcja wyznaczajaca indeks pod jakim znajduje sie dany element na podanej liscie.
-index(Elem,List) ->
-  index(Elem,List,1).
+find(Elem,List) ->
+  find(Elem,List,1).
 
 -spec result([agent()]) -> float() | islandEmpty.
 %% @doc Funkcja okreslajaca najlepszy wynik na podstawie przeslanej listy agentow
@@ -79,12 +98,23 @@ result(Agents) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
--spec index(term(),[term()],integer()) -> integer().
+-spec find(term(),[term()],integer()) -> integer().
 %% @doc Funkcja wyznaczajaca indeks pod jakim znajduje sie dany element na podanej liscie.
-index(Elem,[Elem|_],Inc) ->
+find(Elem,[Elem|_],Inc) ->
   Inc;
-index(_,[],_) ->
+find(_,[],_) ->
   notFound;
-index(Elem,[_|T],Inc) ->
-  index(Elem,T,Inc+1).
+find(Elem,[_|T],Inc) ->
+  find(Elem,T,Inc+1).
+
+-spec mapIndex(Elem::term(), Index::integer(), List::[term()], F::fun(), Acc::[term()]) -> [term()].
+%% @doc Funkcja wykonuje funkcje F na elemencie listy List o indeksie Index oraz parametrze Elem.
+%% Wynik tej funkcji jest podmieniany jako nowy element o tym indeksie.
+mapIndex(_,_,[],_,_) ->
+  erlang:error(wrongIndex);
+mapIndex(Elem,1,[H|T],F,Acc) ->
+  NewElem = F(Elem,H),
+  lists:reverse(Acc,[NewElem|T]);
+mapIndex(Elem,Index,[H|T],F,Acc) ->
+  mapIndex(Elem,Index - 1,T,F,[H|Acc]).
 

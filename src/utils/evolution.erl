@@ -3,7 +3,7 @@
 %% @doc Modul z funkcjami dotyczacymi ewolucji czyli przechodzenia jednej generacji w kolejna.
 %% Sa tu rowniez funkcje implementujace migracje miedzy wyspami
 -module(evolution).
--export([sendToWork/1, doReproduce/1, doFight/1, doMigrate/1, eachFightsAll/1, insertAppend/3, averageEmigration/1]).
+-export([sendToWork/1, doReproduce/1, doFight/1, doMigrate/1, eachFightsAll/1]).
 
 -type task() :: death | fight | reproduction | migration.
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
@@ -76,19 +76,6 @@ doMigrate(Islands)->
   {Gathered,NewIslands} = gather(Islands,[],[]),
   append(Gathered,lists:reverse(NewIslands)).
 
--spec averageEmigration([agent()]) -> integer().
-%% @doc Funkcja wyznacza statystyczna liczbe agentow do wyemigrowania z podanej populacji.
-averageEmigration(Population) ->
-  N = config:migrationProbability() * length(Population),
-  if N == 0 -> 0;
-    N < 1 ->
-      case random:uniform() < N of
-        true -> 1;
-        false -> 0
-      end;
-    N >=1 -> trunc(N)
-  end.
-
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
@@ -97,18 +84,8 @@ averageEmigration(Population) ->
 append([],Islands) -> Islands;
 append([{Immigrants,From}|T],Islands) ->
   Destination = topology:getDestination(From),
-  NewIslands = insertAppend(Immigrants,Destination,Islands),
+  NewIslands = misc_util:mapIndex(Immigrants,Destination,Islands,fun lists:append/2),
   append(T,NewIslands).
-
--spec insertAppend([agent()],integer(),[island()]) -> [island()].
-%% @doc Funkcja dokleja (append) liste agentow w parametrze do wyspy znajdujacej sie pod podanych indeksem.
-%% Zwracana jest lista wysp po operacji.
-insertAppend(_,_,[]) ->
-  erlang:error(wrongIndex);
-insertAppend(Elem,1,[H|T]) ->
-  [lists:append(Elem,H)|T];
-insertAppend(Elem,Index,[H|T]) ->
-  [H|insertAppend(Elem,Index - 1,T)].
 
 -spec gather([island()],[island()],[{[agent()],integer()}]) -> {[{[agent()],integer()}],[island()]}.
 %% @doc Funkcja wyznacza ile srednio agentow z danej populacji powinno emigrowac i przesuwa ich do specjalnej listy emigrantow.
@@ -116,7 +93,7 @@ insertAppend(Elem,Index,[H|T]) ->
 gather([],Islands,Emigrants) ->
   {Emigrants,Islands};
 gather([I|T],Acc,Emigrants) ->
-  N = averageEmigration(I),
+  N = misc_util:averageNumber(config:migrationProbability(),I),
   case N of
     0 ->
       gather(T,[I|Acc],Emigrants);

@@ -51,9 +51,9 @@ close(Pid) ->
 init([King,N,Path,ProblemSize]) ->
   random:seed(erlang:now()),
   process_flag(trap_exit, true),
-  {ok,Port} = port:start(self(),King),
   {ok,Ring} = ring:start(),
   {ok,Bar} = bar:start(self()),
+  {ok,Port} = port:start(self(),King),
   Arenas = [Ring,Bar,Port],
   io_util:printArenas(Arenas),
   [spawn_link(agent,start,[ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],

@@ -3,7 +3,7 @@
 %% @doc Modul zawierajacy funkcje wykonujace operacje genetyczne
 
 -module(genetic).
--export([solution/1, evaluation/1, reproduction/1, reproduction/2, generatePopulation/1, generateAgent/1]).
+-export([solution/1, evaluation/1, reproduction/1, reproduction/2, generatePopulation/1, generateAgent/1, mutateSolution/1]).
 
 -type solution() :: [float()].
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
@@ -73,11 +73,11 @@ recombineFeatures(F1, F2) ->
 -spec mutateSolution(solution()) -> solution().
 %% @doc Funkcja mutujaca podanego osobnika
 mutateSolution(S) ->
-  [ case random:uniform() < config:mutationRate() of
-      true  -> mutateFeature(F);
-      false -> F
-    end
-    || F <- S ].
+  NrGenesMutated = misc_util:averageNumber(config:mutationRate(),S),
+  Indexes = [random:uniform(length(S)) || _ <- lists:seq(1,NrGenesMutated)], % mozemy zmutowac ten sam gen dwa razy, ale nie szkodzi
+  lists:foldl(fun(Index,Solution) ->
+                misc_util:mapIndex(anything,Index,Solution,fun(_,Gene) -> mutateFeature(Gene) end)
+              end,S,Indexes).
 
 -spec mutateFeature(float()) -> float().
 %% @doc Funkcja mutujaca konkretny gen
