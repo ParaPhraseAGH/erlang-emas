@@ -3,7 +3,7 @@
 %% @doc Modul zawierajacy funkcje wykonujace operacje genetyczne
 
 -module(genetic).
--export([solution/1, evaluation/1, reproduction/1, reproduction/2, generatePopulation/1, generateAgent/1, mutateSolution/1]).
+-export([solution/1, evaluation/1, reproduction/1, reproduction/2, generatePopulation/1, generateAgent/1]).
 
 -type solution() :: [float()].
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
@@ -63,28 +63,37 @@ reproduction(S1, S2) ->
 -spec recombineSolutions(solution(),solution()) -> {solution(),solution()}.
 %% @doc Funkcja krzyzujaca dwa osobniki
 recombineSolutions(S1, S2) ->
-  lists:unzip([ {recombineFeatures(F1, F2), recombineFeatures(F2, F1)} || {F1, F2} <- lists:zip(S1,S2)]).
+  lists:unzip([recombineFeatures(F1, F2) || {F1, F2} <- lists:zip(S1,S2)]).
 
--spec recombineFeatures(float(),float()) -> float().
+-spec recombineFeatures(float(),float()) -> {float(),float()}.
 %% @doc Funkcja odpowiedzialna za skrzyzowanie dwoch pojedynczych genow (floatow).
 recombineFeatures(F1, F2) ->
-  erlang:min(F1, F2) + random:uniform() * (erlang:max(F1, F2) - erlang:min(F1, F2)).
+  A = erlang:min(F1, F2),
+  B = (erlang:max(F1, F2) - erlang:min(F1, F2)),
+  {A + random:uniform() * B,A + random:uniform() * B}.
 
 -spec mutateSolution(solution()) -> solution().
 %% @doc Funkcja mutujaca podanego osobnika
 mutateSolution(S) ->
   NrGenesMutated = misc_util:averageNumber(config:mutationRate(),S),
-  Indexes = [random:uniform(length(S)) || _ <- lists:seq(1,NrGenesMutated)], % mozemy zmutowac ten sam gen dwa razy, ale nie szkodzi
-  lists:foldl(fun(Index,Solution) ->
-                misc_util:mapIndex(anything,Index,Solution,fun(_,Gene) -> mutateFeature(Gene) end)
-              end,S,Indexes).
+  Indexes = [random:uniform(length(S)) || _ <- lists:seq(1,NrGenesMutated)], % indeksy moga sie powtarzac!
+  mutateGenes(S,lists:usort(Indexes),1,[]). % usort usuwa powtorzenia
+
+mutateGenes(RestOfSolution,[],_,Acc) ->
+  lists:reverse(Acc,RestOfSolution);
+mutateGenes([],[_|_],_,_) ->
+  erlang:error(tooManyIndexes);
+mutateGenes([Gene|Solution],[I|Indexes],I,Acc) ->
+  mutateGenes(Solution,Indexes,I+1,[mutateFeature(Gene)|Acc]);
+mutateGenes([Gene|Solution],[I|Indexes],Inc,Acc) ->
+  mutateGenes(Solution,[I|Indexes],Inc+1,[Gene|Acc]).
 
 -spec mutateFeature(float()) -> float().
 %% @doc Funkcja mutujaca konkretny gen
 mutateFeature(F) ->
   Range = config:mutationRange() * case random:uniform() of
-                                     X when X < 0.2 -> 1.0 * 5;
-                                     X when X < 0.4 -> 1.0 / 5;
+                                     X when X < 0.2 -> 5.0;
+                                     X when X < 0.4 -> 0.2;
                                      _ -> 1.0
                                    end,
   F + Range * math:tan(math:pi()*(random:uniform() - 0.5)).

@@ -28,7 +28,7 @@ reproductionTransfer() -> 5.
 fightTransfer() -> 10.
 
 %% @doc Parametr okreslajacy jak duza czesc agenta powinna ulec mutacji
-mutationRate() -> 0.2.
+mutationRate() -> 0.1.
 %% @doc Parametr okreslajacy glebokosc pojedynczej mutacji
 mutationRange() -> 0.05.
 %% @doc Prawdopodobienstwo wystapienia mutacji u osobnika

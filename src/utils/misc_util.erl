@@ -113,8 +113,7 @@ find(Elem,[_|T],Inc) ->
 mapIndex(_,_,[],_,_) ->
   erlang:error(wrongIndex);
 mapIndex(Elem,1,[H|T],F,Acc) ->
-  NewElem = F(Elem,H),
-  lists:reverse(Acc,[NewElem|T]);
+  lists:reverse(Acc,[F(Elem,H)|T]);
 mapIndex(Elem,Index,[H|T],F,Acc) ->
   mapIndex(Elem,Index - 1,T,F,[H|Acc]).
 
