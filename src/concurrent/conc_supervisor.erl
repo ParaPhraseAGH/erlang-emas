@@ -49,7 +49,7 @@ close(Pid) ->
   arenas :: [pid()]}).
 
 init([King,N,Path,ProblemSize]) ->
-  random:seed(erlang:now()),
+  misc_util:seedRandom(),
   process_flag(trap_exit, true),
   {ok,Ring} = ring:start(),
   {ok,Bar} = bar:start(self()),

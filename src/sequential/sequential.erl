@@ -22,7 +22,7 @@ start([A,B,C,D,E],Fun) ->
 
 -spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string(), fun()) -> ok.
 start(ProblemSize,Time,Islands,Topology,Path,Fun) ->
-  random:seed(erlang:now()),
+  misc_util:seedRandom(),
   misc_util:clearInbox(),
   {_Time,{_Result,FDs}} = timer:tc(Fun, [ProblemSize,Time,Islands,Topology,Path]),
   [io_util:closeFiles(FDDict) || FDDict <- FDs],

@@ -36,7 +36,7 @@ close(Pid) ->
 -record(state, {mySupervisor,allSupervisors}).
 
 init(Args) ->
-  random:seed(erlang:now()),
+  misc_util:seedRandom(),
   self() ! Args, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
   {ok, #state{mySupervisor = undefined, allSupervisors = undefined}}.
 

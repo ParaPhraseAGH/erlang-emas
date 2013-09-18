@@ -52,7 +52,7 @@ handle_call(_,_,State) ->
   {noreply,State}.
 
 handle_cast({agent,From,Agent},Pids) ->
-  IslandFrom = misc_util:index(From,Pids),
+  IslandFrom = misc_util:find(From,Pids),
   IslandTo = topology:getDestination(IslandFrom),
   hybrid_island:sendAgent(lists:nth(IslandTo, Pids),Agent),
   {noreply,Pids,config:supervisorTimeout()}.

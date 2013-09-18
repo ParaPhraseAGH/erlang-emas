@@ -38,7 +38,7 @@ close(Pid) ->
 -record(state, {supervisor,waitlist=[]}).
 
 init([Supervisor]) ->
-  random:seed(erlang:now()),
+  misc_util:seedRandom(),
   {ok, #state{supervisor = Supervisor, waitlist = []},config:arenaTimeout()}.
 
 handle_call(_Agent,_From,cleaning) ->

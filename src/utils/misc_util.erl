@@ -3,7 +3,8 @@
 %% @doc Modul z funkcjami pomocniczymi dla roznych wersji algorytmu.
 
 -module(misc_util).
--export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4]).
+-export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
+        seedRandom/0]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type task() :: death | fight | reproduction | migration.
@@ -94,6 +95,19 @@ result(Agents) ->
     _ ->
       lists:max([ Fitness || {_ ,Fitness, _} <- Agents])
   end.
+
+-spec seedRandom() -> {integer(),integer(),integer()}.
+seedRandom() ->
+  {_,B,C} = erlang:now(),
+  List = atom_to_list(node()),
+  Hash = lists:foldl(fun(N,Acc) ->
+                       if N >= 1000 -> Acc * 10000 + N;
+                         N >= 100 -> Acc * 1000 + N;
+                         N >= 10 -> Acc * 100 + N;
+                         N < 10 -> Acc * 10 + N
+                       end
+                     end,0,List),
+  random:seed(Hash,B,C).
 
 %% ====================================================================
 %% Internal functions

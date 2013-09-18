@@ -14,7 +14,7 @@
 %% @doc Funkcja generujaca dane poczatkowe, ktora pod koniec uruchamia glowna
 %% petle procesu.
 start(Path,N,ProblemSize) ->
-  random:seed(erlang:now()),
+  misc_util:seedRandom(),
   IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
   FDs = io_util:prepareWriting(IslandPath),
   Agents = genetic:generatePopulation(ProblemSize),
