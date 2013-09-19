@@ -5,48 +5,30 @@ N=2
 ## dlugosc wektora problemu
 Problem=10
 ## czas obliczania
-Time=100
+Time=3000
 ## ilosc rdzeni
 TotalCores=`cat /proc/cpuinfo | grep processor | wc -l`
 
-function concurrent {
-   for (( i=0; i<N; i++ ))
-   do
-   	erl -noshell -run concurrent run $1 $2 $3 -run init stop
+function runModel {
+   for (( i=0; i<N; i++ )) do
+    Path=$7"/instance"$i
+    mkdir -p $Path
+    echo $Path
+   	#taskset $1
+   	erl -noshell -run $2 start $3 $4 $5 $6 $Path -run init stop
    done
 }
-function hybrid {
-   for (( i=0; i<N; i++ ))
-   do
-   	erl -noshell -run hybrid run $1 $2 $3 -run init stop
-   done
-}
-function sequential {
-   for (( i=0; i<N; i++ ))
-   do
-   	erl -noshell -run sequential run $1 $2 $3 -run init stop
-   done
-}
-function setCores {
-    for (( core=0; core<$1 && core<TotalCores; core++ ))
-    do
-        #turning on the core
-        echo 1 > /sys/devices/system/cpu/cpu${core}/online
-    done
-    for (( core=$1; core<TotalCores; core++ ))
-    do
-        #turning off the core
-        echo 0 > /sys/devices/system/cpu/cpu${core}/online
-    done
-}
-cd bin
-echo TotalCores
-for (( cores=2; cores<=8; cores = cores*2 ))
+
+cd ebin
+for topology in mesh ring
 do
-    setCores $cores
-    concurrent $Problem $Time 2
-    sequential $Problem $Time 2
-    hybrid $Problem $Time 2
+    for cores in 0x0000000A 0x000000AA 0x000000FF
+    do
+        for island in 2 4 8
+        do
+            runModel $cores concurrent $Problem $Time $island $topology "Concurrent/"$island"_"$cores"_"$topology
+            runModel $cores sequential $Problem $Time $island $topology "Sequential/"$island"_"$cores"_"$topology
+            runModel $cores hybrid $Problem $Time $island $topology "Hybrid/"$island"_"$cores"_"$topology
+        done
+    done
 done
-## na koniec wlacz wszystkie rdzenie
-setCores TotalCores

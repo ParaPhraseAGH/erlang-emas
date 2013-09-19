@@ -6,24 +6,25 @@
 -export([start/4]).
 -record(arenas,{fight,reproduction,migration}).
 
+-type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+-type arenas() :: #arenas{}.
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-%% @spec start(RingPid,BarPid,PortPid) -> ok
+-spec start(pos_integer() | agent(), Ring::pid(), Bar::pid(), Port::pid()) -> no_return().
 %% @doc Funkcja generujaca dane i startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac.
 start(ProblemSize,Ring,Bar,Port) when is_integer(ProblemSize) ->
-  random:seed(erlang:now()),
-  S = genetic:solution(ProblemSize),
-  Agent = {S,genetic:evaluation(S),config:initialEnergy()},
+  misc_util:seedRandom(),
+  Agent = genetic:generateAgent(ProblemSize),
   Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
   loop(Agent,Arenas);
-
-%% @spec start(Agent,RingPid,BarPid,PortPid) -> ok
 %% @doc Funkcja startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac oraz dane agenta.
 start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
+  random:seed(erlang:now()),
   Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
   loop(Agent,Arenas).
 
@@ -31,7 +32,7 @@ start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
 %% Internal functions
 %% ====================================================================
 
-%% @spec loop(Agent,Arenas) -> ok
+-spec loop(agent(),arenas()) -> no_return().
 %% @doc Funkcja cyklu zycia agenta. Jego zachowanie jest zalezne od jego
 %% energii. Rekurencja kreci sie w nieskonczonosc, poki energia nie osiagnie 0.
 loop(Agent,Arenas) ->
@@ -40,31 +41,13 @@ loop(Agent,Arenas) ->
       exit(dying);
     reproduction ->
       {Solution,Fitness,_} = Agent,
-      NewEnergy = call(Agent,Arenas#arenas.reproduction),
+      NewEnergy = bar:call(Arenas#arenas.reproduction,Agent),%arenas:call(Agent,Arenas#arenas.reproduction),
       loop({Solution,Fitness,NewEnergy},Arenas);
     fight ->
       {Solution,Fitness,_} = Agent,
-      NewEnergy = call(Agent,Arenas#arenas.fight),
+      NewEnergy = ring:call(Arenas#arenas.fight,Agent),%arenas:call(Agent,Arenas#arenas.fight),
       loop({Solution,Fitness,NewEnergy},Arenas);
     migration ->
-      [Ring,Bar,Port] = call(emigration,Arenas#arenas.migration),
+      [Ring,Bar,Port] = port:call(Arenas#arenas.migration), %arenas:call(emigration,Arenas#arenas.migration),
       loop(Agent,#arenas{fight = Ring, reproduction = Bar, migration = Port})
-  end.
-
-%% @spec call(Message,ArenaPid) -> Answer
-%% @doc Funkcja wysyla podana wiadomosc do danej areny i zwraca otrzymana
-%% odpowiedz.
-call(Msg,ArenaPid) ->
-  Ref = erlang:monitor(process, ArenaPid),
-  ArenaPid ! {self(), Ref, Msg},
-  receive
-    {Ref, Ans} ->
-      erlang:demonitor(Ref, [flush]),
-      Ans;
-    {'DOWN', Ref, process, ArenaPid, Reason} ->
-      io:format("Arena do ktorej chce pisac proces ~p nie istnieje!~n",[self()]),
-      erlang:error(Reason)
-  after config:processTimeout() -> % docelowo nie bedzie timeoutu
-    io:format("Proces ~p nie doczekal sie odpowiedzi od areny ~p!~n",[self(),ArenaPid]),
-    exit(timeout)
   end.
