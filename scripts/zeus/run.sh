@@ -14,7 +14,7 @@ export Time=6000
 ## Topologia wysp
 export Topology=mesh
 
-Models=(sequential) # hybrid concurrent)
+Models=(sequential_lists) # sequential_mixed hybrid concurrent)
 Cores=(1) # 2 4)
 Islands=(1) # 2 4)
 
