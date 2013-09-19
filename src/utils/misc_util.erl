@@ -3,7 +3,8 @@
 %% @doc Modul z funkcjami pomocniczymi dla roznych wersji algorytmu.
 
 -module(misc_util).
--export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, index/2]).
+-export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
+        seedRandom/0]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type task() :: death | fight | reproduction | migration.
@@ -17,7 +18,7 @@
 %% [{K1,V1},{K2,V2},...] -> [{K1,[V1,V3]},{K2,[V2,V4,V5]},...]
 groupBy(List) ->
   dict:to_list(
-    lists:foldr(fun({K,V}, D) ->
+    lists:foldl(fun({K,V}, D) ->
       dict:append(K, V, D)
     end , dict:new(), List)).
 
@@ -52,6 +53,25 @@ behavior_noMig({_, _, Energy}) ->
     false -> fight
   end.
 
+-spec averageNumber(float(),[term()]) -> integer().
+%% @doc Funkcja wyznacza statystyczna liczbe elementow, ktore podlegaja jakiejs operacji z danym prawdopodobienstwem
+averageNumber(Probability,List) ->
+  N = Probability * length(List),
+  if N == 0 -> 0;
+    N < 1 ->
+      case random:uniform() < N of
+        true -> 1;
+        false -> 0
+      end;
+    N >=1 -> trunc(N)
+  end.
+
+-spec mapIndex(Elem::term(), Index::integer(), List::[term()], F::fun()) -> [term()].
+%% @doc Funkcja wykonuje funkcje F na elemencie listy List o indeksie Index oraz parametrze Elem.
+%% Wynik tej funkcji jest podmieniany jako nowy element o tym indeksie.
+mapIndex(Elem,Index,List,F) ->
+  mapIndex(Elem,Index,List,F,[]).
+
 -spec clearInbox() -> ok.
 %% @doc Funkcja czyszczaca skrzynke.
 clearInbox() ->
@@ -61,10 +81,10 @@ clearInbox() ->
     ok
   end.
 
--spec index(term(),[term()]) -> integer().
+-spec find(term(),[term()]) -> integer().
 %% @doc Funkcja wyznaczajaca indeks pod jakim znajduje sie dany element na podanej liscie.
-index(Elem,List) ->
-  index(Elem,List,1).
+find(Elem,List) ->
+  find(Elem,List,1).
 
 -spec result([agent()]) -> float() | islandEmpty.
 %% @doc Funkcja okreslajaca najlepszy wynik na podstawie przeslanej listy agentow
@@ -76,15 +96,38 @@ result(Agents) ->
       lists:max([ Fitness || {_ ,Fitness, _} <- Agents])
   end.
 
+-spec seedRandom() -> {integer(),integer(),integer()}.
+seedRandom() ->
+  {_,B,C} = erlang:now(),
+  List = atom_to_list(node()),
+  Hash = lists:foldl(fun(N,Acc) ->
+                       if N >= 1000 -> Acc * 10000 + N;
+                         N >= 100 -> Acc * 1000 + N;
+                         N >= 10 -> Acc * 100 + N;
+                         N < 10 -> Acc * 10 + N
+                       end
+                     end,0,List),
+  random:seed(Hash,B,C).
+
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
--spec index(term(),[term()],integer()) -> integer().
+-spec find(term(),[term()],integer()) -> integer().
 %% @doc Funkcja wyznaczajaca indeks pod jakim znajduje sie dany element na podanej liscie.
-index(Elem,[Elem|_],Inc) ->
+find(Elem,[Elem|_],Inc) ->
   Inc;
-index(_,[],_) ->
+find(_,[],_) ->
   notFound;
-index(Elem,[_|T],Inc) ->
-  index(Elem,T,Inc+1).
+find(Elem,[_|T],Inc) ->
+  find(Elem,T,Inc+1).
+
+-spec mapIndex(Elem::term(), Index::integer(), List::[term()], F::fun(), Acc::[term()]) -> [term()].
+%% @doc Funkcja wykonuje funkcje F na elemencie listy List o indeksie Index oraz parametrze Elem.
+%% Wynik tej funkcji jest podmieniany jako nowy element o tym indeksie.
+mapIndex(_,_,[],_,_) ->
+  erlang:error(wrongIndex);
+mapIndex(Elem,1,[H|T],F,Acc) ->
+  lists:reverse(Acc,[F(Elem,H)|T]);
+mapIndex(Elem,Index,[H|T],F,Acc) ->
+  mapIndex(Elem,Index - 1,T,F,[H|Acc]).
 
