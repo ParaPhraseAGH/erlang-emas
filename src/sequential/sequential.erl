@@ -22,7 +22,7 @@ start([A,B,C,D,E],Fun) ->
 
 -spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string(), fun()) -> ok.
 start(ProblemSize,Time,Islands,Topology,Path,Fun) ->
-  random:seed(erlang:now()),
+  misc_util:seedRandom(),
   misc_util:clearInbox(),
   {_Time,{_Result,FDs}} = timer:tc(Fun, [ProblemSize,Time,Islands,Topology,Path]),
   [io_util:closeFiles(FDDict) || FDDict <- FDs],
@@ -33,6 +33,6 @@ start(ProblemSize,Time,Islands,Topology,Path,Fun) ->
 %% @doc Funkcja dokonujaca podstawowych przygotowan i zwracajaca liste slownikow deskryptorow.
 init(Time,IslandsNr,Topology,Path) ->
   timer:send_after(Time,theEnd),
-  timer:send_after(config:writeInterval(),write),
+  timer:send_after(config:writeInterval(),{write,-99999}),
   topology:start_link(IslandsNr,Topology),
   [io_util:prepareWriting(filename:join([Path,"isl" ++ integer_to_list(N)])) || N <- lists:seq(1,IslandsNr)].

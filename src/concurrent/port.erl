@@ -36,16 +36,16 @@ close(Pid) ->
 -record(state, {mySupervisor,allSupervisors}).
 
 init(Args) ->
-  random:seed(erlang:now()),
+  misc_util:seedRandom(),
   self() ! Args, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
-  {ok, #state{mySupervisor = undefined, allSupervisors = undefined},config:arenaTimeout()}.
+  {ok, #state{mySupervisor = undefined, allSupervisors = undefined}}.
 
 handle_call(emigrate,{Pid,_},cleaning) ->
   exit(Pid,finished),
   {noreply,cleaning,config:arenaTimeout()};
 handle_call(emigrate, From, State) ->
   {HisPid, _} = From,
-  IslandFrom = misc_util:index(State#state.mySupervisor,State#state.allSupervisors),
+  IslandFrom = misc_util:find(State#state.mySupervisor,State#state.allSupervisors),
   case catch topology:getDestination(IslandFrom) of
     IslandTo when is_integer(IslandTo) ->
       NewSupervisor = lists:nth(IslandTo,State#state.allSupervisors),
@@ -55,18 +55,16 @@ handle_call(emigrate, From, State) ->
       end;
     _ -> exit(HisPid,finished)
   end,
-  {noreply,State,config:arenaTimeout()}.
+  {noreply,State}.
 
 handle_cast(close, _State) ->
   {noreply,cleaning,config:arenaTimeout()}.
 
 handle_info(timeout,cleaning) ->
   {stop,normal,cleaning};
-handle_info(timeout,State) ->
-  {stop,timeout,State};
 handle_info([Supervisor,King], _UndefinedState) ->
   AllSupervisors = concurrent:getAddresses(King),
-  {noreply, #state{mySupervisor = Supervisor, allSupervisors = AllSupervisors},config:arenaTimeout()}.
+  {noreply, #state{mySupervisor = Supervisor, allSupervisors = AllSupervisors}}.
 
 terminate(_Reason, _State) ->
   ok.

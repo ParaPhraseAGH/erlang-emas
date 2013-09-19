@@ -37,12 +37,13 @@ init(ProblemSize,Time,IslandsNr,Topology,Path) ->
 %% @doc Glowa petla programu. Każda iteracja powoduje ewolucję nowej generacji osobnikow.
 loop(Population,FDs) ->
   receive
-    write ->
+    {write,Last} ->
       Islands = lists:sort(misc_util:groupBy(Population)),
-      io_util:writeIslands(FDs,[Agents || {_,Agents} <- Islands]),
+      io_util:writeIslands(FDs,[Agents || {_,Agents} <- Islands],Last),
       PrintAgents = [A || {_,A} <- Population],
-      io:format("Best: ~p  Energy:~p~n",[misc_util:result(PrintAgents),io_util:sumEnergy(PrintAgents)]),
-      timer:send_after(config:writeInterval(),write),
+      Best = misc_util:result(PrintAgents),
+      io:format("Best: ~p  Energy:~p~n",[Best,io_util:sumEnergy(PrintAgents)]),
+      timer:send_after(config:writeInterval(),{write,Best}),
       loop(Population,FDs);
     theEnd ->
       Best = misc_util:result([A || {_,A} <- Population]),

@@ -38,10 +38,10 @@ init(ProblemSize,Time,IslandsNr,Topology,Path) ->
 %% @doc Glowa petla programu. Każda iteracja powoduje ewolucję nowej generacji osobnikow.
 loop(Islands,FDs) ->
   receive
-    write ->
-      io_util:writeIslands(FDs,Islands),
+    {write,PreviousBest} ->
+      io_util:writeIslands(FDs,Islands,PreviousBest),
       io_util:printSeq(Islands),
-      timer:send_after(config:writeInterval(),write),
+      timer:send_after(config:writeInterval(),{write,lists:max([misc_util:result(I) || I <- Islands])}),
       loop(Islands,FDs);
     theEnd ->
       Best = lists:max([misc_util:result(I) || I <- Islands]),

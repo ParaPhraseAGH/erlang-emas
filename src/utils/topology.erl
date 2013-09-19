@@ -36,7 +36,7 @@ getDestination(X) ->
 -record(state, {n,topology}).
 
 init([IslandsNr,Topology]) ->
-  random:seed(erlang:now()),
+  misc_util:seedRandom(),
   {ok, #state{n = IslandsNr, topology = Topology}}.
 
 handle_call({destination,X}, _From, State) ->

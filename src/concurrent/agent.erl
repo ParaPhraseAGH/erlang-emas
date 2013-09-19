@@ -17,7 +17,7 @@
 %% @doc Funkcja generujaca dane i startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac.
 start(ProblemSize,Ring,Bar,Port) when is_integer(ProblemSize) ->
-  random:seed(erlang:now()),
+  misc_util:seedRandom(),
   Agent = genetic:generateAgent(ProblemSize),
   Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
   loop(Agent,Arenas);

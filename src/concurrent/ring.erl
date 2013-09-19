@@ -36,7 +36,7 @@ close(Pid) ->
 %% Callbacks
 %% ====================================================================
 init([]) ->
-  random:seed(erlang:now()),
+  misc_util:seedRandom(),
   {ok, [], config:arenaTimeout()}.
 
 handle_call(_Agent,_From,cleaning) ->

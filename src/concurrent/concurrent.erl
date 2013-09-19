@@ -11,7 +11,6 @@
 
 -spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
 start(ProblemSize,Time,Islands,Topology,Path) ->
-  %Path = io_util:genPath("Concurrent",ProblemSize,Time,Islands),
   misc_util:clearInbox(),
   topology:start_link(Islands,Topology),
   Supervisors = [conc_supervisor:start(self(),X,Path,ProblemSize) || X <- lists:seq(1,Islands)],
