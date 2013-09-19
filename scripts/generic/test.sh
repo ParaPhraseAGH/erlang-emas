@@ -23,7 +23,8 @@ do
     for island in 2 4 8
     do
         runModel $cores concurrent $Problem $Time $island "Concurrent/"$island"_"$cores
-        runModel $cores sequential $Problem $Time $island "Sequential/"$island"_"$cores
+        runModel $cores sequential_lists $Problem $Time $island "Sequential/"$island"_"$cores
+        runModel $cores sequential_mixed $Problem $Time $island "Sequential/"$island"_"$cores
         runModel $cores hybrid $Problem $Time $island "Hybrid/"$island"_"$cores
     done
 done
