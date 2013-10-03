@@ -6,7 +6,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/4, sendAgents/2, unlinkAgent/2, linkAgent/2, close/1]).
+-export([start/4, sendAgents/2, unlinkAgent/2, linkAgent/2, close/1, report/3]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
@@ -36,6 +36,11 @@ unlinkAgent(Pid,AgentPid) ->
 linkAgent(Pid,AgentFrom) ->
   gen_server:call(Pid,{immigrant,AgentFrom}).
 
+-spec report(pid(),non_neg_integer(),atom()) -> ok.
+%% @doc Umozliwia przeslanie supervisorowi informacji od areny o liczbie spotkan agentow
+report(Pid,N,Key) ->
+  gen_server:cast(Pid,{logFromArena,Key,N}).
+
 -spec close(pid()) -> ok.
 close(Pid) ->
   gen_server:cast(Pid,close).
@@ -44,14 +49,14 @@ close(Pid) ->
 %% Callbacks
 %% ====================================================================
 -record(state, {best = -999999.9 :: float(),
-  fds :: dict(),
-  population = config:populationSize() :: pos_integer(),
-  arenas :: [pid()]}).
+                fds :: dict(),
+                population = config:populationSize() :: pos_integer(),
+                arenas :: [pid()]}).
 
 init([King,N,Path,ProblemSize]) ->
   misc_util:seedRandom(),
   process_flag(trap_exit, true),
-  {ok,Ring} = ring:start(),
+  {ok,Ring} = ring:start(self()),
   {ok,Bar} = bar:start(self()),
   {ok,Port} = port:start(self(),King),
   Arenas = [Ring,Bar,Port],
@@ -87,6 +92,9 @@ handle_cast({newAgents,AgentList},State) ->
   NewPopulation = State#state.population + length(AgentList),
   Best = State#state.best,
   {noreply,State#state{best = lists:max([Result,Best]), population = NewPopulation},config:supervisorTimeout()};
+handle_cast({logFromArena,Key,N},State) ->
+  io_util:write(dict:fetch(Key,State#state.fds),N),
+  {noreply,State,config:supervisorTimeout()};
 handle_cast(close,State) ->
   {stop,normal,State}.
 

@@ -33,11 +33,14 @@ close(Pid) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--record(state, {mySupervisor,allSupervisors}).
+-record(state, {mySupervisor :: pid(),
+                allSupervisors ::[pid()],
+                counter = 0 ::non_neg_integer()}).
 
 init(Args) ->
   misc_util:seedRandom(),
   self() ! Args, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
+  timer:send_after(config:writeInterval(),report),
   {ok, #state{mySupervisor = undefined, allSupervisors = undefined}}.
 
 handle_call(emigrate,{Pid,_},cleaning) ->
@@ -55,11 +58,16 @@ handle_call(emigrate, From, State) ->
       end;
     _ -> exit(HisPid,finished)
   end,
-  {noreply,State}.
+  OldCounter = State#state.counter,
+  {noreply,State#state{counter = OldCounter + 1}}.
 
 handle_cast(close, _State) ->
   {noreply,cleaning,config:arenaTimeout()}.
 
+handle_info(report, State) ->
+  conc_supervisor:report(State#state.mySupervisor,State#state.counter,migration),
+  timer:send_after(config:writeInterval(),report),
+  {noreply,State#state{counter = 0},config:arenaTimeout()};
 handle_info(timeout,cleaning) ->
   {stop,normal,cleaning};
 handle_info([Supervisor,King], _UndefinedState) ->

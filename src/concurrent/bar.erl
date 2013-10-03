@@ -35,10 +35,13 @@ close(Pid) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--record(state, {supervisor,waitlist=[]}).
+-record(state, {supervisor :: pid(),
+                waitlist = [] :: [tuple()],
+                counter = 0 :: non_neg_integer()}).
 
 init([Supervisor]) ->
   misc_util:seedRandom(),
+  timer:send_after(config:writeInterval(),report),
   {ok, #state{supervisor = Supervisor, waitlist = []},config:arenaTimeout()}.
 
 handle_call(_Agent,_From,cleaning) ->
@@ -52,13 +55,18 @@ handle_call(Agent1, From1, State) ->
       gen_server:reply(From1,NewEnergy1),
       gen_server:reply(From2,NewEnergy2),
       conc_supervisor:sendAgents(State#state.supervisor,[NewAgent1,NewAgent2]),
-      {noreply,State#state{waitlist = []},config:arenaTimeout()}
+      OldCounter = State#state.counter,
+      {noreply,State#state{waitlist = [], counter = OldCounter + 1},config:arenaTimeout()}
   end.
 
 handle_cast(close, State) ->
   [gen_server:reply(From,0) || {From,_} <- State#state.waitlist],
   {noreply,cleaning,config:arenaTimeout()}.
 
+handle_info(report, State) ->
+  conc_supervisor:report(State#state.supervisor,State#state.counter,reproduction),
+  timer:send_after(config:writeInterval(),report),
+  {noreply,State#state{counter = 0},config:arenaTimeout()};
 handle_info(timeout,cleaning) ->
   {stop,normal,cleaning};
 handle_info(timeout,State) ->
