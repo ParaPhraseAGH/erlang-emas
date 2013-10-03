@@ -22,11 +22,12 @@ write(FD,Value) ->
 %% @doc Funkcja tworzy folder oraz pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
 prepareWriting(Path) ->
   file:make_dir(Path),
-  {ok, FitnessFD} = file:open(filename:join([Path,"fitness.txt"]),[append,delayed_write,raw]),
-  {ok, PopulationFD} = file:open(filename:join([Path,"population.txt"]),[append,delayed_write,raw]),
-  dict:store(fitness,FitnessFD,
-    dict:store(population,PopulationFD,
-      dict:new())).
+  lists:foldl(fun(Atom,Dict) ->
+                Filename = atom_to_list(Atom) ++ ".txt",
+                {ok,Descriptor} = file:open(filename:join([Path,Filename]),[append,delayed_write,raw]),
+                dict:store(Atom,Descriptor,Dict)
+              end,dict:new(),
+              [fitness,population,migration,fight,reproduction,death]).
 
 -spec closeFiles(dict()) -> any().
 %% @doc Funkcja zamykająca pliki podane w argumencie
