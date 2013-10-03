@@ -51,6 +51,10 @@ loop(Agents,FDs,Counters) ->
                 end,
       io_util:write(dict:fetch(fitness,FDs),Fitness),
       io_util:write(dict:fetch(population,FDs),length(Agents)),
+      io_util:write(dict:fetch(migration,FDs),Counters#counters.migration),
+      io_util:write(dict:fetch(death,FDs),Counters#counters.death),
+      io_util:write(dict:fetch(reproduction,FDs),Counters#counters.reproduction),
+      io_util:write(dict:fetch(fight,FDs),Counters#counters.fight),
       io:format("Island ~p Fitness ~p Population ~p~n",[self(),misc_util:result(Agents),length(Agents)]),
       timer:send_after(config:writeInterval(),{write,Fitness}),
       loop(Agents,FDs,#counters{});
