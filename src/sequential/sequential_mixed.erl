@@ -5,7 +5,13 @@
 -module(sequential_mixed).
 -export([start/5, start/0, start/1]).
 
+-record(counters,{fight = 0 :: non_neg_integer(),
+  reproduction = 0 :: non_neg_integer(),
+  migration = 0 :: non_neg_integer(),
+  death = 0 :: non_neg_integer()}).
+
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+-type counters() :: #counters{}.
 
 %% ====================================================================
 %% API functions
@@ -31,20 +37,20 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
 init(ProblemSize,Time,IslandsNr,Topology,Path) ->
   Population = lists:append([[{X,genetic:generateAgent(ProblemSize)} || _ <- lists:seq(1,config:populationSize())] || X <- lists:seq(1,IslandsNr)]),
   FDs = sequential:init(Time,IslandsNr,Topology,Path),
-  loop(Population,FDs).
+  loop(Population,FDs,[#counters{} || _ <- lists:seq(1,IslandsNr)]).
 
--spec loop([agent()],[dict()]) -> {float(),[dict()]}.
+-spec loop([agent()],[dict()],[counters()]) -> {float(),[dict()]}.
 %% @doc Glowa petla programu. Każda iteracja powoduje ewolucję nowej generacji osobnikow.
-loop(Population,FDs) ->
+loop(Population,FDs,Counters) ->
   receive
     {write,Last} ->
       Islands = lists:sort(misc_util:groupBy(Population)),
-      io_util:writeIslands(FDs,[Agents || {_,Agents} <- Islands],Last),
+      io_util:writeIslands(FDs,[Agents || {_,Agents} <- Islands],Counters,Last),
       PrintAgents = [A || {_,A} <- Population],
       Best = misc_util:result(PrintAgents),
       io:format("Best: ~p  Energy:~p~n",[Best,io_util:sumEnergy(PrintAgents)]),
       timer:send_after(config:writeInterval(),{write,Best}),
-      loop(Population,FDs);
+      loop(Population,FDs,[#counters{} || _ <- lists:seq(1,length(Islands))]);
     theEnd ->
       Best = misc_util:result([A || {_,A} <- Population]),
       {Best,FDs}
@@ -67,5 +73,5 @@ loop(Population,FDs) ->
     Degrouped = [[{Home,A} || A <- List] || {Home,List} <- AfterWork],                              % Degrouped = [[{H1,A1'},{H1,A2'}],[{H2,A3'}...]
     NewAgents = lists:flatten([DeadAndMigrated|Degrouped]),
     %io:format("Population: ~p~n",[NewAgents]),
-    loop(misc_util:shuffle(NewAgents),FDs)
+    loop(misc_util:shuffle(NewAgents),FDs,NewCounters)
   end.

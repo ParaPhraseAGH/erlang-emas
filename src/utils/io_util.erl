@@ -3,12 +3,18 @@
 %% @doc Modul z funkcjami dotyczacymi operacji wejscia/wyjscia (wypisywanie na ekran, zapis do pliku).
 
 -module(io_util).
--export([printSeq/1, prepareWriting/1, closeFiles/1, write/2, writeIslands/3, printMoreStats/1, genPath/4, sumEnergy/1, printArenas/1]).
+-export([printSeq/1, prepareWriting/1, closeFiles/1, write/2, writeIslands/4, printMoreStats/1, genPath/4, sumEnergy/1, printArenas/1]).
+
+-record(counters,{fight = 0 :: non_neg_integer(),
+  reproduction = 0 :: non_neg_integer(),
+  migration = 0 :: non_neg_integer(),
+  death = 0 :: non_neg_integer()}).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type island() :: [agent()].
 -type task() :: death | fight | reproduction | migration.
 -type groups() :: [{task(),[agent()]}].
+-type counters() :: #counters{}.
 
 %% ====================================================================
 %% API functions
@@ -34,19 +40,23 @@ prepareWriting(Path) ->
 closeFiles(FDs) ->
   [file:close(FD) || {_,FD} <- dict:to_list(FDs)].
 
--spec writeIslands([port()],[island()],float()) -> ok.
+-spec writeIslands([port()],[island()],[counters()],float()) -> ok.
 %% @doc Funkcja dokonujaca zapisu do pliku dla modelu sekwencyjnego. W argumencie podawana jest lista wysp oraz
 %% lista slownikow z deskryptorow. Kolejnosc na liscie determinuje przyporzadkowanie wyspy do danego slownika,
 %% takze nie moze ona ulec zmianie podczas innych operacji na tych listach w algorytmie.
-writeIslands([],[],_) -> ok;
-writeIslands([FD|FDs],[I|Islands],PreviousBest) ->
+writeIslands([],[],[],_) -> ok;
+writeIslands([FD|FDs],[I|Islands],[Counters|Rest],PreviousBest) ->
   Fitness = case misc_util:result(I) of
               islandEmpty -> PreviousBest;
               X -> X
             end,
   write(dict:fetch(fitness,FD),Fitness),
   write(dict:fetch(population,FD),length(I)),
-  writeIslands(FDs,Islands,PreviousBest).
+  write(dict:fetch(reproduction,FD),Counters#counters.reproduction),
+  write(dict:fetch(fight,FD),Counters#counters.fight),
+  write(dict:fetch(death,FD),Counters#counters.death),
+  %write(dict:fetch(migration,FD),Counters#counters.migration), todo
+  writeIslands(FDs,Islands,Rest,PreviousBest).
 
 -spec printSeq([island()]) -> ok.
 %% @doc Funkcja wypisujaca na ekran podstawowe parametry dla modelu sekwencyjnego. W argumencie przesylana jest lista wysp.

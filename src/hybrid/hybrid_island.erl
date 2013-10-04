@@ -67,21 +67,6 @@ loop(Agents,FDs,Counters) ->
     Groups = misc_util:groupBy([{misc_util:behavior(A),A} || A <- Agents ]),
     NewGroups = [evolution:sendToWork(G) || G <- Groups],
     NewAgents = misc_util:shuffle(lists:flatten(NewGroups)),
-    NewCounters = countGroups(Groups,#counters{}),
-    loop(NewAgents,FDs,#counters{fight = Counters#counters.fight + NewCounters#counters.fight,
-                                reproduction = Counters#counters.reproduction + NewCounters#counters.reproduction,
-                                death = Counters#counters.death + NewCounters#counters.death,
-                                migration = Counters#counters.migration + NewCounters#counters.migration})
+    NewCounters = misc_util:countGroups(Groups,#counters{}),
+    loop(NewAgents,FDs,misc_util:addCounters(Counters,NewCounters))
   end.
-
--spec countGroups([tuple()],counters()) -> counters().
-countGroups([],Counter) ->
-  Counter;
-countGroups([{death,AgentList}|Groups],Counter) ->
-  countGroups(Groups,Counter#counters{death = length(AgentList)});
-countGroups([{migration,AgentList}|Groups],Counter) ->
-  countGroups(Groups,Counter#counters{migration = length(AgentList)});
-countGroups([{fight,AgentList}|Groups],Counter) ->
-  countGroups(Groups,Counter#counters{fight = length(AgentList)});
-countGroups([{reproduction,AgentList}|Groups],Counter) ->
-  countGroups(Groups,Counter#counters{reproduction = length(AgentList)}).
