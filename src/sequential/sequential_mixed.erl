@@ -67,11 +67,22 @@ loop(Population,FDs,Counters) ->
       {reproduction,RAgents} -> RAgents;
       false -> []
     end,                                                                                            % Reproducers = [{H1,[A1,A2]},{H2,[A3,A5]},...]
+    NewCounters = countFightReproductions(lists:sort(Fighters),lists:sort(Reproducers)),
     AfterFights = [{Home,evolution:sendToWork({fight,AgentList})} || {Home,AgentList} <- Fighters], % AfterFights = [{H1,[A1',A2']},{H2,[A3',A5']},...]
     AfterReproductions = [{Home,evolution:sendToWork({reproduction,AgentList})} || {Home,AgentList} <- Reproducers],
     AfterWork = lists:append(AfterFights,AfterReproductions),
     Degrouped = [[{Home,A} || A <- List] || {Home,List} <- AfterWork],                              % Degrouped = [[{H1,A1'},{H1,A2'}],[{H2,A3'}...]
     NewAgents = lists:flatten([DeadAndMigrated|Degrouped]),
     %io:format("Population: ~p~n",[NewAgents]),
-    loop(misc_util:shuffle(NewAgents),FDs,NewCounters)
+    loop(misc_util:shuffle(NewAgents),FDs,[misc_util:addCounters(C1,C2) || {C1,C2} <- lists:zip(Counters,NewCounters)])
   end.
+
+-spec countFightReproductions([tuple()],[tuple()]) -> [counters()].
+countFightReproductions([],[]) ->
+  [];
+countFightReproductions([{_,FightList}|T1],[]) ->
+  [#counters{fight = length(FightList)} | countFightReproductions(T1,[])];
+countFightReproductions([],[{_,ReproductionList}|T2]) ->
+  [#counters{reproduction = length(ReproductionList)} | countFightReproductions([],T2)];
+countFightReproductions([{_,FightList}|T1],[{_,ReproductionList}|T2]) ->
+  [#counters{fight = length(FightList), reproduction = length(ReproductionList)} | countFightReproductions(T1,T2)].
