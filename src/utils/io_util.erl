@@ -55,7 +55,7 @@ writeIslands([FD|FDs],[I|Islands],[Counters|Rest],PreviousBest) ->
   write(dict:fetch(reproduction,FD),Counters#counters.reproduction),
   write(dict:fetch(fight,FD),Counters#counters.fight),
   write(dict:fetch(death,FD),Counters#counters.death),
-  %write(dict:fetch(migration,FD),Counters#counters.migration), todo
+  write(dict:fetch(migration,FD),Counters#counters.migration),
   writeIslands(FDs,Islands,Rest,PreviousBest).
 
 -spec printSeq([island()]) -> ok.

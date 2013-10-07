@@ -78,6 +78,8 @@ loop(Population,FDs,Counters) ->
   end.
 
 -spec countFightReproductions([tuple()],[tuple()]) -> [counters()].
+%% @doc Liczy ile fighterow i reproducerow jest na kazdej wyspie. Funkcja sypie sie, jesli dlugosci list nie sa jednoznaczne tj. gdy na ktorejs wyspie nie ma fighterow
+%% albo reproducerow. Ta sytuacja niby raczej sie nie powinna zdarzac, ale i tak warto byloby to naprawic.
 countFightReproductions([],[]) ->
   [];
 countFightReproductions([{_,FightList}|T1],[]) ->
