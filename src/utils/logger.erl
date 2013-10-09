@@ -18,13 +18,13 @@ start_link(Model,Path) ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [Model,Path], []).
 
 -spec logLocalStats(sequential | parallel,atom(),term()) -> ok.
-%% @doc Funkcja loguje statystyki specyficzne dla danej wyspy (np. fitness, population).
+%% @doc Loguje statystyki specyficzne dla danej wyspy (np. fitness, population).
 %% Pierwsza zmienna informuje o trybie zapisu: parallel dla modelu concurrent i hybrid, a sequential dla sekwencyjnych.
 logLocalStats(Mode,Stat,Value) ->
   gen_server:cast(whereis(?MODULE),{Mode,Stat,self(),Value}).
 
 -spec logGlobalStats(tuple()) -> ok.
-%% @doc Funkcja zapisuje globalne statystyki (deaths,fights etc.) do plikow.
+%% @doc Zapisuje globalne statystyki (deaths,fights etc.) do plikow.
 logGlobalStats(Counter) ->
   gen_server:cast(whereis(?MODULE),{counter,Counter}).
 
@@ -36,8 +36,12 @@ close() ->
   gen_server:cast(whereis(?MODULE),close).
 
 %%%===================================================================
-%%% gen_server callbacks
+%%% Callbacks
 %%%===================================================================
+
+-record(state,{dict :: dict(),
+              counters = {0,0,0,0}:: {integer(),integer(),integer(),integer()},
+              n = 0 :: non_neg_integer()}).
 
 init([Model,Path]) ->
   Dict = case Model of
@@ -46,31 +50,42 @@ init([Model,Path]) ->
     {parallel,Pids} when is_list(Pids)->
       prepareParDictionary(Pids,dict:new(),Path)
   end,
-  {ok, Dict}.
+  {ok, #state{dict = Dict}}.
 
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
-handle_cast({parallel,Stat,Pid,Value}, Dict) ->
-  logLocal(Dict,Pid,Stat,Value),
-  {noreply, Dict};
-handle_cast({sequential,Stat,_Pid,Values}, Dict) ->
-  logList(Stat,1,Values,Dict),
-  {noreply, Dict};
-handle_cast({counter,{Deaths,Fights,Reproductions,Migrations}}, Dict) ->
+handle_cast({parallel,Stat,Pid,Value}, State) ->
+  logLocal(State#state.dict,Pid,Stat,Value),
+  {noreply, State};
+handle_cast({sequential,Stat,_Pid,Values}, State) ->
+  logList(Stat,1,Values,State#state.dict),
+  {noreply, State};
+handle_cast({counter,{Deaths,Fights,Reproductions,Migrations}}, State) ->
+  Dict = State#state.dict,
   logGlobal(Dict,death,Deaths),
   logGlobal(Dict,fight,Fights),
   logGlobal(Dict,reproduction,Reproductions),
   logGlobal(Dict,migration,Migrations),
-  {noreply, Dict};
+  {noreply, State};
+handle_cast({agregate,self(),Counters}, State) ->
+  N = length(dict:to_list(State#state.dict)) - 4,
+  case State#state.n - 1 of
+    N ->
+      logGlobalStats(addCounters(Counters,State#state.counters)),
+      {noreply, #state{dict = State#state.dict}};
+    X ->
+      OldCounters = State#state.counters,
+      {noreply, State#state{n = X + 2, counters = addCounters(Counters,OldCounters)}}
+  end;
 handle_cast(close, State) ->
   {stop, normal, State}.
 
 handle_info(_Info, State) ->
   {noreply, State}.
 
-terminate(_Reason, Dict) ->
-  closeFiles(Dict).
+terminate(_Reason, State) ->
+  closeFiles(State#state.dict).
 
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
@@ -100,14 +115,14 @@ prepareSeqDictionary(IslandNr,Dict,Path) ->
   prepareSeqDictionary(IslandNr-1,NewDict,Path).
 
 -spec createFDs(string(),dict(),[atom()]) -> FDs :: dict().
-%% @doc Funkcja tworzy pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
+%% @doc Tworzy pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
 createFDs(Path,InitDict,Files) ->
   lists:foldl(fun(Atom,Dict) ->
     Filename = atom_to_list(Atom) ++ ".txt",
     {ok,Descriptor} = file:open(filename:join([Path,Filename]),[append,delayed_write,raw]),
     dict:store(Atom,Descriptor,Dict)
   end,InitDict,
-  Files).
+    Files).
 
 -spec logList(atom(),pos_integer(),[term()],dict()) -> ok.
 logList(_,_,[],_) ->
@@ -117,25 +132,30 @@ logList(Stat,Index,[H|T],Dict) ->
   logList(Stat,Index+1,T,Dict).
 
 -spec logLocal(dict(),term(),atom(),term()) -> ok.
-%% @doc Funkcja dokonuje buforowanego zapisu do pliku lokalnej statystyki. W argumencie podany glowny slownik, klucz, nazwa statystyki i wartosc do wpisania.
+%% @doc Dokonuje buforowanego zapisu do pliku lokalnej statystyki. W argumencie podany glowny slownik, klucz, nazwa statystyki i wartosc do wpisania.
 logLocal(Dictionary,Key,Statistic,Value) ->
   FDs = dict:fetch(Key,Dictionary),
   FD = dict:fetch(Statistic,FDs),
   file:write(FD,io_lib:fwrite("~p\n",[Value])).
 
 -spec logGlobal(dict(),atom(),term()) -> ok.
-%% @doc Funkcja dokonuje buforowanego zapisu do pliku globalnej statystyki. W argumencie podany glowny slownik, nazwa statystyki i wartosc do wpisania.
+%% @doc Dokonuje buforowanego zapisu do pliku globalnej statystyki. W argumencie podany glowny slownik, nazwa statystyki i wartosc do wpisania.
 logGlobal(Dictionary,Stat,Value) ->
   FD = dict:fetch(Stat,Dictionary),
   file:write(FD,io_lib:fwrite("~p\n",[Value])).
 
 -spec closeFiles(dict()) -> any().
-%% @doc Funkcja zamykająca pliki podane w argumencie
+%% @doc Zamyka pliki podane w argumencie
 closeFiles(Dict) ->
   [case X of
      {Id,FD} when is_atom(Id) -> file:close(FD);
      {_Id,D} -> [file:close(FD) || {_Stat,FD} <- dict:to_list(D)]
    end || X <- dict:to_list(Dict)].
+
+-spec addCounters(tuple(),tuple()) -> tuple().
+addCounters({D1,F1,R1,M1},{D2,F2,R2,M2}) ->
+  {D1+D2,F1+F2,R1+R2,M1+M2}.
+
 
 
 
