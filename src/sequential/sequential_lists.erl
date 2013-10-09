@@ -44,8 +44,11 @@ init(ProblemSize,Time,IslandsNr,Topology,Path) ->
 %% @doc Glowa petla programu. Każda iteracja powoduje ewolucję nowej generacji osobnikow.
 loop(Islands,FDs,Counter) ->
   receive
-    {write,PreviousBest} ->
-      io_util:writeIslands(FDs,Islands,Counter,PreviousBest),
+    {write,_PreviousBest} ->
+      %io_util:writeIslands(FDs,Islands,Counter,PreviousBest),
+      logger:logGlobalStats({Counter#counter.death,Counter#counter.fight,Counter#counter.reproduction,Counter#counter.migration}),
+      logger:logLocalStats(sequential,fitness,[misc_util:result(I) || I <- Islands]),
+      logger:logLocalStats(sequential,population,[length(I) || I <- Islands]),
       io_util:printSeq(Islands),
       timer:send_after(config:writeInterval(),{write,lists:max([misc_util:result(I) || I <- Islands])}),
       loop(Islands,FDs,#counter{});
