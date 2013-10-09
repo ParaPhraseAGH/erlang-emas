@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/2, close/0]).
+-export([start_link/2, logLocal/3, close/0]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
@@ -16,6 +16,12 @@
 -spec start_link(atom(),string()) -> {ok,pid()}.
 start_link(Model,Path) ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [Model,Path], []).
+
+-spec logLocal(sequential | parallel,atom(),term()) -> ok.
+%% @doc Funkcja loguje statystyki specyficzne dla danej wyspy (np. fitness, population).
+%% Pierwsza zmienna informuje o trybie zapisu: parallel dla modelu concurrent i hybrid, a sequential dla sekwencyjnych.
+logLocal(Mode,Stat,Value) ->
+  gen_server:cast(whereis(?MODULE),{Mode,Stat,self(),Value}).
 
 -spec close() -> ok.
 close() ->
@@ -37,10 +43,10 @@ init([Model,Path]) ->
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
-handle_cast({Stat,Pid,Value}, Dict) when is_float(Value) ->
+handle_cast({parallel,Stat,Pid,Value}, Dict) ->
   log(Dict,Pid,Stat,Value),
   {noreply, Dict};
-handle_cast({Stat,_Pid,Values}, Dict) when is_list(Values) ->
+handle_cast({sequential,Stat,_Pid,Values}, Dict) ->
   logList(Stat,1,Values,Dict),
   {noreply, Dict};
 handle_cast(close, State) ->
@@ -49,8 +55,8 @@ handle_cast(close, State) ->
 handle_info(_Info, State) ->
   {noreply, State}.
 
-terminate(_Reason, _State) ->
-  ok.
+terminate(_Reason, Dict) ->
+  closeFiles(Dict).
 
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
@@ -101,6 +107,11 @@ log(Dictionary,Key,Statistic,Value) ->
   FDs = dict:fetch(Key,Dictionary),
   FD = dict:fetch(Statistic,FDs),
   file:write(FD,io_lib:fwrite("~p\n",[Value])).
+
+-spec closeFiles(dict()) -> any().
+%% @doc Funkcja zamykająca pliki podane w argumencie
+closeFiles(Dict) ->
+  [[file:close(FD) || {_Stat,FD} <- dict:to_list(D)] || {_Id,D} <- dict:to_list(Dict)].
 
 
 

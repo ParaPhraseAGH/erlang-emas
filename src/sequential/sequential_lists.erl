@@ -40,7 +40,7 @@ init(ProblemSize,Time,IslandsNr,Topology,Path) ->
   FDs = sequential:init(Time,IslandsNr,Topology,Path),
   loop(Islands,FDs,#counter{}).
 
--spec loop([island()],[dict()],counters()) -> {float(),[dict()]}.
+-spec loop([island()],[dict()],counter()) -> {float(),[dict()]}.
 %% @doc Glowa petla programu. Każda iteracja powoduje ewolucję nowej generacji osobnikow.
 loop(Islands,FDs,Counter) ->
   receive
