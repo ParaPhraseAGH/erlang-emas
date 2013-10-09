@@ -24,7 +24,7 @@ start([A,B,C,D,E],Fun) ->
 start(ProblemSize,Time,Islands,Topology,Path,Fun) ->
   misc_util:seedRandom(),
   misc_util:clearInbox(),
-  {_Time,{_Result,FDs}} = timer:tc(Fun, [ProblemSize,Time,Islands,Topology,Path]),
+  {_Time,_Result} = timer:tc(Fun, [ProblemSize,Time,Islands,Topology,Path]),
   %[io_util:closeFiles(FDDict) || FDDict <- FDs],
   topology:close(),
   logger:close(),

@@ -37,12 +37,12 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
 %% Zwracany jest koncowy wynik.
 init(ProblemSize,Time,IslandsNr,Topology,Path) ->
   Islands = [genetic:generatePopulation(ProblemSize) || _ <- lists:seq(1,IslandsNr)],
-  FDs = sequential:init(Time,IslandsNr,Topology,Path),
-  loop(Islands,FDs,#counter{}).
+  sequential:init(Time,IslandsNr,Topology,Path),
+  loop(Islands,#counter{}).
 
--spec loop([island()],[dict()],counter()) -> {float(),[dict()]}.
+-spec loop([island()],counter()) -> float().
 %% @doc Glowa petla programu. Każda iteracja powoduje ewolucję nowej generacji osobnikow.
-loop(Islands,FDs,Counter) ->
+loop(Islands,Counter) ->
   receive
     {write,_PreviousBest} ->
       % todo PreviousBest
@@ -52,16 +52,15 @@ loop(Islands,FDs,Counter) ->
       logger:logLocalStats(sequential,population,[length(I) || I <- Islands]),
       io_util:printSeq(Islands),
       timer:send_after(config:writeInterval(),{write,lists:max(Results)}),
-      loop(Islands,FDs,#counter{});
+      loop(Islands,#counter{});
     theEnd ->
-      Best = lists:max([misc_util:result(I) || I <- Islands]),
-      {Best,FDs}
+      lists:max([misc_util:result(I) || I <- Islands])
   after 0 ->
     IslandsMigrated = evolution:doMigrate(Islands), % todo logowanie migracji
     Groups = [misc_util:groupBy([{misc_util:behavior_noMig(Agent),Agent} || Agent <- I]) || I <- IslandsMigrated],
     NewGroups = [lists:map(fun evolution:sendToWork/1,I) || I <- Groups],
     NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- NewGroups],
-    loop(NewIslands,FDs,countAllIslands(Groups,Counter))
+    loop(NewIslands,countAllIslands(Groups,Counter))
   end.
 
 -spec countAllIslands([list()],counter()) -> counter().
