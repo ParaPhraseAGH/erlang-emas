@@ -44,23 +44,23 @@ init(ProblemSize,Time,IslandsNr,Topology,Path) ->
 %% @doc Glowa petla programu. Każda iteracja powoduje ewolucję nowej generacji osobnikow.
 loop(Islands,Counter) ->
   receive
-    {write,_PreviousBest} ->
-      % todo PreviousBest
+    write ->
       Results = [misc_util:result(I) || I <- Islands],
       logger:logGlobalStats(sequential,{Counter#counter.death,Counter#counter.fight,Counter#counter.reproduction,Counter#counter.migration}),
       logger:logLocalStats(sequential,fitness,Results),
       logger:logLocalStats(sequential,population,[length(I) || I <- Islands]),
       io_util:printSeq(Islands),
-      timer:send_after(config:writeInterval(),{write,lists:max(Results)}),
+      timer:send_after(config:writeInterval(),write),
       loop(Islands,#counter{});
     theEnd ->
       lists:max([misc_util:result(I) || I <- Islands])
   after 0 ->
-    IslandsMigrated = evolution:doMigrate(Islands), % todo logowanie migracji
+    {NrOfEmigrants,IslandsMigrated} = evolution:doMigrate(Islands),
     Groups = [misc_util:groupBy([{misc_util:behavior_noMig(Agent),Agent} || Agent <- I]) || I <- IslandsMigrated],
     NewGroups = [lists:map(fun evolution:sendToWork/1,I) || I <- Groups],
     NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- NewGroups],
-    loop(NewIslands,countAllIslands(Groups,Counter))
+    NewCounter = countAllIslands(Groups,Counter),
+    loop(NewIslands,NewCounter#counter{migration = NrOfEmigrants + Counter#counter.migration})
   end.
 
 -spec countAllIslands([list()],counter()) -> counter().
