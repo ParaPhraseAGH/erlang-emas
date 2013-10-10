@@ -5,8 +5,14 @@
 -module(sequential_lists).
 -export([start/5, start/0, start/1]).
 
+-record(counter,{fight = 0 :: non_neg_integer(),
+  reproduction = 0 :: non_neg_integer(),
+  migration = 0 :: non_neg_integer(),
+  death = 0 :: non_neg_integer()}).
+
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type island() :: [agent()].
+-type counter() :: #counter{}.
 
 %% ====================================================================
 %% API functions
@@ -31,25 +37,34 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
 %% Zwracany jest koncowy wynik.
 init(ProblemSize,Time,IslandsNr,Topology,Path) ->
   Islands = [genetic:generatePopulation(ProblemSize) || _ <- lists:seq(1,IslandsNr)],
-  FDs = sequential:init(Time,IslandsNr,Topology,Path),
-  loop(Islands,FDs).
+  sequential:init(Time,IslandsNr,Topology,Path),
+  loop(Islands,#counter{}).
 
--spec loop([island()],[dict()]) -> {float(),[dict()]}.
+-spec loop([island()],counter()) -> float().
 %% @doc Glowa petla programu. Każda iteracja powoduje ewolucję nowej generacji osobnikow.
-loop(Islands,FDs) ->
+loop(Islands,Counter) ->
   receive
-    {write,PreviousBest} ->
-      io_util:writeIslands(FDs,Islands,PreviousBest),
+    write ->
+      Results = [misc_util:result(I) || I <- Islands],
+      logger:logGlobalStats(sequential,{Counter#counter.death,Counter#counter.fight,Counter#counter.reproduction,Counter#counter.migration}),
+      logger:logLocalStats(sequential,fitness,Results),
+      logger:logLocalStats(sequential,population,[length(I) || I <- Islands]),
       io_util:printSeq(Islands),
-      timer:send_after(config:writeInterval(),{write,lists:max([misc_util:result(I) || I <- Islands])}),
-      loop(Islands,FDs);
+      timer:send_after(config:writeInterval(),write),
+      loop(Islands,#counter{});
     theEnd ->
-      Best = lists:max([misc_util:result(I) || I <- Islands]),
-      {Best,FDs}
+      lists:max([misc_util:result(I) || I <- Islands])
   after 0 ->
-    IslandsMigrated = evolution:doMigrate(Islands),
+    {NrOfEmigrants,IslandsMigrated} = evolution:doMigrate(Islands),
     Groups = [misc_util:groupBy([{misc_util:behavior_noMig(Agent),Agent} || Agent <- I]) || I <- IslandsMigrated],
     NewGroups = [lists:map(fun evolution:sendToWork/1,I) || I <- Groups],
     NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- NewGroups],
-    loop(NewIslands,FDs)
+    NewCounter = countAllIslands(Groups,Counter),
+    loop(NewIslands,NewCounter#counter{migration = NrOfEmigrants + Counter#counter.migration})
   end.
+
+-spec countAllIslands([list()],counter()) -> counter().
+%% @doc Liczy kategorie (ile fights,deaths etc.) na wszystkich wyspach i dodaje do Counter.
+countAllIslands(GroupedIslands,Counter) ->
+  CountedIslands = [misc_util:countGroups(I,#counter{}) || I <- GroupedIslands],
+  lists:foldl(fun misc_util:addCounters/2,Counter,CountedIslands).

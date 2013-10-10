@@ -68,13 +68,13 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
   [AtoCTransfer, BtoDTransfer] = [ erlang:min(config:reproductionTransfer(), E) || E <- [EnA, EnB] ],
   [{SolA, EvA, EnA - AtoCTransfer}, {SolB, EvB, EnB - BtoDTransfer}, {SolC, EvC, AtoCTransfer}, {SolD, EvD, BtoDTransfer}].
 
--spec doMigrate([island()]) -> [island()].
+-spec doMigrate([island()]) -> {non_neg_integer(),[island()]}.
 %% @doc Funkcja dokonujaca migracji dla algorytmu sekwencyjnego. Najpierw z kazdej wyspy pobierana jest statystyczna
 %% liczba agentow, ktorzy powinni ulec migracji. Dla kazdej grupy emigrantow wyznaczana jest wyspa docelowa
 %% i sa oni do niej dopisywani. Zwracana jest lista wysp po dokonanej mirgacji.
 doMigrate(Islands)->
   {Gathered,NewIslands} = gather(Islands,[],[]),
-  append(Gathered,lists:reverse(NewIslands)).
+  {length(Gathered),append(Gathered,lists:reverse(NewIslands))}.
 
 %% ====================================================================
 %% Internal functions

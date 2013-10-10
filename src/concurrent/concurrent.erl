@@ -13,10 +13,12 @@
 start(ProblemSize,Time,Islands,Topology,Path) ->
   misc_util:clearInbox(),
   topology:start_link(Islands,Topology),
-  Supervisors = [conc_supervisor:start(self(),X,Path,ProblemSize) || X <- lists:seq(1,Islands)],
+  Supervisors = [conc_supervisor:start(self(),ProblemSize) || _ <- lists:seq(1,Islands)],
+  logger:start_link({parallel,Supervisors},Path),
   giveAddresses(Supervisors,Islands),
   timer:sleep(Time),
   [conc_supervisor:close(Pid) || Pid <- Supervisors],
+  logger:close(),
   topology:close().
 
 -spec start(list()) -> ok.

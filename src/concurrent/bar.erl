@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, start/1, call/2, close/1]).
+-export([start_link/1, start/1, call/2, getStats/1, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
@@ -28,6 +28,11 @@ start(Supervisor) ->
 call(Pid,Agent) ->
   gen_server:call(Pid,Agent).
 
+-spec getStats(pid()) -> non_neg_integer().
+%% @doc Zwraca statystyki areny
+getStats(Pid) ->
+  gen_server:call(Pid,getStats).
+
 -spec close(pid()) -> ok.
 close(Pid) ->
   gen_server:cast(Pid,close).
@@ -35,12 +40,16 @@ close(Pid) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--record(state, {supervisor,waitlist=[]}).
+-record(state, {supervisor :: pid(),
+                waitlist = [] :: [tuple()],
+                counter = 0 :: non_neg_integer()}).
 
 init([Supervisor]) ->
   misc_util:seedRandom(),
   {ok, #state{supervisor = Supervisor, waitlist = []},config:arenaTimeout()}.
 
+handle_call(getStats,_From,State) ->
+  {reply,State#state.counter,State#state{counter = 0}};
 handle_call(_Agent,_From,cleaning) ->
   {reply,0,cleaning,config:arenaTimeout()};
 handle_call(Agent1, From1, State) ->
@@ -52,7 +61,8 @@ handle_call(Agent1, From1, State) ->
       gen_server:reply(From1,NewEnergy1),
       gen_server:reply(From2,NewEnergy2),
       conc_supervisor:sendAgents(State#state.supervisor,[NewAgent1,NewAgent2]),
-      {noreply,State#state{waitlist = []},config:arenaTimeout()}
+      OldCounter = State#state.counter,
+      {noreply,State#state{waitlist = [], counter = OldCounter + 1},config:arenaTimeout()}
   end.
 
 handle_cast(close, State) ->

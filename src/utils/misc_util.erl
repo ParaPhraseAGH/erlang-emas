@@ -4,11 +4,17 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
-        seedRandom/0]).
+        seedRandom/0, countGroups/2, addCounters/2]).
+
+-record(counter,{fight = 0 :: non_neg_integer(),
+  reproduction = 0 :: non_neg_integer(),
+  migration = 0 :: non_neg_integer(),
+  death = 0 :: non_neg_integer()}).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type task() :: death | fight | reproduction | migration.
 -type groups() :: [{task(),[agent()]}].
+-type counter() :: #counter{}.
 
 %% ====================================================================
 %% API functions
@@ -65,6 +71,27 @@ averageNumber(Probability,List) ->
       end;
     N >=1 -> trunc(N)
   end.
+
+-spec countGroups([tuple()],counter()) -> counter().
+%% @doc Zwraca liczby agentow nalezacych do poszczegolnych kategorii w formie rekordu
+countGroups([],Counter) ->
+  Counter;
+countGroups([{death,AgentList}|Groups],Counter) ->
+  countGroups(Groups,Counter#counter{death = length(AgentList)});
+countGroups([{migration,AgentList}|Groups],Counter) ->
+  countGroups(Groups,Counter#counter{migration = length(AgentList)});
+countGroups([{fight,AgentList}|Groups],Counter) ->
+  countGroups(Groups,Counter#counter{fight = length(AgentList)});
+countGroups([{reproduction,AgentList}|Groups],Counter) ->
+  countGroups(Groups,Counter#counter{reproduction = length(AgentList)}).
+
+-spec addCounters(counter(),counter()) -> counter().
+%% @doc Funkcja dodaje dwa liczniki
+addCounters(C1,C2) ->
+  #counter{fight = C1#counter.fight + C2#counter.fight,
+  reproduction = C1#counter.reproduction + C2#counter.reproduction,
+  death = C1#counter.death + C2#counter.death,
+  migration = C1#counter.migration + C2#counter.migration}.
 
 -spec mapIndex(Elem::term(), Index::integer(), List::[term()], F::fun()) -> [term()].
 %% @doc Funkcja wykonuje funkcje F na elemencie listy List o indeksie Index oraz parametrze Elem.
