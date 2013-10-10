@@ -44,8 +44,9 @@ sendAgent(Agent) ->
 %% ====================================================================
 init([ProblemSize,Time,Islands,Topology,Path]) ->
   timer:send_after(Time,theEnd),
+  Pids = [spawn_link(hybrid_island,start,[ProblemSize]) || _ <- lists:seq(1,Islands)],
   topology:start_link(Islands,Topology),
-  Pids = [spawn_link(hybrid_island,start,[Path,X,ProblemSize]) || X <- lists:seq(1,Islands)],
+  logger:start_link({parallel,Pids},Path),
   {ok,Pids,config:supervisorTimeout()}.
 
 handle_call(_,_,State) ->
@@ -54,7 +55,7 @@ handle_call(_,_,State) ->
 handle_cast({agent,From,Agent},Pids) ->
   IslandFrom = misc_util:find(From,Pids),
   IslandTo = topology:getDestination(IslandFrom),
-  hybrid_island:sendAgent(lists:nth(IslandTo, Pids),Agent),
+  hybrid_island:sendAgent(lists:nth(IslandTo,Pids),Agent),
   {noreply,Pids,config:supervisorTimeout()}.
 
 handle_info(timeout,Pids) ->
@@ -64,7 +65,8 @@ handle_info(theEnd,Pids) ->
 
 terminate(_Reason,Pids) ->
   [hybrid_island:close(Pid) || Pid <- Pids],
-  topology:close().
+  topology:close(),
+  logger:close().
 
 code_change(_OldVsn,State,_Extra) ->
   {ok, State}.

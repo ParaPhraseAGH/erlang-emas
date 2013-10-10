@@ -3,7 +3,7 @@
 %% @doc Modul z funkcjami dotyczacymi operacji wejscia/wyjscia (wypisywanie na ekran, zapis do pliku).
 
 -module(io_util).
--export([printSeq/1, prepareWriting/1, closeFiles/1, write/2, writeIslands/3, printMoreStats/1, genPath/4, sumEnergy/1, printArenas/1]).
+-export([printSeq/1, printMoreStats/1, genPath/4, sumEnergy/1, printArenas/1]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type island() :: [agent()].
@@ -13,39 +13,6 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec write(file:io_device(),term()) -> ok.
-%% @doc Funkcja dokonuje buforowanego zapisu do pliku. W argumencie podany deskryptor i wartosc do zapisania.
-write(FD,Value) ->
-  file:write(FD,io_lib:fwrite("~p\n",[Value])).
-
--spec prepareWriting(string()) -> FDs :: dict().
-%% @doc Funkcja tworzy folder oraz pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
-prepareWriting(Path) ->
-  file:make_dir(Path),
-  {ok, FitnessFD} = file:open(filename:join([Path,"fitness.txt"]),[append,delayed_write,raw]),
-  {ok, PopulationFD} = file:open(filename:join([Path,"population.txt"]),[append,delayed_write,raw]),
-  dict:store(fitness,FitnessFD,
-    dict:store(population,PopulationFD,
-      dict:new())).
-
--spec closeFiles(dict()) -> any().
-%% @doc Funkcja zamykająca pliki podane w argumencie
-closeFiles(FDs) ->
-  [file:close(FD) || {_,FD} <- dict:to_list(FDs)].
-
--spec writeIslands([port()],[island()],float()) -> ok.
-%% @doc Funkcja dokonujaca zapisu do pliku dla modelu sekwencyjnego. W argumencie podawana jest lista wysp oraz
-%% lista slownikow z deskryptorow. Kolejnosc na liscie determinuje przyporzadkowanie wyspy do danego slownika,
-%% takze nie moze ona ulec zmianie podczas innych operacji na tych listach w algorytmie.
-writeIslands([],[],_) -> ok;
-writeIslands([FD|FDs],[I|Islands],PreviousBest) ->
-  Fitness = case misc_util:result(I) of
-              islandEmpty -> PreviousBest;
-              X -> X
-            end,
-  write(dict:fetch(fitness,FD),Fitness),
-  write(dict:fetch(population,FD),length(I)),
-  writeIslands(FDs,Islands,PreviousBest).
 
 -spec printSeq([island()]) -> ok.
 %% @doc Funkcja wypisujaca na ekran podstawowe parametry dla modelu sekwencyjnego. W argumencie przesylana jest lista wysp.

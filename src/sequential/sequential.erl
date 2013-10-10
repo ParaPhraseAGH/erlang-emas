@@ -24,15 +24,17 @@ start([A,B,C,D,E],Fun) ->
 start(ProblemSize,Time,Islands,Topology,Path,Fun) ->
   misc_util:seedRandom(),
   misc_util:clearInbox(),
-  {_Time,{_Result,FDs}} = timer:tc(Fun, [ProblemSize,Time,Islands,Topology,Path]),
-  [io_util:closeFiles(FDDict) || FDDict <- FDs],
+  {_Time,_Result} = timer:tc(Fun, [ProblemSize,Time,Islands,Topology,Path]),
+  %[io_util:closeFiles(FDDict) || FDDict <- FDs],
   topology:close(),
+  logger:close(),
   io:format("Total time:   ~p s~nFitness:     ~p~n",[_Time/1000000,_Result]).
 
 -spec init(Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> [dict()].
 %% @doc Funkcja dokonujaca podstawowych przygotowan i zwracajaca liste slownikow deskryptorow.
 init(Time,IslandsNr,Topology,Path) ->
   timer:send_after(Time,theEnd),
-  timer:send_after(config:writeInterval(),{write,-99999}),
+  timer:send_after(config:writeInterval(),write),
   topology:start_link(IslandsNr,Topology),
-  [io_util:prepareWriting(filename:join([Path,"isl" ++ integer_to_list(N)])) || N <- lists:seq(1,IslandsNr)].
+  logger:start_link({sequential,IslandsNr},Path).
+  %[io_util:prepareWriting(filename:join([Path,"isl" ++ integer_to_list(N)])) || N <- lists:seq(1,IslandsNr)].

@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/2, start/2, call/1, close/1]).
+-export([start_link/2, start/2, call/1, getStats/1, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
@@ -26,6 +26,11 @@ start(Supervisor,King) ->
 call(Pid) ->
   gen_server:call(Pid,emigrate).
 
+-spec getStats(pid()) -> non_neg_integer().
+%% @doc Zwraca statystyki areny
+getStats(Pid) ->
+  gen_server:call(Pid,getStats).
+
 -spec close(pid()) -> ok.
 close(Pid) ->
   gen_server:cast(Pid,close).
@@ -33,13 +38,17 @@ close(Pid) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--record(state, {mySupervisor,allSupervisors}).
+-record(state, {mySupervisor :: pid(),
+                allSupervisors :: [pid()],
+                counter = 0 :: non_neg_integer()}).
 
 init(Args) ->
   misc_util:seedRandom(),
   self() ! Args, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
   {ok, #state{mySupervisor = undefined, allSupervisors = undefined}}.
 
+handle_call(getStats,_From,State) ->
+  {reply,State#state.counter,State#state{counter = 0}};
 handle_call(emigrate,{Pid,_},cleaning) ->
   exit(Pid,finished),
   {noreply,cleaning,config:arenaTimeout()};
@@ -55,7 +64,8 @@ handle_call(emigrate, From, State) ->
       end;
     _ -> exit(HisPid,finished)
   end,
-  {noreply,State}.
+  OldCounter = State#state.counter,
+  {noreply,State#state{counter = OldCounter + 1}}.
 
 handle_cast(close, _State) ->
   {noreply,cleaning,config:arenaTimeout()}.

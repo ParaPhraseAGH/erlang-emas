@@ -1,0 +1,6 @@
+[submodule "skel"]
+	path = skel
+	url = https://github.com/ParaPhrase/skel.git
+[submodule "deps/skel"]
+	path = deps/skel
+	url = https://github.com/ParaPhrase/skel.git
