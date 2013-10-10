@@ -47,7 +47,7 @@ loop(Population,Counter) ->
       Islands = lists:sort(misc_util:groupBy(Population)),
       logger:logLocalStats(sequential,fitness,[misc_util:result(Agents) || {_,Agents} <- Islands]),
       logger:logLocalStats(sequential,population,[length(Agents) || {_,Agents} <- Islands]),
-      logger:logGlobalStats({Counter#counter.death,Counter#counter.fight,Counter#counter.reproduction,Counter#counter.migration}),
+      logger:logGlobalStats(sequential,{Counter#counter.death,Counter#counter.fight,Counter#counter.reproduction,Counter#counter.migration}),
       PrintAgents = [A || {_,A} <- Population],
       Best = misc_util:result(PrintAgents),
       io:format("Best: ~p  Energy:~p~n",[Best,io_util:sumEnergy(PrintAgents)]),

@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/2, logLocalStats/3, logGlobalStats/1, agregateGlobalStats/1, close/0]).
+-export([start_link/2, logLocalStats/3, logGlobalStats/2, close/0]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
@@ -23,12 +23,11 @@ start_link(Model,Path) ->
 logLocalStats(Mode,Stat,Value) ->
   gen_server:cast(whereis(?MODULE),{Mode,Stat,self(),Value}).
 
--spec logGlobalStats(tuple()) -> ok.
+-spec logGlobalStats(sequential | parallel,tuple()) -> ok.
 %% @doc Zapisuje globalne statystyki (deaths,fights etc.) do plikow.
-logGlobalStats(Counter) ->
-  gen_server:cast(whereis(?MODULE),{counter,Counter}).
-
-agregateGlobalStats(Counter) ->
+logGlobalStats(sequential,Counter) ->
+  gen_server:cast(whereis(?MODULE),{counter,Counter});
+logGlobalStats(parallel,Counter) ->
   gen_server:cast(whereis(?MODULE),{agregate,self(),Counter}).
 
 -spec close() -> ok.
@@ -68,15 +67,15 @@ handle_cast({counter,{Deaths,Fights,Reproductions,Migrations}}, State) ->
   logGlobal(Dict,reproduction,Reproductions),
   logGlobal(Dict,migration,Migrations),
   {noreply, State};
-handle_cast({agregate,self(),Counters}, State) ->
+handle_cast({agregate,_Pid,Counters}, State) ->
   N = length(dict:to_list(State#state.dict)) - 4,
-  case State#state.n - 1 of
+  case State#state.n + 1 of
     N ->
-      logGlobalStats(addCounters(Counters,State#state.counters)),
+      logGlobalStats(sequential,addCounters(Counters,State#state.counters)),
       {noreply, #state{dict = State#state.dict}};
     X ->
       OldCounters = State#state.counters,
-      {noreply, State#state{n = X + 2, counters = addCounters(Counters,OldCounters)}}
+      {noreply, State#state{n = X, counters = addCounters(Counters,OldCounters)}}
   end;
 handle_cast(close, State) ->
   {stop, normal, State}.

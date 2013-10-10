@@ -3,29 +3,27 @@
 %% @doc Modul odpowiedzialny za logike pojedynczej wyspy w modelu hybrydowym.
 
 -module(hybrid_island).
--export([start/3, close/1, sendAgent/2]).
+-export([start/1, close/1, sendAgent/2]).
 
--record(counters,{fight = 0 :: non_neg_integer(),
+-record(counter,{fight = 0 :: non_neg_integer(),
                   reproduction = 0 :: non_neg_integer(),
                   migration = 0 :: non_neg_integer(),
                   death = 0 :: non_neg_integer()}).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type counters() :: #counters{}.
+-type counter() :: #counter{}.
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start(Path::string(), N::integer(), ProblemSize::integer()) -> ok.
+-spec start(ProblemSize::integer()) -> ok.
 %% @doc Funkcja generujaca dane poczatkowe, ktora pod koniec uruchamia glowna
 %% petle procesu.
-start(Path,N,ProblemSize) ->
+start(ProblemSize) ->
   misc_util:seedRandom(),
-  IslandPath = filename:join([Path,"isl" ++ integer_to_list(N)]),
-  FDs = io_util:prepareWriting(IslandPath),
   Agents = genetic:generatePopulation(ProblemSize),
   timer:send_after(config:writeInterval(),{write,-99999}),
-  loop(Agents,FDs,#counters{}).
+  loop(Agents,#counter{}).
 
 -spec close(pid()) -> {finish,pid()}.
 close(Pid) ->
@@ -40,33 +38,29 @@ sendAgent(Pid,Agent) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
--spec loop([agent()],dict(),counters()) -> ok.
+-spec loop([agent()],counter()) -> ok.
 %% @doc Glowna petla procesu. Kazda iteracja powoduje wytworzenie kolejnej generacji.
-loop(Agents,FDs,Counters) ->
+loop(Agents,Counters) ->
   receive
     {write,Last} ->
       Fitness = case misc_util:result(Agents) of
                   islandEmpty -> Last;
                   X -> X
                 end,
-      io_util:write(dict:fetch(fitness,FDs),Fitness),
-      io_util:write(dict:fetch(population,FDs),length(Agents)),
-      io_util:write(dict:fetch(migration,FDs),Counters#counters.migration),
-      io_util:write(dict:fetch(death,FDs),Counters#counters.death),
-      io_util:write(dict:fetch(reproduction,FDs),Counters#counters.reproduction),
-      io_util:write(dict:fetch(fight,FDs),Counters#counters.fight),
-      io:format("Island ~p Fitness ~p Population ~p~n",[self(),misc_util:result(Agents),length(Agents)]),
+      logger:logLocalStats(parallel,fitness,Fitness),
+      logger:logLocalStats(parallel,population,length(Agents)),
+      logger:logGlobalStats(parallel,{Counters#counter.death,Counters#counter.fight,Counters#counter.reproduction,Counters#counter.migration}),
+      io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,length(Agents)]),
       timer:send_after(config:writeInterval(),{write,Fitness}),
-      loop(Agents,FDs,#counters{});
+      loop(Agents,#counter{});
     {agent,_Pid,A} ->
-      loop([A|Agents],FDs,Counters);
+      loop([A|Agents],Counters);
     {finish,_Pid} ->
-      io_util:closeFiles(FDs),
       ok
   after 0 ->
     Groups = misc_util:groupBy([{misc_util:behavior(A),A} || A <- Agents ]),
     NewGroups = [evolution:sendToWork(G) || G <- Groups],
     NewAgents = misc_util:shuffle(lists:flatten(NewGroups)),
-    NewCounters = misc_util:countGroups(Groups,#counters{}),
-    loop(NewAgents,FDs,misc_util:addCounters(Counters,NewCounters))
+    NewCounters = misc_util:countGroups(Groups,#counter{}),
+    loop(NewAgents,misc_util:addCounters(Counters,NewCounters))
   end.

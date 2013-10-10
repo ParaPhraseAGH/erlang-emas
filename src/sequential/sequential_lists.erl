@@ -47,7 +47,7 @@ loop(Islands,Counter) ->
     {write,_PreviousBest} ->
       % todo PreviousBest
       Results = [misc_util:result(I) || I <- Islands],
-      logger:logGlobalStats({Counter#counter.death,Counter#counter.fight,Counter#counter.reproduction,Counter#counter.migration}),
+      logger:logGlobalStats(sequential,{Counter#counter.death,Counter#counter.fight,Counter#counter.reproduction,Counter#counter.migration}),
       logger:logLocalStats(sequential,fitness,Results),
       logger:logLocalStats(sequential,population,[length(I) || I <- Islands]),
       io_util:printSeq(Islands),
