@@ -32,7 +32,7 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
--spec init(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> {float(),[dict()]}.
+-spec init(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> float().
 %% @doc Funkcja tworzaca odpowiednia ilosc wysp i przechodzaca do glownej petli.
 %% Zwracany jest koncowy wynik.
 init(ProblemSize,Time,IslandsNr,Topology,Path) ->
@@ -45,9 +45,8 @@ init(ProblemSize,Time,IslandsNr,Topology,Path) ->
 loop(Islands,Counter) ->
   receive
     write ->
-      Results = [misc_util:result(I) || I <- Islands],
       logger:logGlobalStats(sequential,{Counter#counter.death,Counter#counter.fight,Counter#counter.reproduction,Counter#counter.migration}),
-      logger:logLocalStats(sequential,fitness,Results),
+      logger:logLocalStats(sequential,fitness,[misc_util:result(I) || I <- Islands]),
       logger:logLocalStats(sequential,population,[length(I) || I <- Islands]),
       io_util:printSeq(Islands),
       timer:send_after(config:writeInterval(),write),

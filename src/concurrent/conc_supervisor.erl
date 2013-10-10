@@ -43,7 +43,7 @@ close(Pid) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--record(state, {best = -999999.9 :: float(),
+-record(state, {best = -999999.9 :: float() | islandEmpty,
                 population = config:populationSize() :: pos_integer(),
                 deathCounter = 0 :: non_neg_integer(),
                 arenas :: [pid()]}).
@@ -57,7 +57,7 @@ init([King,ProblemSize]) ->
   Arenas = [Ring,Bar,Port],
   io_util:printArenas(Arenas),
   [spawn_link(agent,start,[ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
-  timer:send_after(config:writeInterval(),{write,-99999}),
+  timer:send_after(config:writeInterval(),write),
   {ok,#state{arenas = Arenas},config:supervisorTimeout()}.
 
 terminate(_Reason,State) ->
@@ -82,8 +82,7 @@ handle_cast({newAgents,AgentList},State) ->
   [spawn_link(agent,start,[A|State#state.arenas]) || A <- AgentList],
   Result = misc_util:result(AgentList),
   NewPopulation = State#state.population + length(AgentList),
-  Best = State#state.best,
-  {noreply,State#state{best = lists:max([Result,Best]), population = NewPopulation},config:supervisorTimeout()};
+  {noreply,State#state{best = lists:max([Result,State#state.best]), population = NewPopulation},config:supervisorTimeout()};
 handle_cast(close,State) ->
   {stop,normal,State}.
 
@@ -92,17 +91,14 @@ handle_info({'EXIT',_,_},State) ->
   Population = State#state.population,
   DeathCounter = State#state.deathCounter,
   {noreply,State#state{population = Population - 1, deathCounter = DeathCounter + 1},config:supervisorTimeout()};
-handle_info({write,Last},State) ->
+handle_info(write,State) ->
   [Ring,Bar,Port] = State#state.arenas,
-  Fitness = case State#state.best of
-   islandEmpty -> Last;
-   X -> X
-  end,
+  Fitness = State#state.best,
   logger:logGlobalStats(parallel,{State#state.deathCounter,ring:getStats(Ring),bar:getStats(Bar),port:getStats(Port)}),
   logger:logLocalStats(parallel,fitness,Fitness),
   logger:logLocalStats(parallel,population,State#state.population),
-  io:format("Island ~p Fitness ~p Population ~p~n",[self(),State#state.best,State#state.population]),
-  timer:send_after(config:writeInterval(),{write,Fitness}),
+  io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,State#state.population]),
+  timer:send_after(config:writeInterval(),write),
   {noreply,State#state{deathCounter = 0},config:supervisorTimeout()};
 handle_info(timeout,State) ->
   {stop,timeout,State}.

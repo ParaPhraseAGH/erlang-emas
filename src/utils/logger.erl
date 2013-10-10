@@ -7,13 +7,12 @@
 %% API
 -export([start_link/2, logLocalStats/3, logGlobalStats/2, close/0]).
 %% gen_server
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
-  code_change/3]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start_link(atom(),string()) -> {ok,pid()}.
+-spec start_link({atom(),[pid()] | integer()},string()) -> {ok,pid()}.
 start_link(Model,Path) ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [Model,Path], []).
 

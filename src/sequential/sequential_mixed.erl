@@ -31,7 +31,7 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
--spec init(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> {float(),[dict()]}.
+-spec init(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> float().
 %% @doc Funkcja tworzaca odpowiednia ilosc wysp i przechodzaca do glownej petli.
 %% Zwracany jest koncowy wynik.
 init(ProblemSize,Time,IslandsNr,Topology,Path) ->
@@ -39,7 +39,7 @@ init(ProblemSize,Time,IslandsNr,Topology,Path) ->
   sequential:init(Time,IslandsNr,Topology,Path),
   loop(Population,#counter{}).
 
--spec loop([agent()],[counter()]) -> float().
+-spec loop([agent()],counter()) -> float().
 %% @doc Glowa petla programu. Każda iteracja powoduje ewolucję nowej generacji osobnikow.
 loop(Population,Counter) ->
   receive
