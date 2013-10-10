@@ -3,60 +3,16 @@
 %% @doc Modul z funkcjami dotyczacymi operacji wejscia/wyjscia (wypisywanie na ekran, zapis do pliku).
 
 -module(io_util).
--export([printSeq/1, prepareWriting/1, closeFiles/1, write/2, writeIslands/4, printMoreStats/1, genPath/4, sumEnergy/1, printArenas/1]).
-
--record(counters,{fight = 0 :: non_neg_integer(),
-  reproduction = 0 :: non_neg_integer(),
-  migration = 0 :: non_neg_integer(),
-  death = 0 :: non_neg_integer()}).
+-export([printSeq/1, printMoreStats/1, genPath/4, sumEnergy/1, printArenas/1]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type island() :: [agent()].
 -type task() :: death | fight | reproduction | migration.
 -type groups() :: [{task(),[agent()]}].
--type counters() :: #counters{}.
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec write(file:io_device(),term()) -> ok.
-%% @doc Funkcja dokonuje buforowanego zapisu do pliku. W argumencie podany deskryptor i wartosc do zapisania.
-write(FD,Value) ->
-  file:write(FD,io_lib:fwrite("~p\n",[Value])).
-
--spec prepareWriting(string()) -> FDs :: dict().
-%% @doc Funkcja tworzy folder oraz pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
-prepareWriting(Path) ->
-  file:make_dir(Path),
-  lists:foldl(fun(Atom,Dict) ->
-                Filename = atom_to_list(Atom) ++ ".txt",
-                {ok,Descriptor} = file:open(filename:join([Path,Filename]),[append,delayed_write,raw]),
-                dict:store(Atom,Descriptor,Dict)
-              end,dict:new(),
-              [fitness,population,migration,fight,reproduction,death]).
-
--spec closeFiles(dict()) -> any().
-%% @doc Funkcja zamykająca pliki podane w argumencie
-closeFiles(FDs) ->
-  [file:close(FD) || {_,FD} <- dict:to_list(FDs)].
-
--spec writeIslands([port()],[island()],[counters()],float()) -> ok.
-%% @doc Funkcja dokonujaca zapisu do pliku dla modelu sekwencyjnego. W argumencie podawana jest lista wysp oraz
-%% lista slownikow z deskryptorow. Kolejnosc na liscie determinuje przyporzadkowanie wyspy do danego slownika,
-%% takze nie moze ona ulec zmianie podczas innych operacji na tych listach w algorytmie.
-writeIslands([],[],[],_) -> ok;
-writeIslands([FD|FDs],[I|Islands],[Counters|Rest],PreviousBest) ->
-  Fitness = case misc_util:result(I) of
-              islandEmpty -> PreviousBest;
-              X -> X
-            end,
-  write(dict:fetch(fitness,FD),Fitness),
-  write(dict:fetch(population,FD),length(I)),
-  write(dict:fetch(reproduction,FD),Counters#counters.reproduction),
-  write(dict:fetch(fight,FD),Counters#counters.fight),
-  write(dict:fetch(death,FD),Counters#counters.death),
-  write(dict:fetch(migration,FD),Counters#counters.migration),
-  writeIslands(FDs,Islands,Rest,PreviousBest).
 
 -spec printSeq([island()]) -> ok.
 %% @doc Funkcja wypisujaca na ekran podstawowe parametry dla modelu sekwencyjnego. W argumencie przesylana jest lista wysp.
