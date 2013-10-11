@@ -41,13 +41,13 @@ loop(Agent,Arenas) ->
       exit(dying);
     reproduction ->
       {Solution,Fitness,_} = Agent,
-      NewEnergy = bar:call(Arenas#arenas.reproduction,Agent),%arenas:call(Agent,Arenas#arenas.reproduction),
+      NewEnergy = bar:call(Arenas#arenas.reproduction,Agent),
       loop({Solution,Fitness,NewEnergy},Arenas);
     fight ->
       {Solution,Fitness,_} = Agent,
-      NewEnergy = ring:call(Arenas#arenas.fight,Agent),%arenas:call(Agent,Arenas#arenas.fight),
+      NewEnergy = ring:call(Arenas#arenas.fight,Agent),
       loop({Solution,Fitness,NewEnergy},Arenas);
     migration ->
-      [Ring,Bar,Port] = port:call(Arenas#arenas.migration), %arenas:call(emigration,Arenas#arenas.migration),
+      [Ring,Bar,Port] = port:call(Arenas#arenas.migration),
       loop(Agent,#arenas{fight = Ring, reproduction = Bar, migration = Port})
   end.
