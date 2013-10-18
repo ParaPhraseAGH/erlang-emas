@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, start/1, call/2, getStats/1, close/1]).
+-export([start_link/1, start/1, call/2, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
@@ -28,11 +28,6 @@ start(Supervisor) ->
 call(Pid,Agent) ->
   gen_server:call(Pid,Agent).
 
--spec getStats(pid()) -> non_neg_integer().
-%% @doc Zwraca statystyki areny
-getStats(Pid) ->
-  gen_server:call(Pid,getStats).
-
 -spec close(pid()) -> ok.
 close(Pid) ->
   gen_server:cast(Pid,close).
@@ -46,6 +41,7 @@ close(Pid) ->
 
 init([Supervisor]) ->
   misc_util:seedRandom(),
+  timer:send_after(config:writeInterval(),report),
   {ok, #state{supervisor = Supervisor}, config:arenaTimeout()}.
 
 handle_call(getStats,_From,State) ->
@@ -69,6 +65,12 @@ handle_cast(close, State) ->
   [gen_server:reply(From,0) || {From,_,_} <- State#state.waitlist],
   {noreply,cleaning,config:arenaTimeout()}.
 
+handle_info(report,cleaning) ->
+  {noreply,cleaning,config:arenaTimeout()};
+handle_info(report,State) ->
+  conc_supervisor:reportFromArena(State#state.supervisor,fight,State#state.counter),
+  timer:send_after(config:writeInterval(),report),
+  {noreply,State#state{counter = 0}};
 handle_info(timeout,cleaning) ->
   {stop,normal,cleaning};
 handle_info(timeout,State) ->

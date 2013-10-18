@@ -6,7 +6,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/2, sendAgents/2, unlinkAgent/2, linkAgent/2, close/1]).
+-export([start/2, sendAgents/2, unlinkAgent/2, linkAgent/2, reportFromArena/3, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
@@ -36,6 +36,10 @@ unlinkAgent(Pid,AgentPid) ->
 linkAgent(Pid,AgentFrom) ->
   gen_server:call(Pid,{immigrant,AgentFrom}).
 
+-spec reportFromArena(pid(),fight | reproduction | migration, non_neg_integer()) -> ok.
+reportFromArena(Pid,Arena,Value) ->
+  gen_server:cast(Pid,{reportFromArena,Arena,Value}).
+
 -spec close(pid()) -> ok.
 close(Pid) ->
   gen_server:cast(Pid,close).
@@ -43,21 +47,22 @@ close(Pid) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--record(state, {best = -999999.9 :: float(),
+-record(state, {best = -999999.9 :: float() | islandEmpty,
                 population = config:populationSize() :: pos_integer(),
                 deathCounter = 0 :: non_neg_integer(),
+                reports = dict:new() :: dict(),
                 arenas :: [pid()]}).
 
 init([King,ProblemSize]) ->
   misc_util:seedRandom(),
   process_flag(trap_exit, true),
-  {ok,Ring} = ring:start(self()),
-  {ok,Bar} = bar:start(self()),
-  {ok,Port} = port:start(self(),King),
+  {ok,Ring} = ring:start_link(self()),
+  {ok,Bar} = bar:start_link(self()),
+  {ok,Port} = port:start_link(self(),King),
   Arenas = [Ring,Bar,Port],
   io_util:printArenas(Arenas),
   [spawn_link(agent,start,[ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
-  timer:send_after(config:writeInterval(),{write,-99999}),
+  timer:send_after(config:writeInterval(),write),
   {ok,#state{arenas = Arenas},config:supervisorTimeout()}.
 
 terminate(_Reason,State) ->
@@ -82,28 +87,46 @@ handle_cast({newAgents,AgentList},State) ->
   [spawn_link(agent,start,[A|State#state.arenas]) || A <- AgentList],
   Result = misc_util:result(AgentList),
   NewPopulation = State#state.population + length(AgentList),
-  Best = State#state.best,
-  {noreply,State#state{best = lists:max([Result,Best]), population = NewPopulation},config:supervisorTimeout()};
+  {noreply,State#state{best = lists:max([Result,State#state.best]), population = NewPopulation},config:supervisorTimeout()};
+handle_cast({reportFromArena,Arena,Value},State) ->
+  Dict = State#state.reports,
+  case dict:find(Arena,Dict) of
+    {ok,_} ->
+      error("Double report from the same arena");
+    error ->
+      NewDict = dict:store(Arena,Value,Dict),
+      case dict:size(NewDict) of
+        3 ->
+          logger:logGlobalStats(parallel,{State#state.deathCounter,dict:fetch(fight,NewDict),dict:fetch(reproduction,NewDict),dict:fetch(migration,NewDict)}),
+          {noreply,State#state{reports = dict:new(), deathCounter = 0},config:supervisorTimeout()};
+        _ ->
+          {noreply,State#state{reports = NewDict},config:supervisorTimeout()}
+      end
+  end;
 handle_cast(close,State) ->
   {stop,normal,State}.
 
 
-handle_info({'EXIT',_,_},State) ->
+handle_info({'EXIT',_,dying},State) ->
   Population = State#state.population,
   DeathCounter = State#state.deathCounter,
   {noreply,State#state{population = Population - 1, deathCounter = DeathCounter + 1},config:supervisorTimeout()};
-handle_info({write,Last},State) ->
-  [Ring,Bar,Port] = State#state.arenas,
-  Fitness = case State#state.best of
-   islandEmpty -> Last;
-   X -> X
+handle_info({'EXIT',Pid,Reason},State) ->
+  case lists:member(Pid,State#state.arenas) of
+    true ->
+      io:format("Error w arenie, zamykamy impreze~n"),
+      exit(Reason);
+    false ->
+      io:format("Error w agencie, karawana jedzie dalej~n")
   end,
-  logger:logGlobalStats(parallel,{State#state.deathCounter,ring:getStats(Ring),bar:getStats(Bar),port:getStats(Port)}),
+  {noreply,State,config:supervisorTimeout()};
+handle_info(write,State) ->
+  Fitness = State#state.best,
   logger:logLocalStats(parallel,fitness,Fitness),
   logger:logLocalStats(parallel,population,State#state.population),
-  io:format("Island ~p Fitness ~p Population ~p~n",[self(),State#state.best,State#state.population]),
-  timer:send_after(config:writeInterval(),{write,Fitness}),
-  {noreply,State#state{deathCounter = 0},config:supervisorTimeout()};
+  io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,State#state.population]),
+  timer:send_after(config:writeInterval(),write),
+  {noreply,State,config:supervisorTimeout()};
 handle_info(timeout,State) ->
   {stop,timeout,State}.
 
