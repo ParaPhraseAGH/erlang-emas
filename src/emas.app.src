@@ -1,0 +1,18 @@
+%%%-------------------------------------------------------------------
+%%% @author Piotrek
+%%% @copyright (C) 2013, <COMPANY>
+%%% @doc
+%%%
+%%% @end
+%%% Created : 21. paź 2013 14:23
+%%%-------------------------------------------------------------------
+{application, emas, [
+  {description, "emas in erlang"},
+  {vsn, "0.1"},
+  {registered, []},
+  {applications, [
+    kernel,
+    stdlib
+  ]},
+  {env, []}
+]}.
