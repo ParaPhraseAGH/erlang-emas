@@ -39,25 +39,34 @@ init([IslandsNr,Topology]) ->
   misc_util:seedRandom(),
   {ok, #state{n = IslandsNr, topology = Topology}}.
 
-handle_call({destination,X}, _From, State) ->
-  N = State#state.n,
-  Ans = case State#state.topology of
-    ring ->
-      NewIsland = case random:uniform() < 0.5 of
-        true -> X + 1;
-        false -> X - 1
-      end,
-      case NewIsland - 1 of
-        -1 -> N;
-        N -> 1;
-        _ -> NewIsland
-      end;
-    mesh ->
-      random:uniform(N);
-    _ ->
-      erlang:error(wrongTopology)
-  end,
-  {reply, Ans ,State}.
+handle_call({destination, X}, _From, State) ->
+    Ans = case State#state.n of
+              1 -> 1;
+              N ->
+                  case State#state.topology of
+                      ring ->
+                          NewIsland = case random:uniform() < 0.5 of
+                                          true -> X + 1;
+                                          false -> X - 1
+                                      end,
+                          case NewIsland - 1 of
+                              -1 -> N;
+                              N -> 1;
+                              _ -> NewIsland
+                          end;
+                      mesh ->
+                          randomMesh(N,X);
+                      _ ->
+                          erlang:error(wrongTopology)
+                  end
+          end,
+    {reply, Ans, State}.
+
+randomMesh(N,From) ->
+    Destination = random:uniform(N),
+    if Destination == From -> randomMesh(N,From);
+        Destination =/= From -> Destination
+    end.
 
 handle_cast(close, State) ->
   {stop, normal, State}.
