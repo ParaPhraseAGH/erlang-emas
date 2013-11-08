@@ -41,7 +41,7 @@ init(ProblemSize,Time,IslandsNr,Topology,Path) ->
     loop(Islands,#counter{}).
 
 -spec loop([island()],counter()) -> float().
-%% @doc Glowa petla programu. KaÄąÄ˝da iteracja powoduje ewolucjĂ„â„˘ nowej generacji osobnikow.
+%% @doc Glowa petla programu. Kazda iteracja powoduje ewolucje nowej generacji osobnikow.
 loop(Islands,Counter) ->
     receive
         write ->
