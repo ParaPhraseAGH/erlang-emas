@@ -48,11 +48,10 @@ def read_all_runs_stats(instance_names):
     return [read_run_stats(instance_name) for instance_name in instance_names]
 
 
-def plot_common_data(common, figure_name):
+def plot_data(data_tuples, figure_name):
     rows = 2
     cols = 2
     fig, ax = plt.subplots(rows, cols)
-    data_tuples = common.items()
     for i in range(rows):
         for j in range(cols):
             if len(data_tuples) > i*rows+j:
@@ -63,48 +62,36 @@ def plot_common_data(common, figure_name):
     fig.tight_layout()
 
 
-def plot_island_data(island, figure_name):
-    rows = 1
-    cols = 2
-    fig, ax = plt.subplots(rows, cols)
-    data_tuples = island.items()
-    for j in range(cols):
-        label, data = data_tuples[j]
-        # print label, data
-        ax[j].plot(range(len(data)), data)
-        ax[j].set_title(label)
-    fig.suptitle(figure_name, fontsize=18)
-    fig.tight_layout()
-
-
-
-def merge_islands_stats(islands, func):
+def merge_islands_stats(islands, func, stat):
     '''
     func can be one of: avg, max, min, sum, median 
     or func can be a function that gets a list of values and returns a 
-    gets a list of islands stats and returns averages of all islands per second
+    list of islands stats and returns averages of all islands per second
     '''
     func_map = dict([('avg', np.mean), ('max', max), 
                      ('sum', sum), ('min', min),
                      ('median', np.median)])
     if type(func) == str: func = func_map[func]
-    groups = defaultdict(list)
+    groups = []
     for island in islands:
-        for attr in ['fitness', 'population']:
-            groups[attr].append(island[attr])
-    for key in groups:
-        groups[key] = [func(e) for e in zip(*groups[key])]
-    return dict(groups)
+        groups.append(island[stat])
+    result = [func(e) for e in zip(*groups)]
+    return result
 
 
 def main():
-    instance_name = "tmp3"
+    instance_name = "tmp"
 
     common, islands = read_run_stats(instance_name)
-    func = 'avg'
-    island = merge_islands_stats(islands, func)
-    plot_common_data(common, instance_name)
-    plot_island_data(island, instance_name + " - " + func)
+
+    best_fitness = merge_islands_stats(islands, 'max', 'fitness')
+    avg_population = merge_islands_stats(islands, 'avg', 'population')
+    spread_population = merge_islands_stats(islands, lambda elem: max(elem) - min(elem), 'population')
+    
+    plot_data(common.items(), instance_name)
+    plot_data([('Fitness',best_fitness),
+                ('Average population', avg_population),
+                ('Population spread', spread_population)], instance_name)
     # print merge_islands_stats(islands, 'avg')
     # print merge_islands_stats(islands, 'max')
     # print merge_islands_stats(islands, 'min')
