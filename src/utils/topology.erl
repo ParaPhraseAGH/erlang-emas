@@ -55,18 +55,14 @@ handle_call({destination, X}, _From, State) ->
                               _ -> NewIsland
                           end;
                       mesh ->
-                          randomMesh(N,X);
+                          Destinations = [I || I <- lists:seq(1,N), I =/= X],
+                          Index = random:uniform(length(Destinations)),
+                          lists:nth(Index,Destinations);
                       _ ->
                           erlang:error(wrongTopology)
                   end
           end,
     {reply, Ans, State}.
-
-randomMesh(N,From) ->
-    Destination = random:uniform(N),
-    if Destination == From -> randomMesh(N,From);
-        Destination =/= From -> Destination
-    end.
 
 handle_cast(close, State) ->
   {stop, normal, State}.
