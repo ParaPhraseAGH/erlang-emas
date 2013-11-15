@@ -62,23 +62,27 @@ def plot_data(data_tuples, figure_name):
     fig.tight_layout()
 
 
+func_map = dict([('mean', np.mean), ('max', max), 
+                 ('sum', sum), ('min', min),
+                 ('median', np.median),
+                 ('spread', lambda elem: max(elem) - min(elem))
+                 ])
+
+
+def get_func(func):
+    return func_map[func] if type(func) == str else func 
+
+
 def merge_stats(islands, func, stat):
     '''
-    func can be one of: avg, max, min, sum, median 
+    func can be one of: mean, max, min, sum, median 
     or func can be a function that gets a list of values and returns a 
     list of islands stats and returns averages of all islands per second
     islands is a list of dicts
     e.g. [{'fitness': [1,2,3], 'population': [5,5,5]}, {'fitness': [4,5,6], 'population': [7,7,7]}]
     '''
-    func_map = dict([('avg', np.mean), ('max', max), 
-                     ('sum', sum), ('min', min),
-                     ('median', np.median),
-                     ('spread', lambda elem: max(elem) - min(elem))
-                     ])
-    if type(func) == str: func = func_map[func]
-    groups = []
-    for island in islands:
-        groups.append(island[stat])
+    func = get_func(func)
+    groups = [island[stat] for island in islands]
     result = [func(e) for e in zip(*groups)]
     return result
 
@@ -100,7 +104,7 @@ class DataToPlot(object):
 
     def __str__(self): return self.pprint(10)
 
-    # def __repr__(self): return self.pprint(2)
+    def __repr__(self): return self.pprint(1)
 
     def pprint(self, limit):
         s = self.label + ": " + str(self.data[:limit])
@@ -126,14 +130,15 @@ def plot_data_objs(data_to_plot_list, figure_name):
     fig.suptitle(figure_name, fontsize=18)
     fig.tight_layout()
 
+
 def fetch_instance(instance_name):
     common, islands = read_run_stats(instance_name)
 
     best_fitness = DataToPlot.from_list(islands, 'max', 'fitness', scale='log')
-    avg_population = DataToPlot.from_list(islands, 'avg', 'population')
+    mean_population = DataToPlot.from_list(islands, 'mean', 'population')
     spread_population = DataToPlot.from_list(islands, 'spread', 'population')
 
-    subplots_data = [best_fitness, avg_population, spread_population]
+    subplots_data = [best_fitness, mean_population, spread_population]
     common_data = [DataToPlot(data, attr) for attr, data in common.items()]
     instance_data = subplots_data + common_data
 
@@ -143,27 +148,42 @@ def fetch_instance(instance_name):
     # plot_data_objs(common_data, instance_name)
     # show()
     
-    # print merge_stats(islands, 'avg')
-    # print merge_stats(islands, 'max')
-    # print merge_stats(islands, 'min')
-    # print merge_stats(islands, 'sum')
-    # print merge_stats(islands, 'median')
     # print merge_stats(islands, lambda elem_list: len(elem_list))
     return instance_data
 
-def merge_instances(instances):
-    for instance in instances:
-        print instances
+
+def merge_instances(instances, func):
+    func = get_func(func)
+    result = []
+    for tup in zip(*instances):
+        example = tup[0]
+        datas = [elem.data for elem in tup]
+        data = [func(data) for data in zip(*datas)]
+        new_label = func.func_name + ' ' + example.label
+        dtp = DataToPlot(data, example.attr, scale=example.scale, func=example.func, label=new_label)
+        result.append(dtp)
+    return result
+
+
+def plot_stats(instance_names, func):
+    instances = [fetch_instance(instance_name) for instance_name in instance_names]
+    result_to_plot = merge_instances(instances, func)
+    step = 4 # 4 subplots on a figure
+    for i in range(0,len(result_to_plot), step):
+        plot_data_objs(result_to_plot[i:i+step], func + ' of ' + str(len(instance_names)))
+    show()
 
 
 def main():
-    instance_name = 'tmp'
-    tmp = fetch_instance(instance_name)
-    instance_name = 'tmp2'
-    tmp2 = fetch_instance(instance_name)
+    func = 'mean'
+    instance_names = ['tmp']
+    
+    # func = 'mean'
+    # run_count = 4
+    # instance_names = ['tmp'+str(i+1) for i in range(run_count)]
 
-    merge_instances([tmp, tmp2])
-
+    print instance_names
+    plot_stats(instance_names, func)
 
 if __name__ == '__main__':
     main()
