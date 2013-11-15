@@ -62,15 +62,19 @@ def plot_data(data_tuples, figure_name):
     fig.tight_layout()
 
 
-def merge_islands_stats(islands, func, stat):
+def merge_stats(islands, func, stat):
     '''
     func can be one of: avg, max, min, sum, median 
     or func can be a function that gets a list of values and returns a 
     list of islands stats and returns averages of all islands per second
+    islands is a list of dicts
+    e.g. [{'fitness': [1,2,3], 'population': [5,5,5]}, {'fitness': [4,5,6], 'population': [7,7,7]}]
     '''
     func_map = dict([('avg', np.mean), ('max', max), 
                      ('sum', sum), ('min', min),
-                     ('median', np.median)])
+                     ('median', np.median),
+                     ('spread', lambda elem: max(elem) - min(elem))
+                     ])
     if type(func) == str: func = func_map[func]
     groups = []
     for island in islands:
@@ -79,26 +83,86 @@ def merge_islands_stats(islands, func, stat):
     return result
 
 
-def main():
-    instance_name = "tmp"
+class DataToPlot(object):
+    """docstring for DataToPlot"""
+    def __init__(self, data, attr, scale='linear', func=None, label=None):
+        self.data = data
+        self.func = func
+        self.attr = attr
+        self.scale = scale
+        fs = str(func) + ' ' if func is not None else ''
+        self.label = fs + attr if label is None else label
 
+    @classmethod
+    def from_list(cls, data, func, attr, scale='linear', label=None):
+        data = merge_stats(data, func, attr)
+        return cls(data, attr, scale=scale, func=func, label=label)
+
+    def __str__(self): return self.pprint(10)
+
+    # def __repr__(self): return self.pprint(2)
+
+    def pprint(self, limit):
+        s = self.label + ": " + str(self.data[:limit])
+        s = s if len(self.data) < limit else s + ' ... ' + str(len(self.data) - limit) + ' more'
+        return s
+
+
+def plot_data_objs(data_to_plot_list, figure_name):
+    rows = 2
+    cols = 2
+    fig, ax = plt.subplots(rows, cols)
+    for i in range(rows):
+        for j in range(cols):
+            if len(data_to_plot_list) > i*rows+j:
+                obj = data_to_plot_list[i*rows+j]
+                if obj.scale == 'log' and max(obj.data) <= 0:
+                    ydata = map(lambda x: -x, obj.data)
+                else:
+                    ydata = obj.data
+                ax[i][j].plot(range(len(obj.data)), ydata)
+                ax[i][j].set_yscale(obj.scale)
+                ax[i][j].set_title(obj.label)
+    fig.suptitle(figure_name, fontsize=18)
+    fig.tight_layout()
+
+def fetch_instance(instance_name):
     common, islands = read_run_stats(instance_name)
 
-    best_fitness = merge_islands_stats(islands, 'max', 'fitness')
-    avg_population = merge_islands_stats(islands, 'avg', 'population')
-    spread_population = merge_islands_stats(islands, lambda elem: max(elem) - min(elem), 'population')
+    best_fitness = DataToPlot.from_list(islands, 'max', 'fitness', scale='log')
+    avg_population = DataToPlot.from_list(islands, 'avg', 'population')
+    spread_population = DataToPlot.from_list(islands, 'spread', 'population')
+
+    subplots_data = [best_fitness, avg_population, spread_population]
+    common_data = [DataToPlot(data, attr) for attr, data in common.items()]
+    instance_data = subplots_data + common_data
+
+    # print instance_name, ':', instance_data
+
+    # plot_data_objs(subplots_data, instance_name)
+    # plot_data_objs(common_data, instance_name)
+    # show()
     
-    plot_data(common.items(), instance_name)
-    plot_data([('Fitness',best_fitness),
-                ('Average population', avg_population),
-                ('Population spread', spread_population)], instance_name)
-    # print merge_islands_stats(islands, 'avg')
-    # print merge_islands_stats(islands, 'max')
-    # print merge_islands_stats(islands, 'min')
-    # print merge_islands_stats(islands, 'sum')
-    # print merge_islands_stats(islands, 'median')
-    # print merge_islands_stats(islands, lambda elem_list: len(elem_list))
-    show()
+    # print merge_stats(islands, 'avg')
+    # print merge_stats(islands, 'max')
+    # print merge_stats(islands, 'min')
+    # print merge_stats(islands, 'sum')
+    # print merge_stats(islands, 'median')
+    # print merge_stats(islands, lambda elem_list: len(elem_list))
+    return instance_data
+
+def merge_instances(instances):
+    for instance in instances:
+        print instances
+
+
+def main():
+    instance_name = 'tmp'
+    tmp = fetch_instance(instance_name)
+    instance_name = 'tmp2'
+    tmp2 = fetch_instance(instance_name)
+
+    merge_instances([tmp, tmp2])
 
 
 if __name__ == '__main__':
