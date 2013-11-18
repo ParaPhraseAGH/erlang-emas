@@ -29,12 +29,11 @@ for model in ${Models[*]}; do
 	Command="module load erlang\n"
 	Command+="erl -pa $EmasRoot/ebin -noshell -run $model start $Problem $Time $Islands $Topology -run init stop"
 
-	# TODO!
 	outputPath=$OutputRoot/$model/$cores
 	mkdir -p $outputPath
 
 	Settings=$CommonSettings		
-	Settings+=" ""-l nodes=1:ppn=$cores"		# Available cores
+	Settings+=" ""-l nodes=1:X5650:ppn=$cores"	# Available cores
 	Settings+=" ""-o $outputPath"			# Output directory
 	
 	echo -e "$Command" | qsub $Settings
