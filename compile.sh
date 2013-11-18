@@ -1,4 +1,4 @@
 #/bin/bash
 
-rebar compile
+./rebar compile
 #erl -make
