@@ -45,17 +45,25 @@ init(ProblemSize,Time,IslandsNr,Topology,Path) ->
 loop(Islands,Counter) ->
     receive
         write ->
-            logger:logGlobalStats(sequential,{Counter#counter.death,
-                                              Counter#counter.fight,
-                                              Counter#counter.reproduction,
-                                              Counter#counter.migration}),
             logger:logLocalStats(sequential,
                                  fitness,
                                  [misc_util:result(I) || I <- Islands]),
             logger:logLocalStats(sequential,
                                  population,
                                  [length(I) || I <- Islands]),
-            io_util:printSeq(Islands),
+            logger:logGlobalStats(sequential,{Counter#counter.death,
+                Counter#counter.fight,
+                Counter#counter.reproduction,
+                Counter#counter.migration}),
+%%             io:format("Timestamp: ~p~n",[os:timestamp()]),
+%%             io:format("Best fitness: ~p~n",[misc_util:result(lists:flatten(Islands))]),
+%%             io:format("Total population: ~p~n",[length(lists:flatten(Islands))]),
+%%             io:format("Fights: ~p~n",[Counter#counter.fight]),
+%%             io:format("Reproductions: ~p~n",[Counter#counter.reproduction]),
+%%             io:format("Deaths: ~p~n",[Counter#counter.death]),
+%%             io:format("Migrations: ~p~n",[Counter#counter.migration]),
+%%             io:format("~n"),
+%%             io_util:printSeq(Islands),
             timer:send_after(config:writeInterval(),write),
             loop(Islands,#counter{});
         theEnd ->

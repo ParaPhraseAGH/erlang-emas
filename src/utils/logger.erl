@@ -39,6 +39,8 @@ close() ->
 
 -record(state, {dict :: dict(),
                 counters = {0, 0, 0, 0} :: {integer(), integer(), integer(), integer()},
+                bestFitness = -999999 :: integer(),
+                populations = [] :: list(),
                 n = 0 :: non_neg_integer()}).
 -type state() :: #state{}.
 
@@ -64,18 +66,44 @@ handle_call(_Request, _From, State) ->
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_cast({parallel, Stat, Pid, Value}, State) ->
-    logLocal(State#state.dict, Pid, Stat, Value),
-    {noreply, State};
+handle_cast({parallel, Stat, _Pid, Value}, State) ->
+    %%     logLocal(State#state.dict, Pid, Stat, Value),
+    case Stat of
+        fitness ->
+            if State#state.bestFitness < Value ->
+                    {noreply,State#state{bestFitness = Value}};
+               State#state.bestFitness >= Value ->
+                    {noreply,State}
+            end;
+
+        population ->
+            N = length(dict:to_list(State#state.dict)) - 4,
+            if length(State#state.populations) + 1 == N ->
+                    io:format("fitness: ~p~n",[State#state.bestFitness]),
+                    io:format("population: ~p~n",[lists:sum([Value|State#state.populations])]),
+                    {noreply,State#state{populations = []}};
+               length(State#state.populations) + 1 =/= N ->
+                    OldPopulations = State#state.populations,
+                    {noreply,State#state{populations = [Value|OldPopulations]}}
+            end;
+        _ ->
+            error("No such stat!")
+
+    end;
 handle_cast({sequential, Stat, _Pid, Values}, State) ->
-    logList(Stat, 1, Values, State#state.dict),
+    %%     logList(Stat, 1, Values, State#state.dict),
+    io:format(atom_to_list(Stat) ++ ": ~p~n",[lists:max(Values)]),
     {noreply, State};
 handle_cast({counter, {Deaths, Fights, Reproductions, Migrations}}, State) ->
-    Dict = State#state.dict,
-    logGlobal(Dict, death, Deaths),
-    logGlobal(Dict, fight, Fights),
-    logGlobal(Dict, reproduction, Reproductions),
-    logGlobal(Dict, migration, Migrations),
+    %%     Dict = State#state.dict,
+    %%     logGlobal(Dict, death, Deaths),
+    %%     logGlobal(Dict, fight, Fights),
+    %%     logGlobal(Dict, reproduction, Reproductions),
+    %%     logGlobal(Dict, migration, Migrations),
+    io:format("fights: ~p~n",[Fights]),
+    io:format("reproductions: ~p~n",[Reproductions]),
+    io:format("deaths: ~p~n",[Deaths]),
+    io:format("migrations: ~p~n~n",[Migrations]),
     {noreply, State};
 handle_cast({agregate, _Pid, Counters}, State) ->
     N = length(dict:to_list(State#state.dict)) - 4,
