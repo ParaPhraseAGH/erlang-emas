@@ -1,40 +1,43 @@
 #/bin/bash
 
-export EmasRoot="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
-export OutputRoot=~/test #output
-export PlotRoot=~/plots
-Scripts=$EmasRoot/scripts/zeus
+EmasRoot="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ../.. && pwd )"
+OutputRoot=output
 
-## ilosc wykonanych testow dla kazdej konfiguracji
-export N=1
-## dlugosc wektora problemu
-export Problem=100
-## czas obliczania
-export Time=6000
-## Topologia wysp
-export Topology=mesh
+# Computation settings
+N=1			# Number of runs for each computation
+Time=6000       	# Computation time [ms]
+Problem=100		# Problem size	
+Islands=12		# Islands amount
+Topology=mesh		# Islands topology
 
-Models=(sequential_lists) # sequential_mixed hybrid concurrent)
-Cores=(1) # 2 4)
-Islands=(1) # 2 4)
+# Common Zeus settings
+CommonSettings="-t 1-$N"				# Number of runs for each job
+CommonSettings+=" ""-l mem=1gb"				# Available memory
+CommonSettings+=" ""-l file=500mb"			# Available disc
+CommonSettings+=" ""-l walltime=$(($Time / 800))"	# Available time [s] (~120% predicted computation time)
+CommonSettings+=" ""-j oe"				# Join stdout and stderr
+CommonSettings+=" ""-A plgkrzywic2013b"			# Grant ID
+CommonSettings+=" ""-N emas"				# Job name
 
-lock=`qsub $Scripts/noop.sh -h`
+# Independent variables
+Models=(sequential_lists) # hybrid concurrent)
+Cores=(1 2 4 8 12)
 
-jobs=()
 for model in ${Models[*]}; do
-    export model
-    statJobs=()
     for cores in ${Cores[*]}; do
-	export cores
-        for islands in ${Islands[*]}; do
-	   export islands
-	   export outputPath=$OutputRoot/$model/$cores/$islands
-	   emasJobs=`qsub $Scripts/emas.sh -l cput=$(($Time / 1000)),nodes=1:ppn=$cores -V -t 1-$N -W depend=afterok:$lock`
-	   statJobs+=(`qsub $Scripts/extractor.sh -V -W depend=afterokarray:$emasJobs`)
-        done
+
+	Command="module load erlang\n"
+	Command+="erl -pa $EmasRoot/ebin -noshell -run $model start $Problem $Time $Islands $Topology -run init stop"
+
+	# TODO!
+	outputPath=$OutputRoot/$model/$cores
+	mkdir -p $outputPath
+
+	Settings=$CommonSettings		
+	Settings+=" ""-l nodes=1:ppn=$cores"		# Available cores
+	Settings+=" ""-o $outputPath"			# Output directory
+	
+	echo -e "$Command" | qsub $Settings
     done
-    export outputPath=$OutputRoot/$model
-    qsub $Scripts/gnuplot.sh -V -W depend=afterok$(printf ":%s" "${statJobs[@]}") -m e -M krzywic@agh.edu.pl -z
 done
 
-qrls $lock
