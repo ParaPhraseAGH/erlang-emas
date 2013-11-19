@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/sh
 
 EmasRoot="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ../.. && pwd )"
 OutputRoot=output
