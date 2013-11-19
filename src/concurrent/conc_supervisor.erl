@@ -22,17 +22,17 @@ start(King,ProblemSize) ->
     Pid.
 
 -spec sendAgents(pid(),[agent()]) -> ok.
-%% @doc Funkcja za pomocÄ‚â€žĂ˘â‚¬Â¦ ktĂ„â€šÄąâ€šrej moĂ„Ä…Ă„Ëťna wysĂ„Ä…Ă˘â‚¬ĹˇaÄ‚â€žĂ˘â‚¬Ë‡ supervisorowi listÄ‚â€žĂ˘â€žË� nowych agentĂ„â€šÄąâ€šw.
+%% @doc Funkcja za pomoca ktorej mozna wyslac supervisorowi liste nowych agentow.
 sendAgents(Pid,Agents) ->
     gen_server:cast(Pid,{newAgents,Agents}).
 
 -spec unlinkAgent(pid(),pid()) -> ok.
-%% @doc Funkcja usuwa link miÄ‚â€žĂ˘â€žË�dzy supervisorem, a danym agentem. Zapytanie synchroniczne.
+%% @doc Funkcja usuwa link miedzy supervisorem, a danym agentem. Zapytanie synchroniczne.
 unlinkAgent(Pid,AgentPid) ->
     gen_server:call(Pid,{emigrant,AgentPid}).
 
 -spec linkAgent(pid(),{pid(),reference()}) -> ok.
-%% @doc Funkcja tworzy link miÄ‚â€žĂ˘â€žË�dzy supervisorem, a danym agentem. Zapytanie synchroniczne.
+%% @doc Funkcja tworzy link miedzy supervisorem, a danym agentem. Zapytanie synchroniczne.
 linkAgent(Pid,AgentFrom) ->
     gen_server:call(Pid,{immigrant,AgentFrom}).
 
