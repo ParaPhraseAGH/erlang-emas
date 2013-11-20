@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 from matplotlib.pylab import *
 from collections import defaultdict
+import log_to_files
 
 
 def readlines(filepath):
@@ -183,9 +185,9 @@ def plot_stats(instance_names, func):
     show()
 
 
-def main():
-    func = 'mean'
-    instance_names = ['tmpskel3']
+def main(instance_names=[], func='mean'):
+    # func = 'mean'
+    # instance_names = ['tmpskel3']
     
     # func = 'mean'
     # run_count = 4
@@ -194,5 +196,26 @@ def main():
     print instance_names
     plot_stats(instance_names, func)
 
+def zeus(directory='.', proj="emas", func='mean'):
+    for name in os.listdir(directory):
+        if name.startswith(proj + '.'):
+            logfile = os.path.join(directory, name)
+            out_dir = logfile + '_run'
+            log_to_files.parse(logfile, out_dir)
+    instance_names = [os.path.join(directory,name) for name in os.listdir(directory) if name.endswith('_run')]
+    plot_stats(instance_names, func)
+
 if __name__ == '__main__':
-    main()
+    proj = 'emas'
+    func = 'mean'
+    if len(sys.argv) < 2:
+        print 'Usage:'
+        print '\tpython log_to_files.py {<directory_with_logfiles>|<directory_with_subdirectories}'
+    else:
+        directory = sys.argv[1]
+        logfiles = [os.path.join(directory,name) for name in os.listdir(directory) if name.startswith(proj)]
+        instance_names = [os.path.join(directory,name) for name in os.listdir(directory) if name.endswith('_run')]
+        if len(logfiles) != len(instance_names):
+            zeus(directory, proj, func)
+        else:
+            main(instance_names, func)
