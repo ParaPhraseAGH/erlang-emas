@@ -19,23 +19,32 @@ def read_run_stats(instance_name):
     islands = [name for name in os.listdir(instance_name) if name.startswith('island')]
     if len(islands) == 0:
         # if skel stats, remove migration
-        statslist.remove("migration")
+        # statslist.remove("migration")
         data = {}
         for filename in island_statslist:
             filepath = os.path.join(instance_name, filename  + ".txt")
             # print filepath, readlines(filepath)
-            data[filename] = readlines(filepath)
+            try:
+                data[filename] = readlines(filepath)
+            except:
+                print 'exception:', filename, ' stats not present'
         island_data.append(data)
     for filename in statslist:
         filepath = os.path.join(instance_name, filename + ".txt")
         # print filepath, readlines(filepath)
-        common_data[filename] = readlines(filepath)
+        try:
+            common_data[filename] = readlines(filepath)
+        except:
+            print 'exception:', filename, ' stats not present'
     for island in islands:
         data = {}
         for filename in island_statslist:
             filepath = os.path.join(instance_name, island, filename  + ".txt")
             # print filepath, readlines(filepath)
-            data[filename] = readlines(filepath)
+            try:
+                data[filename] = readlines(filepath)
+            except:
+                print 'exception:', filename, ' stats not present'
         island_data.append(data)
     return common_data, island_data
 
@@ -176,7 +185,7 @@ def plot_stats(instance_names, func):
 
 def main():
     func = 'mean'
-    instance_names = ['tmp']
+    instance_names = ['tmpskel3']
     
     # func = 'mean'
     # run_count = 4
