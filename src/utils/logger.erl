@@ -92,7 +92,15 @@ handle_cast({parallel, Stat, _Pid, Value}, State) ->
     end;
 handle_cast({sequential, Stat, _Pid, Values}, State) ->
     %%     logList(Stat, 1, Values, State#state.dict),
-    io:format(atom_to_list(Stat) ++ ": ~p~n",[lists:max(Values)]),
+    case Stat of
+        fitness ->
+            io:format(atom_to_list(Stat) ++ ": ~p~n",[lists:max(Values)]);
+        population ->
+            io:format(atom_to_list(Stat) ++ ": ~p~n",[lists:sum(Values)]);
+        _ ->
+           error("Wrong statistic!")
+    end,
+
     {noreply, State};
 handle_cast({counter, {Deaths, Fights, Reproductions, Migrations}}, State) ->
     %%     Dict = State#state.dict,
@@ -100,10 +108,10 @@ handle_cast({counter, {Deaths, Fights, Reproductions, Migrations}}, State) ->
     %%     logGlobal(Dict, fight, Fights),
     %%     logGlobal(Dict, reproduction, Reproductions),
     %%     logGlobal(Dict, migration, Migrations),
-    io:format("fights: ~p~n",[Fights]),
-    io:format("reproductions: ~p~n",[Reproductions]),
-    io:format("deaths: ~p~n",[Deaths]),
-    io:format("migrations: ~p~n~n",[Migrations]),
+    io:format("fight: ~p~n",[Fights]),
+    io:format("reproduction: ~p~n",[Reproductions]),
+    io:format("death: ~p~n",[Deaths]),
+    io:format("migration: ~p~n~n",[Migrations]),
     {noreply, State};
 handle_cast({agregate, _Pid, Counters}, State) ->
     N = length(dict:to_list(State#state.dict)) - 4,
