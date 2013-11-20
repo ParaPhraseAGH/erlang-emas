@@ -1,4 +1,5 @@
-#/bin/bash
+#!/bin/sh
 
-rebar compile
+./rebar get-deps
+./rebar compile
 #erl -make
