@@ -150,7 +150,7 @@ prepareParDictionary([], Dict, Path) ->
     createFDs(Path, Dict, [death, fight, reproduction, migration]);
 prepareParDictionary([H|T], Dict, Path) ->
     IslandPath = filename:join([Path, "island" ++ integer_to_list(length(T) + 1)]),
-    file:make_dir(IslandPath),
+%%     file:make_dir(IslandPath),
     NewDict = dict:store(H, createFDs(IslandPath, dict:new(), [fitness, population]), Dict), % Key = pid(), Value = dictionary of file descriptors
     prepareParDictionary(T, NewDict, Path).
 
@@ -160,7 +160,7 @@ prepareSeqDictionary(0, Dict, Path) ->
     createFDs(Path, Dict, [death, fight, reproduction, migration]);
 prepareSeqDictionary(IslandNr, Dict, Path) ->
     IslandPath = filename:join([Path, "island" ++ integer_to_list(IslandNr)]),
-    file:make_dir(IslandPath),
+%%     file:make_dir(IslandPath),
     NewDict = dict:store(IslandNr, createFDs(IslandPath, dict:new(), [fitness, population]), Dict), % Key = IslandNumber, Value = dictionary of file descriptors
     prepareSeqDictionary(IslandNr - 1, NewDict, Path).
 
@@ -169,8 +169,8 @@ prepareSeqDictionary(IslandNr, Dict, Path) ->
 createFDs(Path, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         Filename = atom_to_list(Atom) ++ ".txt",
-                        {ok, Descriptor} = file:open(filename:join([Path, Filename]), [append, delayed_write, raw]),
-                        dict:store(Atom, Descriptor, Dict)
+%%                         {ok, Descriptor} = file:open(filename:join([Path, Filename]), [append, delayed_write, raw]),
+                        dict:store(Atom, desc, Dict)
                 end, InitDict,
                 Files).
 
