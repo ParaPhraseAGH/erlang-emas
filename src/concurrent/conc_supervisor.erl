@@ -22,17 +22,17 @@ start(King,ProblemSize) ->
     Pid.
 
 -spec sendAgents(pid(),[agent()]) -> ok.
-%% @doc Funkcja za pomocĂ„â€¦ ktÄ‚Ĺ‚rej moÄąÄ˝na wysÄąâ€šaĂ„â€ˇ supervisorowi listĂ„â„˘ nowych agentÄ‚Ĺ‚w.
+%% @doc Funkcja za pomoca ktorej mozna wyslac supervisorowi liste nowych agentow.
 sendAgents(Pid,Agents) ->
     gen_server:cast(Pid,{newAgents,Agents}).
 
 -spec unlinkAgent(pid(),pid()) -> ok.
-%% @doc Funkcja usuwa link miĂ„â„˘dzy supervisorem, a danym agentem. Zapytanie synchroniczne.
+%% @doc Funkcja usuwa link miedzy supervisorem, a danym agentem. Zapytanie synchroniczne.
 unlinkAgent(Pid,AgentPid) ->
     gen_server:call(Pid,{emigrant,AgentPid}).
 
 -spec linkAgent(pid(),{pid(),reference()}) -> ok.
-%% @doc Funkcja tworzy link miĂ„â„˘dzy supervisorem, a danym agentem. Zapytanie synchroniczne.
+%% @doc Funkcja tworzy link miedzy supervisorem, a danym agentem. Zapytanie synchroniczne.
 linkAgent(Pid,AgentFrom) ->
     gen_server:call(Pid,{immigrant,AgentFrom}).
 
@@ -95,18 +95,13 @@ handle_cast({newAgents,AgentList},State) ->
     {noreply,State#state{best = lists:max([Result,State#state.best]), population = NewPopulation},config:supervisorTimeout()};
 handle_cast({reportFromArena,Arena,Value},State) ->
     Dict = State#state.reports,
-    case dict:find(Arena,Dict) of
-        {ok,_} ->
-            error("Double report from the same arena");
-        error ->
-            NewDict = dict:store(Arena,Value,Dict),
-            case dict:size(NewDict) of
-                3 ->
-                    logger:logGlobalStats(parallel,{State#state.deathCounter,dict:fetch(fight,NewDict),dict:fetch(reproduction,NewDict),dict:fetch(migration,NewDict)}),
-                    {noreply,State#state{reports = dict:new(), deathCounter = 0},config:supervisorTimeout()};
-                _ ->
-                    {noreply,State#state{reports = NewDict},config:supervisorTimeout()}
-            end
+    NewDict = dict:store(Arena,Value,Dict),
+    case dict:size(NewDict) of
+        3 ->
+            logger:logGlobalStats(parallel,{State#state.deathCounter,dict:fetch(fight,NewDict),dict:fetch(reproduction,NewDict),dict:fetch(migration,NewDict)}),
+            {noreply,State#state{reports = dict:new(), deathCounter = 0},config:supervisorTimeout()};
+        _ ->
+            {noreply,State#state{reports = NewDict},config:supervisorTimeout()}
     end;
 handle_cast(close,State) ->
     {stop,normal,State}.

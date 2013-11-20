@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/sh
 
 tar -cf emas.tar.gz ebin/
 tar -cf skel.tar.gz deps/skel/ebin
