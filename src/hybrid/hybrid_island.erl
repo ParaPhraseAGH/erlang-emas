@@ -50,7 +50,7 @@ loop(Agents,Counters) ->
       logger:logLocalStats(parallel,fitness,Fitness),
       logger:logLocalStats(parallel,population,length(Agents)),
       logger:logGlobalStats(parallel,{Counters#counter.death,Counters#counter.fight,Counters#counter.reproduction,Counters#counter.migration}),
-      io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,length(Agents)]),
+%%       io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,length(Agents)]),
       timer:send_after(config:writeInterval(),{write,Fitness}),
       loop(Agents,#counter{});
     {agent,_Pid,A} ->

@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/sh
 
 ## ilosc wykonanych testow dla kazdej konfiguracji
 N=2
