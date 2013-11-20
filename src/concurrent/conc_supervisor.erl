@@ -126,7 +126,7 @@ handle_info(write,State) ->
     Fitness = State#state.best,
     logger:logLocalStats(parallel,fitness,Fitness),
     logger:logLocalStats(parallel,population,State#state.population),
-    io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,State#state.population]),
+%%     io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,State#state.population]),
     timer:send_after(config:writeInterval(),write),
     {noreply,State,config:supervisorTimeout()};
 handle_info(timeout,State) ->
