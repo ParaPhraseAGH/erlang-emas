@@ -46,6 +46,7 @@ close() ->
 
 -spec init(term()) -> {ok,state()}.
 init([Model, Path]) ->
+    io:format("Start time: ~p~n",[erlang:now()]),
     Dict = case Model of
                {sequential, IslandsNr} ->
                    prepareSeqDictionary(IslandsNr, dict:new(), Path);
@@ -94,14 +95,20 @@ handle_cast({sequential, Stat, _Pid, Values}, State) ->
     %%     logList(Stat, 1, Values, State#state.dict),
     case Stat of
         fitness ->
-            io:format(atom_to_list(Stat) ++ ": ~p~n",[lists:max(Values)]);
+            Best = lists:max(Values),
+            if State#state.bestFitness < -1 andalso Best >= -1 ->
+                io:format("Time to hit: ~p~n~n",[erlang:now()]);
+            true ->
+                nothing
+            end,
+            io:format(atom_to_list(Stat) ++ ": ~p~n",[Best]),
+            {noreply,State#state{bestFitness = Best}};
         population ->
-            io:format(atom_to_list(Stat) ++ ": ~p~n",[lists:sum(Values)]);
+            io:format(atom_to_list(Stat) ++ ": ~p~n",[lists:sum(Values)]),
+            {noreply,State};
         _ ->
            error("Wrong statistic!")
-    end,
-
-    {noreply, State};
+    end;
 handle_cast({counter, {Deaths, Fights, Reproductions, Migrations}}, State) ->
     %%     Dict = State#state.dict,
     %%     logGlobal(Dict, death, Deaths),
