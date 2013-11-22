@@ -123,10 +123,15 @@ class DataToPlot(object):
         return s
 
 
-def plot_data_objs(data_to_plot_list, figure_name):
+def plot_data_objs(data_to_plot_list, figure_name, same=False):
     rows = 2
     cols = 2
-    fig, ax = plt.subplots(rows, cols)
+    topo = figure_name.split(':')[0]
+    if same:
+        fig_id = figure_name.split(':')[-1]
+        fig, ax = plt.subplots(rows, cols, num=fig_id)
+    else:
+        fig, ax = plt.subplots(rows, cols)
     for i in range(rows):
         for j in range(cols):
             if len(data_to_plot_list) > i*rows+j:
@@ -135,9 +140,11 @@ def plot_data_objs(data_to_plot_list, figure_name):
                     ydata = map(lambda x: -x, obj.data)
                 else:
                     ydata = obj.data
-                ax[i][j].plot(range(len(obj.data)), ydata)
+                ax[i][j].plot(range(len(obj.data)), ydata, label=topo)
                 ax[i][j].set_yscale(obj.scale)
                 ax[i][j].set_title(obj.label)
+                if same:
+                    ax[i][j].legend(loc='lower left', shadow=True)
     fig.suptitle(figure_name, fontsize=18)
     fig.tight_layout()
 
@@ -153,13 +160,6 @@ def fetch_instance(instance_name):
     common_data = [DataToPlot(data, attr) for attr, data in common.items()]
     instance_data = subplots_data + common_data
 
-    # print instance_name, ':', instance_data
-
-    # plot_data_objs(subplots_data, instance_name)
-    # plot_data_objs(common_data, instance_name)
-    # show()
-    
-    # print merge_stats(islands, lambda elem_list: len(elem_list))
     return instance_data
 
 
@@ -176,46 +176,46 @@ def merge_instances(instances, func):
     return result
 
 
-def plot_stats(instance_names, func):
+def plot_stats(instance_names, func, same):
     instances = [fetch_instance(instance_name) for instance_name in instance_names]
     result_to_plot = merge_instances(instances, func)
+    out_dir = instance_names[0].split(os.path.sep)[0]
     step = 4 # 4 subplots on a figure
     for i in range(0,len(result_to_plot), step):
-        plot_data_objs(result_to_plot[i:i+step], func + ' of ' + str(len(instance_names)))
-    show()
+        label = ':'.join([out_dir,func,str(len(instance_names)), str(i/step+1)])
+        plot_data_objs(result_to_plot[i:i+step], label, same)
+    # show()
 
 
-def main(instance_names=[], func='mean'):
-    # func = 'mean'
-    # instance_names = ['tmpskel3']
-    
-    # func = 'mean'
-    # run_count = 4
-    # instance_names = ['tmp'+str(i+1) for i in range(run_count)]
-
-    print instance_names
-    plot_stats(instance_names, func)
+def main(instance_names=[], func='mean', same=False):
+    # print instance_names
+    plot_stats(instance_names, func, same)
 
 def zeus(directory='.', proj="emas", func='mean'):
     for name in os.listdir(directory):
-        if name.startswith(proj + '.'):
+        if name.startswith(proj) and not name.endswith('_run'):
             logfile = os.path.join(directory, name)
             out_dir = logfile + '_run'
             log_to_files.parse(logfile, out_dir)
     instance_names = [os.path.join(directory,name) for name in os.listdir(directory) if name.endswith('_run')]
-    plot_stats(instance_names, func)
+    return instance_names
 
-if __name__ == '__main__':
+def run():
     proj = 'emas'
     func = 'mean'
     if len(sys.argv) < 2:
         print 'Usage:'
-        print '\tpython log_to_files.py {<directory_with_logfiles>|<directory_with_subdirectories}'
+        print '\tpython stat_plotter.py {<directory_with_logfiles>|<directory_with_subdirectories} ...'
     else:
-        directory = sys.argv[1]
-        logfiles = [os.path.join(directory,name) for name in os.listdir(directory) if name.startswith(proj)]
-        instance_names = [os.path.join(directory,name) for name in os.listdir(directory) if name.endswith('_run')]
-        if len(logfiles) != len(instance_names):
-            zeus(directory, proj, func)
-        else:
-            main(instance_names, func)
+        directories = sys.argv[1:]
+        for directory in directories:
+            logfiles = [os.path.join(directory,name) for name in os.listdir(directory) if name.startswith(proj) and not name.endswith('_run')]
+            instance_names = [os.path.join(directory,name) for name in os.listdir(directory) if name.endswith('_run')]
+            if len(logfiles) != len(instance_names):
+                instance_names = zeus(directory, proj, func)
+            main(instance_names, func, True)
+
+
+if __name__ == '__main__':
+    run()
+    show()
