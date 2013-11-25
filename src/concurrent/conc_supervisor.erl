@@ -21,18 +21,18 @@ start(King,ProblemSize) ->
     {ok,Pid} = gen_server:start(?MODULE,[King,ProblemSize],[]),
     Pid.
 
--spec sendAgents(pid(),[agent()]) -> ok.
 %% @doc Funkcja za pomoca ktorej mozna wyslac supervisorowi liste nowych agentow.
+-spec sendAgents(pid(),[agent()]) -> ok.
 sendAgents(Pid,Agents) ->
     gen_server:cast(Pid,{newAgents,Agents}).
 
--spec unlinkAgent(pid(),pid()) -> ok.
 %% @doc Funkcja usuwa link miedzy supervisorem, a danym agentem. Zapytanie synchroniczne.
+-spec unlinkAgent(pid(),pid()) -> ok.
 unlinkAgent(Pid,AgentPid) ->
     gen_server:call(Pid,{emigrant,AgentPid}).
 
--spec linkAgent(pid(),{pid(),reference()}) -> ok.
 %% @doc Funkcja tworzy link miedzy supervisorem, a danym agentem. Zapytanie synchroniczne.
+-spec linkAgent(pid(),{pid(),reference()}) -> ok.
 linkAgent(Pid,AgentFrom) ->
     gen_server:call(Pid,{immigrant,AgentFrom}).
 
@@ -65,7 +65,7 @@ init([King,ProblemSize]) ->
     Arenas = [Ring,Bar,Port],
     io_util:printArenas(Arenas),
     [spawn_link(agent,start,[ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
-    timer:send_after(config:writeInterval(),write),
+    timer:send_interval(config:writeInterval(),write),
     {ok,#state{arenas = Arenas},config:supervisorTimeout()}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -116,7 +116,7 @@ handle_info({'EXIT',_,dying},State) ->
 handle_info({'EXIT',Pid,Reason},State) ->
     case lists:member(Pid,State#state.arenas) of
         true ->
-            io:format("Error w arenie, zamykamy impreze~n"),
+            io:format("Error w arenie, zamykamy impreze na wyspie ~p~n",[self()]),
             exit(Reason);
         false ->
             io:format("Error w agencie, karawana jedzie dalej~n")
@@ -126,8 +126,7 @@ handle_info(write,State) ->
     Fitness = State#state.best,
     logger:logLocalStats(parallel,fitness,Fitness),
     logger:logLocalStats(parallel,population,State#state.population),
-%%     io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,State#state.population]),
-    timer:send_after(config:writeInterval(),write),
+    %%     io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,State#state.population]),
     {noreply,State,config:supervisorTimeout()};
 handle_info(timeout,State) ->
     {stop,timeout,State}.

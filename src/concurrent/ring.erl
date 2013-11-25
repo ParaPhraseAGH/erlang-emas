@@ -23,8 +23,8 @@ start_link(Supervisor) ->
 start(Supervisor) ->
     gen_server:start(?MODULE, [Supervisor], []).
 
+%% @doc Funkcja wysylajaca zgloszenie agenta do ringu.
 -spec call(pid(),agent()) -> Energy :: integer().
-%% @doc Funkcja wysylajaca zgĂ„Ä…Ă˘â‚¬Ĺˇoszenie agenta do ringu.
 call(Pid,Agent) ->
     gen_server:call(Pid,Agent).
 
@@ -45,7 +45,7 @@ close(Pid) ->
                       {ok,state(),non_neg_integer()}.
 init([Supervisor]) ->
     misc_util:seedRandom(),
-    timer:send_after(config:writeInterval(),report),
+    timer:send_interval(config:writeInterval(),report),
     {ok, #state{supervisor = Supervisor}, config:arenaTimeout()}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -85,7 +85,6 @@ handle_info(report,cleaning) ->
     {noreply,cleaning,config:arenaTimeout()};
 handle_info(report,State) ->
     conc_supervisor:reportFromArena(State#state.supervisor,fight,State#state.counter),
-    timer:send_after(config:writeInterval(),report),
     {noreply,State#state{counter = 0}};
 handle_info(timeout,cleaning) ->
     {stop,normal,cleaning};

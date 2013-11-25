@@ -21,8 +21,8 @@ start_link(Supervisor,King) ->
 start(Supervisor,King) ->
     gen_server:start(?MODULE, [Supervisor,King], []).
 
--spec call(pid()) -> [pid()].
 %% @doc Funkcja wysylajaca zgloszenie agenta do portu.
+-spec call(pid()) -> [pid()].
 call(Pid) ->
     gen_server:call(Pid,emigrate).
 
@@ -43,7 +43,7 @@ close(Pid) ->
 init(Args) ->
     misc_util:seedRandom(),
     self() ! Args, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
-    timer:send_after(config:writeInterval(),report),
+    timer:send_interval(config:writeInterval(),report),
     {ok, #state{mySupervisor = undefined, allSupervisors = undefined}}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -85,7 +85,6 @@ handle_info(report,cleaning) ->
     {noreply,cleaning,config:arenaTimeout()};
 handle_info(report,State) ->
     conc_supervisor:reportFromArena(State#state.mySupervisor,migration,State#state.counter),
-    timer:send_after(config:writeInterval(),report),
     {noreply,State#state{counter = 0}};
 handle_info([Supervisor,King], _UndefinedState) ->
     AllSupervisors = concurrent:getAddresses(King),
