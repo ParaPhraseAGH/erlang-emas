@@ -3,7 +3,8 @@
 
 import os
 import sys
-from matplotlib.pylab import *
+import matplotlib.pylab as plt
+import numpy as np
 from collections import defaultdict
 import log_to_files
 
@@ -153,10 +154,10 @@ def fetch_instance(instance_name):
     common, islands = read_run_stats(instance_name)
 
     best_fitness = DataToPlot.from_list(islands, 'max', 'fitness', scale='log')
-    mean_population = DataToPlot.from_list(islands, 'mean', 'population')
+    sum_population = DataToPlot.from_list(islands, 'sum', 'population')
     spread_population = DataToPlot.from_list(islands, 'spread', 'population')
 
-    subplots_data = [best_fitness, mean_population, spread_population]
+    subplots_data = [best_fitness, sum_population, spread_population]
     common_data = [DataToPlot(data, attr) for attr, data in common.items()]
     instance_data = subplots_data + common_data
 
@@ -218,4 +219,4 @@ def run():
 
 if __name__ == '__main__':
     run()
-    show()
+    plt.show()
