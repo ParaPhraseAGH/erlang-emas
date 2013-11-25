@@ -17,7 +17,7 @@ def write_stats_to_file(directory, attr, data):
         for line in data:
             f.write(str(line) + '\n')
 
-def main(logfile, out_dir):
+def parse(logfile, out_dir):
     
     lines = read_zeus_lines(logfile)
     attrs = ['fitness', 'population', 'fight', 'reproduction', 'death', 'migration']
@@ -31,12 +31,12 @@ def main(logfile, out_dir):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-    	print 'Usage:'
+        print 'Usage:'
         print '> python log_to_files.py <logfile_to_parse> [<output_directory>]'
     else:
-    	logfile = sys.argv[1]
-    	if len(sys.argv) == 2:
+        logfile = sys.argv[1]
+        if len(sys.argv) == 2:
             out_dir = logfile + '_run'
         else:
             out_dir = sys.argv[2]
-        main(logfile, out_dir)
+        parse(logfile, out_dir)
