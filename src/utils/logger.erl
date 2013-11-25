@@ -46,6 +46,7 @@ close() ->
 
 -spec init(term()) -> {ok,state()}.
 init([Model, Path]) ->
+    io:format("Start time: ~p~n",[erlang:now()]),
     Dict = case Model of
                {sequential, IslandsNr} ->
                    prepareSeqDictionary(IslandsNr, dict:new(), Path);
@@ -94,14 +95,20 @@ handle_cast({sequential, Stat, _Pid, Values}, State) ->
     %%     logList(Stat, 1, Values, State#state.dict),
     case Stat of
         fitness ->
-            io:format(atom_to_list(Stat) ++ ": ~p~n",[lists:max(Values)]);
+            Best = lists:max(Values),
+            if State#state.bestFitness < -1 andalso Best >= -1 ->
+                io:format("Time to hit: ~p~n~n",[erlang:now()]);
+            true ->
+                nothing
+            end,
+            io:format(atom_to_list(Stat) ++ ": ~p~n",[Best]),
+            {noreply,State#state{bestFitness = Best}};
         population ->
-            io:format(atom_to_list(Stat) ++ ": ~p~n",[lists:sum(Values)]);
+            io:format(atom_to_list(Stat) ++ ": ~p~n",[lists:sum(Values)]),
+            {noreply,State};
         _ ->
            error("Wrong statistic!")
-    end,
-
-    {noreply, State};
+    end;
 handle_cast({counter, {Deaths, Fights, Reproductions, Migrations}}, State) ->
     %%     Dict = State#state.dict,
     %%     logGlobal(Dict, death, Deaths),
@@ -150,7 +157,7 @@ prepareParDictionary([], Dict, Path) ->
     createFDs(Path, Dict, [death, fight, reproduction, migration]);
 prepareParDictionary([H|T], Dict, Path) ->
     IslandPath = filename:join([Path, "island" ++ integer_to_list(length(T) + 1)]),
-    file:make_dir(IslandPath),
+%%     file:make_dir(IslandPath),
     NewDict = dict:store(H, createFDs(IslandPath, dict:new(), [fitness, population]), Dict), % Key = pid(), Value = dictionary of file descriptors
     prepareParDictionary(T, NewDict, Path).
 
@@ -160,7 +167,7 @@ prepareSeqDictionary(0, Dict, Path) ->
     createFDs(Path, Dict, [death, fight, reproduction, migration]);
 prepareSeqDictionary(IslandNr, Dict, Path) ->
     IslandPath = filename:join([Path, "island" ++ integer_to_list(IslandNr)]),
-    file:make_dir(IslandPath),
+%%     file:make_dir(IslandPath),
     NewDict = dict:store(IslandNr, createFDs(IslandPath, dict:new(), [fitness, population]), Dict), % Key = IslandNumber, Value = dictionary of file descriptors
     prepareSeqDictionary(IslandNr - 1, NewDict, Path).
 
@@ -169,8 +176,8 @@ prepareSeqDictionary(IslandNr, Dict, Path) ->
 createFDs(Path, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         Filename = atom_to_list(Atom) ++ ".txt",
-                        {ok, Descriptor} = file:open(filename:join([Path, Filename]), [append, delayed_write, raw]),
-                        dict:store(Atom, Descriptor, Dict)
+%%                         {ok, Descriptor} = file:open(filename:join([Path, Filename]), [append, delayed_write, raw]),
+                        dict:store(Atom, desc, Dict)
                 end, InitDict,
                 Files).
 
