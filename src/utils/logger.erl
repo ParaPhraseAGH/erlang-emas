@@ -39,8 +39,6 @@ close() ->
 
 -record(state, {dict :: dict(),
                 counters = {0, 0, 0, 0} :: {integer(), integer(), integer(), integer()},
-                bestFitness = -999999 :: integer(),
-                populations = [] :: list(),
                 n = 0 :: non_neg_integer()}).
 -type state() :: #state{}.
 
@@ -67,58 +65,18 @@ handle_call(_Request, _From, State) ->
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_cast({parallel, Stat, _Pid, Value}, State) ->
-    %%     logLocal(State#state.dict, Pid, Stat, Value),
-    case Stat of
-        fitness ->
-            if State#state.bestFitness < Value ->
-                    {noreply,State#state{bestFitness = Value}};
-               State#state.bestFitness >= Value ->
-                    {noreply,State}
-            end;
-
-        population ->
-            N = length(dict:to_list(State#state.dict)) - 4,
-            if length(State#state.populations) + 1 == N ->
-                    io:format("fitness: ~p~n",[State#state.bestFitness]),
-                    io:format("population: ~p~n",[lists:sum([Value|State#state.populations])]),
-                    {noreply,State#state{populations = []}};
-               length(State#state.populations) + 1 =/= N ->
-                    OldPopulations = State#state.populations,
-                    {noreply,State#state{populations = [Value|OldPopulations]}}
-            end;
-        _ ->
-            error("No such stat!")
-
-    end;
+handle_cast({parallel, Stat, Pid, Value}, State) ->
+    logLocal(State#state.dict, Pid, Stat, Value),
+    {noreply,State};
 handle_cast({sequential, Stat, _Pid, Values}, State) ->
-    %%     logList(Stat, 1, Values, State#state.dict),
-    case Stat of
-        fitness ->
-            Best = lists:max(Values),
-            if State#state.bestFitness < -1 andalso Best >= -1 ->
-                io:format("Time to hit: ~p~n~n",[erlang:now()]);
-            true ->
-                nothing
-            end,
-            io:format(atom_to_list(Stat) ++ ": ~p~n",[Best]),
-            {noreply,State#state{bestFitness = Best}};
-        population ->
-            io:format(atom_to_list(Stat) ++ ": ~p~n",[lists:sum(Values)]),
-            {noreply,State};
-        _ ->
-           error("Wrong statistic!")
-    end;
+    logList(Stat, 1, Values, State#state.dict),
+    {noreply,State};
 handle_cast({counter, {Deaths, Fights, Reproductions, Migrations}}, State) ->
-    %%     Dict = State#state.dict,
-    %%     logGlobal(Dict, death, Deaths),
-    %%     logGlobal(Dict, fight, Fights),
-    %%     logGlobal(Dict, reproduction, Reproductions),
-    %%     logGlobal(Dict, migration, Migrations),
-    io:format("fight: ~p~n",[Fights]),
-    io:format("reproduction: ~p~n",[Reproductions]),
-    io:format("death: ~p~n",[Deaths]),
-    io:format("migration: ~p~n~n",[Migrations]),
+    Dict = State#state.dict,
+    logGlobal(Dict, death, Deaths),
+    logGlobal(Dict, fight, Fights),
+    logGlobal(Dict, reproduction, Reproductions),
+    logGlobal(Dict, migration, Migrations),
     {noreply, State};
 handle_cast({agregate, _Pid, Counters}, State) ->
     N = length(dict:to_list(State#state.dict)) - 4,
@@ -156,8 +114,14 @@ code_change(_OldVsn, State, _Extra) ->
 prepareParDictionary([], Dict, Path) ->
     createFDs(Path, Dict, [death, fight, reproduction, migration]);
 prepareParDictionary([H|T], Dict, Path) ->
-    IslandPath = filename:join([Path, "island" ++ integer_to_list(length(T) + 1)]),
-%%     file:make_dir(IslandPath),
+    IslandPath = case Path of
+                     standard_io ->
+                         standard_io;
+                     _ ->
+                         NewPath = filename:join([Path, "island" ++ integer_to_list(length(T) + 1)]),
+                         file:make_dir(NewPath),
+                         NewPath
+                 end,
     NewDict = dict:store(H, createFDs(IslandPath, dict:new(), [fitness, population]), Dict), % Key = pid(), Value = dictionary of file descriptors
     prepareParDictionary(T, NewDict, Path).
 
@@ -166,18 +130,29 @@ prepareParDictionary([H|T], Dict, Path) ->
 prepareSeqDictionary(0, Dict, Path) ->
     createFDs(Path, Dict, [death, fight, reproduction, migration]);
 prepareSeqDictionary(IslandNr, Dict, Path) ->
-    IslandPath = filename:join([Path, "island" ++ integer_to_list(IslandNr)]),
-%%     file:make_dir(IslandPath),
+    IslandPath = case Path of
+                     standard_io ->
+                         standard_io;
+                     _ ->
+                         NewPath = filename:join([Path, "island" ++ integer_to_list(IslandNr)]),
+                         file:make_dir(NewPath),
+                         NewPath
+                 end,
     NewDict = dict:store(IslandNr, createFDs(IslandPath, dict:new(), [fitness, population]), Dict), % Key = IslandNumber, Value = dictionary of file descriptors
     prepareSeqDictionary(IslandNr - 1, NewDict, Path).
 
 %% @doc Tworzy pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
 -spec createFDs(string(), dict(), [atom()]) -> FDs :: dict().
+createFDs(standard_io, InitDict, Files) ->
+    lists:foldl(fun(Atom, Dict) ->
+                        dict:store(Atom, standard_io, Dict)
+                end, InitDict,
+                Files);
 createFDs(Path, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         Filename = atom_to_list(Atom) ++ ".txt",
-%%                         {ok, Descriptor} = file:open(filename:join([Path, Filename]), [append, delayed_write, raw]),
-                        dict:store(Atom, desc, Dict)
+                        {ok, Descriptor} = file:open(filename:join([Path, Filename]), [append, delayed_write, raw]),
+                        dict:store(Atom, Descriptor, Dict)
                 end, InitDict,
                 Files).
 
