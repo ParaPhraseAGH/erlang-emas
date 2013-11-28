@@ -168,13 +168,13 @@ logList(Stat, Index, [H|T], Dict) ->
 logLocal(Dictionary, Key, Statistic, Value) ->
     FDs = dict:fetch(Key, Dictionary),
     FD = dict:fetch(Statistic, FDs),
-    file:write(FD, io_lib:fwrite("~p\n", [Value])).
+    file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Statistic, Key, Value])).
 
 %% @doc Dokonuje buforowanego zapisu do pliku globalnej statystyki. W argumencie podany glowny slownik, nazwa statystyki i wartosc do wpisania.
 -spec logGlobal(dict(), atom(), term()) -> ok.
 logGlobal(Dictionary, Stat, Value) ->
     FD = dict:fetch(Stat, Dictionary),
-    file:write(FD, io_lib:fwrite("~p\n", [Value])).
+    file:write(FD, io_lib:fwrite("~p ~p\n", [Stat,Value])).
 
 %% @doc Zamyka pliki podane w argumencie
 -spec closeFiles(dict()) -> any().
