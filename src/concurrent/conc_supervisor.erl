@@ -119,9 +119,10 @@ handle_info({'EXIT',Pid,Reason},State) ->
             io:format("Error w arenie, zamykamy impreze na wyspie ~p~n",[self()]),
             exit(Reason);
         false ->
-            io:format("Error w agencie, karawana jedzie dalej~n")
-    end,
-    {noreply,State,config:supervisorTimeout()};
+            io:format("Error w agencie, karawana jedzie dalej~n"),
+            Population = State#state.population,
+            {noreply,State#state{population = Population - 1},config:supervisorTimeout()}
+    end;
 handle_info(write,State) ->
     Fitness = State#state.best,
     logger:logLocalStats(parallel,fitness,Fitness),
