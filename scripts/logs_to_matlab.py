@@ -19,11 +19,19 @@ def parse_dir(directory):
             if data:
                 # print attr, len(data)
                 stats[attr].append(data)
+    # find minimal number of columns in a run
+    mincols = min(min([len(elem) for elem in columns]) for columns in stats.values())
+    print mincols
     for key, lists in stats.items():
-        # print key, len(lists)
-        stats[key] = [' '.join(elem) for elem in lists]
+        print [len(elem) for elem in lists]
+        minlists = [elem[:mincols] for elem in lists]
+        # keylists2 = 
+        print key, 'raw:', [len(elem) for elem in lists]
+        # print 'mincols:', mincols
+        print key, 'cleaned:', [len(elem) for elem in minlists]
+        stats[key] = [' '.join(elem) for elem in minlists]
         log_to_files.write_stats_to_file(directory, key, stats[key])
-    print 'merged', len(logfiles), 'logfiles'
+    print 'merged', len(logfiles), 'logfiles (rows) - ', mincols, 'columns'
 
 
 if __name__ == '__main__':
