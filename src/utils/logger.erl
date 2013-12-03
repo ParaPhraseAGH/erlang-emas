@@ -45,11 +45,15 @@ close() ->
 -spec init(term()) -> {ok,state()}.
 init([Model, Path]) ->
     io:format("Start time: ~p~n",[erlang:now()]),
+    NewPath = case Path of
+                  "standard_io" -> standard_io;
+                  X -> X
+              end,
     Dict = case Model of
                {sequential, IslandsNr} ->
-                   prepareSeqDictionary(IslandsNr, dict:new(), Path);
+                   prepareSeqDictionary(IslandsNr, dict:new(), NewPath);
                {parallel, Pids} when is_list(Pids) ->
-                   prepareParDictionary(Pids, dict:new(), Path)
+                   prepareParDictionary(Pids, dict:new(), NewPath)
            end,
     {ok, #state{dict = Dict}}.
 
