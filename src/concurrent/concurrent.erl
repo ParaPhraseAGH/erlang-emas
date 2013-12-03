@@ -46,7 +46,7 @@ getAddresses(Pid) ->
     {'DOWN', Ref, process, Pid, Reason} ->
       io:format("The king is dead, long live the king!~n",[]),
       erlang:error(Reason)
-  after 1000 ->
+  after 5000 ->
     io:format("Proces ~p nie dostal wiadomosci z adresami~n",[self()]),
     erlang:error(timeout)
   end.
