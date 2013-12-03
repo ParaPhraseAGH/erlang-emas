@@ -2,6 +2,7 @@
 
 import os
 import sys
+from collections import defaultdict
 
 
 def read_zeus_lines(filepath):
@@ -20,10 +21,24 @@ def write_stats_to_file(directory, attr, data):
 def parse(logfile, out_dir):
     
     lines = read_zeus_lines(logfile)
-    attrs = ['fitness', 'population', 'fight', 'reproduction', 'death', 'migration']
+    attrs1 = ['fitness', 'population']
+    attrs2 = ['fight', 'reproduction', 'death', 'migration']
     
-    for attr in attrs:
-        data = [float(line.split(':')[1].strip()) for line in lines if line.startswith(attr)]
+    for attr in attrs1:
+        isl_dict = defaultdict(list)
+        data = [line.split(' ') for line in lines if line.startswith(attr)]
+        for line in data:
+            isl_dict[line[1]].append(float(line[2]))
+        vals = zip(*isl_dict.values())
+        if attr == 'fitness':
+            data2 = [max(tup) for tup in vals]
+        else:
+            data2 = [sum(tup) for tup in vals]
+        if data2:
+            write_stats_to_file(out_dir, attr, data2)
+
+    for attr in attrs2:
+        data = [float(line.split(' ')[-1].strip()) for line in lines if line.startswith(attr)]
         # print attr, data
         if data:
             write_stats_to_file(out_dir, attr, data)
