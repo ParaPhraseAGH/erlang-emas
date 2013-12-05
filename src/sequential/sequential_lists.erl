@@ -55,7 +55,7 @@ loop(Islands,Counter) ->
                                               Counter#counter.fight,
                                               Counter#counter.reproduction,
                                               Counter#counter.migration}),
-            io_util:printSeq(Islands),
+%%             io_util:printSeq(Islands),
             timer:send_after(config:writeInterval(),write),
             loop(Islands,#counter{});
         theEnd ->
