@@ -11,6 +11,7 @@
          code_change/3]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+-type state() :: [pid()].
 
 %% ====================================================================
 %% API functions
