@@ -24,9 +24,9 @@ start_link(IslandsNr,Topology) ->
 close() ->
     gen_server:cast(whereis(?MODULE),close).
 
--spec getDestination(integer()) -> integer().
 %% @doc Funkcja komunikujaca sie synchronicznie z procesem topology i zwracajaca docelowa wyspe
 %%  na podstawie przeslanego argumentu
+-spec getDestination(integer()) -> integer().
 getDestination(X) ->
     gen_server:call(whereis(?MODULE),{destination,X}).
 
