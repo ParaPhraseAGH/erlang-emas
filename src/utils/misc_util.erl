@@ -74,13 +74,31 @@ averageNumber(Probability,List) ->
 
 
 %% @doc Funkcja wyliczajaca sume i minimum odchylen standardowych genotypow agentow
--spec hybridDiversity([agent()]) -> {[float()], [float()]}.
+-spec hybridDiversity([agent()]) -> {float(), float()}.
 hybridDiversity(Agents) ->
     Solutions = [Sol || {Sol, _, _} <- Agents],
-    Variances = [stddev(Sol) || Sol <- transpose(Solutions)],
-    Sum = lists:sum(Variances),
-    Min = lists:min(Variances),
+    Stddevs = [stddev(Sol) || Sol <- transpose(Solutions)],
+    Sum = lists:sum(Stddevs),
+    Min = lists:min(Stddevs),
     {Sum, Min}.
+
+%% @doc Funkcja online wyliczajaca sume i minimum odchylen standardowych genotypow agentow
+-spec concurrentDiversity([agent()], integer(), [float()],[float()]) -> {float(),float(),[float()], [float()]}.
+concurrentDiversity(_Agent, N, _PrevMeans, _PrevStds) when N < 1 ->
+    error("N must be greater than zero");
+concurrentDiversity(Agent, 1, _PrevMeans, _PrevStds) ->
+    {Sol, _, _} = Agent,
+    {0.0, 0.0, Sol, lists:duplicate(length(Sol),0.0)};
+concurrentDiversity(Agent, N, PrevMeans, PrevStds) ->
+    {Sol, _, _} = Agent,
+    {PrevMeans, PrevStds} = lists:map(fun ({Xn, Mean, Std}) ->
+                                              Diff = Xn - Mean,
+                                              {Mean + Diff/N, Std*(N-2)/(N-1) + Diff*Diff/N}
+                                      end, lists:zip3(Sol, PrevMeans, PrevStds)),
+    Sum = lists:sum(PrevStds),
+    Min = lists:min(PrevStds),
+    {Sum, Min, PrevMeans, PrevStds}.
+
 
 
 %% @doc Zwraca liczby agentow nalezacych do poszczegolnych kategorii w formie rekordu
@@ -136,16 +154,16 @@ result(Agents) ->
 
 -spec seedRandom() -> {integer(),integer(),integer()}.
 seedRandom() ->
-  {_,B,C} = erlang:now(),
-  List = atom_to_list(node()),
-  Hash = lists:foldl(fun(N,Acc) ->
-                       if N >= 1000 -> Acc * 10000 + N;
-                         N >= 100 -> Acc * 1000 + N;
-                         N >= 10 -> Acc * 100 + N;
-                         N < 10 -> Acc * 10 + N
-                       end
-                     end,0,List),
-  random:seed(Hash,B,C).
+    {_,B,C} = erlang:now(),
+    List = atom_to_list(node()),
+    Hash = lists:foldl(fun(N,Acc) ->
+                               if N >= 1000 -> Acc * 10000 + N;
+                                  N >= 100 -> Acc * 1000 + N;
+                                  N >= 10 -> Acc * 100 + N;
+                                  N < 10 -> Acc * 10 + N
+                               end
+                       end,0,List),
+    random:seed(Hash,B,C).
 
 %% ====================================================================
 %% Internal functions
@@ -173,20 +191,19 @@ mapIndex(Elem,Index,[H|T],F,Acc) ->
 %% @doc Funkcja wyliczajaca odchylenie standardowe rozkladu zadanego przez liste liczb
 -spec stddev([float()]) -> float().
 stddev(L) ->
-  {SqSum, Sum, Len} = lists:foldl(fun (X, {K,S,N}) ->
-    {K+X*X,S+X,N+1}
-  end, {0,0,0}, L),
-  Mean = Sum/Len,
-  math:sqrt(SqSum/Len-Mean*Mean).
+    {SqSum, Sum, Len} = lists:foldl(fun (X, {K,S,N}) ->
+                                            {K+X*X,S+X,N+1}
+                                    end, {0,0,0}, L),
+    Mean = Sum/Len,
+    math:sqrt(SqSum/Len-Mean*Mean).
 
 %% @doc Funkcja wykonujaca operacje zip na dowolnej liczbie list wejsciowych
 %% http://erlang.org/pipermail/erlang-questions/2012-October/069856.html
 -spec transpose([[float()]]) -> [[float()]].
 transpose([[X | Xs] | Xss]) ->
-  [[X | [H || [H | _] <- Xss]] | transpose([Xs | [T || [_ | T] <- Xss]])];
+    [[X | [H || [H | _] <- Xss]] | transpose([Xs | [T || [_ | T] <- Xss]])];
 transpose([[] | Xss]) -> transpose(Xss);
 transpose([]) -> [];
 transpose(Tuple) when is_tuple(Tuple) ->  % wrapper to emulate zip
-  Xs = transpose(tuple_to_list(Tuple)),
-  [list_to_tuple(X) || X <- Xs].
-
+    Xs = transpose(tuple_to_list(Tuple)),
+    [list_to_tuple(X) || X <- Xs].
