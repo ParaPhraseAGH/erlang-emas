@@ -4,7 +4,7 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
-         seedRandom/0, countGroups/2, addCounters/2]).
+         seedRandom/0, countGroups/2, addCounters/2, hybridDiversity/1]).
 
 -record(counter,{fight = 0 :: non_neg_integer(),
                  reproduction = 0 :: non_neg_integer(),
@@ -72,6 +72,17 @@ averageNumber(Probability,List) ->
        N >=1 -> trunc(N)
     end.
 
+
+%% @doc Funkcja wyliczajaca sume i minimum odchylen standardowych genotypow agentow
+-spec hybridDiversity([agent()]) -> {[float()], [float()]}.
+hybridDiversity(Agents) ->
+    Solutions = [Sol || {Sol, _, _} <- Agents],
+    Variances = [stddev(Sol) || Sol <- transpose(Solutions)],
+    Sum = lists:sum(Variances),
+    Min = lists:min(Variances),
+    {Sum, Min}.
+
+
 %% @doc Zwraca liczby agentow nalezacych do poszczegolnych kategorii w formie rekordu
 -spec countGroups([tuple()],counter()) -> counter().
 countGroups([],Counter) ->
@@ -125,16 +136,16 @@ result(Agents) ->
 
 -spec seedRandom() -> {integer(),integer(),integer()}.
 seedRandom() ->
-    {_,B,C} = erlang:now(),
-    List = atom_to_list(node()),
-    Hash = lists:foldl(fun(N,Acc) ->
-                               if N >= 1000 -> Acc * 10000 + N;
-                                  N >= 100 -> Acc * 1000 + N;
-                                  N >= 10 -> Acc * 100 + N;
-                                  N < 10 -> Acc * 10 + N
-                               end
-                       end,0,List),
-    random:seed(Hash,B,C).
+  {_,B,C} = erlang:now(),
+  List = atom_to_list(node()),
+  Hash = lists:foldl(fun(N,Acc) ->
+                       if N >= 1000 -> Acc * 10000 + N;
+                         N >= 100 -> Acc * 1000 + N;
+                         N >= 10 -> Acc * 100 + N;
+                         N < 10 -> Acc * 10 + N
+                       end
+                     end,0,List),
+  random:seed(Hash,B,C).
 
 %% ====================================================================
 %% Internal functions
@@ -157,3 +168,25 @@ mapIndex(Elem,1,[H|T],F,Acc) ->
     lists:reverse(Acc,[F(Elem,H)|T]);
 mapIndex(Elem,Index,[H|T],F,Acc) ->
     mapIndex(Elem,Index - 1,T,F,[H|Acc]).
+
+
+%% @doc Funkcja wyliczajaca odchylenie standardowe rozkladu zadanego przez liste liczb
+-spec stddev([float()]) -> float().
+stddev(L) ->
+  {SqSum, Sum, Len} = lists:foldl(fun (X, {K,S,N}) ->
+    {K+X*X,S+X,N+1}
+  end, {0,0,0}, L),
+  Mean = Sum/Len,
+  math:sqrt(SqSum/Len-Mean*Mean).
+
+%% @doc Funkcja wykonujaca operacje zip na dowolnej liczbie list wejsciowych
+%% http://erlang.org/pipermail/erlang-questions/2012-October/069856.html
+-spec transpose([[float()]]) -> [[float()]].
+transpose([[X | Xs] | Xss]) ->
+  [[X | [H || [H | _] <- Xss]] | transpose([Xs | [T || [_ | T] <- Xss]])];
+transpose([[] | Xss]) -> transpose(Xss);
+transpose([]) -> [];
+transpose(Tuple) when is_tuple(Tuple) ->  % wrapper to emulate zip
+  Xs = transpose(tuple_to_list(Tuple)),
+  [list_to_tuple(X) || X <- Xs].
+
