@@ -48,6 +48,10 @@ loop(Agents,Counters) ->
                   X -> X
                 end,
       logger:logLocalStats(parallel,fitness,Fitness),
+%%       {VarianceSum, VarianceMin} = misc_util:hybridDiversity(Agents),
+%%%%       io:format("SUM: ~p, MIN~p~n",[VarianceSum,VarianceMin]),
+%%       logger:logLocalStats(parallel,diversitySum, VarianceSum),
+%%       logger:logLocalStats(parallel,diversityMin, VarianceMin),
       logger:logLocalStats(parallel,population,length(Agents)),
       logger:logGlobalStats(parallel,{Counters#counter.death,Counters#counter.fight,Counters#counter.reproduction,Counters#counter.migration}),
 %%       io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,length(Agents)]),
