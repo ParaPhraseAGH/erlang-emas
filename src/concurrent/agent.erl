@@ -3,7 +3,7 @@
 %% @doc Modul odpowiedzialny za logike pojedynczego agenta.
 
 -module(agent).
--export([start/4]).
+-export([start/4, start/5]).
 -record(arenas,{fight,reproduction,migration}).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
@@ -15,14 +15,16 @@
 
 %% @doc Funkcja generujaca dane i startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac.
--spec start(pos_integer() | agent(), Ring::pid(), Bar::pid(), Port::pid()) -> no_return().
-start(ProblemSize,Ring,Bar,Port) when is_integer(ProblemSize) ->
+-spec start(pid(), pos_integer(), Ring::pid(), Bar::pid(), Port::pid()) -> no_return().
+start(Supervisor,ProblemSize,Ring,Bar,Port) when is_integer(ProblemSize) ->
     misc_util:seedRandom(),
     Agent = genetic:generateAgent(ProblemSize),
+    conc_supervisor:newAgent(Supervisor,Agent),
     Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
-    loop(Agent,Arenas);
+    loop(Agent,Arenas).
 %% @doc Funkcja startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac oraz dane agenta.
+-spec start(agent(), Ring::pid(), Bar::pid(), Port::pid()) -> no_return().
 start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
     random:seed(erlang:now()),
     Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
@@ -38,7 +40,7 @@ start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
 loop(Agent,Arenas) ->
     case misc_util:behavior(Agent) of
         death ->
-            exit(dying);
+            exit({dying,Agent});
         reproduction ->
             {Solution,Fitness,_} = Agent,
             NewEnergy = bar:call(Arenas#arenas.reproduction,Agent),

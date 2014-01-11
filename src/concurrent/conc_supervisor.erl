@@ -6,7 +6,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/2, sendAgents/2, unlinkAgent/2, linkAgent/2, reportFromArena/3, close/1]).
+-export([start/2, newAgent/2, sendAgents/2, unlinkAgent/2, linkAgent/2, reportFromArena/3, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -20,6 +20,10 @@
 start(King,ProblemSize) ->
     {ok,Pid} = gen_server:start(?MODULE,[King,ProblemSize],[]),
     Pid.
+
+-spec newAgent(pid(),agent()) -> ok.
+newAgent(Pid,Agent) ->
+    gen_server:cast(Pid,{newAgent,Agent}).
 
 %% @doc Funkcja za pomoca ktorej mozna wyslac supervisorowi liste nowych agentow.
 -spec sendAgents(pid(),[agent()]) -> ok.
@@ -48,11 +52,13 @@ close(Pid) ->
 %% Callbacks
 %% ====================================================================
 -record(state, {best = -999999.9 :: float() | islandEmpty,
-                population = config:populationSize() :: pos_integer(),
+                population = 0 :: pos_integer(),
+                diversity :: {Mean::[float()],StdDev::[float()],DevSum::float(),DevMin::float()},
                 deathCounter = 0 :: non_neg_integer(),
                 reports = dict:new() :: dict(),
                 arenas :: [pid()]}).
 -type state() :: #state{}.
+
 
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
@@ -64,9 +70,11 @@ init([King,ProblemSize]) ->
     {ok,Port} = port:start_link(self(),King),
     Arenas = [Ring,Bar,Port],
     io_util:printArenas(Arenas),
-    [spawn_link(agent,start,[ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
+    [spawn_link(agent,start,[self(),ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
     timer:send_interval(config:writeInterval(),write),
-    {ok,#state{arenas = Arenas},config:supervisorTimeout()}.
+    Vector = lists:duplicate(ProblemSize,0.0),
+    {ok,#state{arenas = Arenas, diversity = {Vector,Vector,0.0,0.0}},config:supervisorTimeout()}.
+
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
                                                     {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
@@ -78,6 +86,7 @@ handle_call({emigrant,AgentPid},_From,State) ->
     erlang:unlink(AgentPid),
     Population = State#state.population,
     {reply,ok,State#state{population = Population - 1}};
+
 handle_call({immigrant,AgentFrom},_From,State) ->
     {AgentPid,_} = AgentFrom,
     erlang:link(AgentPid),
@@ -85,14 +94,27 @@ handle_call({immigrant,AgentFrom},_From,State) ->
     Population = State#state.population,
     {reply,ok,State#state{population = Population + 1}}.
 
+
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
 handle_cast({newAgents,AgentList},State) ->
     [spawn_link(agent,start,[A|State#state.arenas]) || A <- AgentList],
     Result = misc_util:result(AgentList),
-    NewPopulation = State#state.population + length(AgentList),
-    {noreply,State#state{best = lists:max([Result,State#state.best]), population = NewPopulation},config:supervisorTimeout()};
+    {{NewMean,NewM,NewSum,NewMin},NewPopulation} = lists:foldl(fun({Solution,_,_},{{Mean,M,_,_},Population}) ->
+                                                                       {Sum,Min,MidMean,MidM} = misc_util:concurrentDiversity(Solution,add,Population+1,Mean,M),
+                                                                       {{MidMean,MidM,Sum,Min},Population+1}
+                                                               end,{State#state.diversity,State#state.population},AgentList),
+    {noreply,State#state{best = lists:max([Result,State#state.best]),
+                         population = NewPopulation,
+                         diversity = {NewMean,NewM,NewSum,NewMin}},config:supervisorTimeout()};
+
+handle_cast({newAgent,{Solution,_,_}},State) ->
+    N = State#state.population + 1,
+    {Mean,StdDev,_,_} = State#state.diversity,
+    {Sum,Min,NewMean,NewStddev} = misc_util:concurrentDiversity(Solution,add,N,Mean,StdDev),
+    {noreply,State#state{population = N,diversity = {NewMean,NewStddev,Sum,Min}},config:supervisorTimeout()};
+
 handle_cast({reportFromArena,Arena,Value},State) ->
     Dict = State#state.reports,
     NewDict = dict:store(Arena,Value,Dict),
@@ -103,16 +125,21 @@ handle_cast({reportFromArena,Arena,Value},State) ->
         _ ->
             {noreply,State#state{reports = NewDict},config:supervisorTimeout()}
     end;
+
 handle_cast(close,State) ->
     {stop,normal,State}.
+
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_info({'EXIT',_,dying},State) ->
-    Population = State#state.population,
+handle_info({'EXIT',_,{dying,{Solution,_,_}}},State) ->
+    Population = State#state.population - 1,
+    {Mean,StdDev,_,_} = State#state.diversity,
+    {Sum,Min,NewMean,NewStddev} = misc_util:concurrentDiversity(Solution,delete,Population,Mean,StdDev),
     DeathCounter = State#state.deathCounter,
-    {noreply,State#state{population = Population - 1, deathCounter = DeathCounter + 1},config:supervisorTimeout()};
+    {noreply,State#state{population = Population, deathCounter = DeathCounter + 1, diversity = {NewMean,NewStddev,Sum,Min}},config:supervisorTimeout()};
+
 handle_info({'EXIT',Pid,Reason},State) ->
     case lists:member(Pid,State#state.arenas) of
         true ->
@@ -123,14 +150,21 @@ handle_info({'EXIT',Pid,Reason},State) ->
             Population = State#state.population,
             {noreply,State#state{population = Population - 1},config:supervisorTimeout()}
     end;
+
 handle_info(write,State) ->
     Fitness = State#state.best,
+    Population = State#state.population,
+    {_,_,StdSum,StdMin} = State#state.diversity,
     logger:logLocalStats(parallel,fitness,Fitness),
-    logger:logLocalStats(parallel,population,State#state.population),
-    %%     io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,State#state.population]),
+    logger:logLocalStats(parallel,population,Population),
+    logger:logLocalStats(parallel,stddevsum,StdSum),
+    logger:logLocalStats(parallel,stddevmin,StdMin),
+    %%     io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,Population]),
     {noreply,State,config:supervisorTimeout()};
+
 handle_info(timeout,State) ->
     {stop,timeout,State}.
+
 
 -spec terminate(term(),state()) -> no_return().
 terminate(_Reason,State) ->
@@ -138,6 +172,7 @@ terminate(_Reason,State) ->
     port:close(Port),
     bar:close(Bar),
     ring:close(Ring).
+
 
 -spec code_change(term(),state(),term()) -> {ok, state()}.
 code_change(_OldVsn,State,_Extra) ->

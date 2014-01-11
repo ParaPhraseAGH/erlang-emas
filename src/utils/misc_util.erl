@@ -4,7 +4,7 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
-         seedRandom/0, countGroups/2, addCounters/2, hybridDiversity/1]).
+         seedRandom/0, countGroups/2, addCounters/2, hybridDiversity/1, concurrentDiversity/5]).
 
 -record(counter,{fight = 0 :: non_neg_integer(),
                  reproduction = 0 :: non_neg_integer(),
@@ -83,21 +83,28 @@ hybridDiversity(Agents) ->
     {Sum, Min}.
 
 %% @doc Funkcja online wyliczajaca sume i minimum odchylen standardowych genotypow agentow
--spec concurrentDiversity([agent()], integer(), [float()],[float()]) -> {float(),float(),[float()], [float()]}.
-concurrentDiversity(_Agent, N, _PrevMeans, _PrevStds) when N < 1 ->
-    error("N must be greater than zero");
-concurrentDiversity(Agent, 1, _PrevMeans, _PrevStds) ->
-    {Sol, _, _} = Agent,
-    {0.0, 0.0, Sol, lists:duplicate(length(Sol),0.0)};
-concurrentDiversity(Agent, N, PrevMeans, PrevStds) ->
-    {Sol, _, _} = Agent,
-    {PrevMeans, PrevStds} = lists:map(fun ({Xn, Mean, Std}) ->
-                                              Diff = Xn - Mean,
-                                              {Mean + Diff/N, Std*(N-2)/(N-1) + Diff*Diff/N}
-                                      end, lists:zip3(Sol, PrevMeans, PrevStds)),
-    Sum = lists:sum(PrevStds),
-    Min = lists:min(PrevStds),
-    {Sum, Min, PrevMeans, PrevStds}.
+-spec concurrentDiversity(genetic:solution(), atom(), integer(), [float()],[float()]) -> {float(),float(),[float()], [float()]}.
+concurrentDiversity(_Solution, _Action, N, PrevMeans, PrevStds) when N < 1 ->
+    %%     io:format("Diversity incalculable~n"),
+    {-1.0,-1.0,PrevMeans,PrevStds};
+concurrentDiversity(Solution, add, N, PrevMeans, PrevMs) ->
+    {NewMeans, Ms} = lists:unzip(lists:map(fun ({Xn, Mean, M}) ->
+                                                          NewMean = Mean + (Xn - Mean)/N,
+                                                          {NewMean, M + (Xn - Mean)*(Xn - NewMean)}
+                                                  end, lists:zip3(Solution, PrevMeans, PrevMs))),
+    Stds = [X/N || X <- Ms],
+    Sum = lists:sum(Stds),
+    Min = lists:min(Stds),
+    {Sum, Min, NewMeans, Ms};
+concurrentDiversity(Solution, delete, N, PrevMeans, PrevMs) ->
+    {NewMeans, Ms} = lists:unzip(lists:map(fun ({Xn, Mean, M}) ->
+                                                          NewMean = Mean - (Xn - Mean)/N,
+                                                          {NewMean, M - (Xn - Mean)*(Xn - NewMean)}
+                                                  end, lists:zip3(Solution, PrevMeans, PrevMs))),
+    Stds = [X/N || X <- Ms],
+    Sum = lists:sum(Stds),
+    Min = lists:min(Stds),
+    {Sum, Min, NewMeans, Ms}.
 
 
 

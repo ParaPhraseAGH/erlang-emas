@@ -50,7 +50,6 @@ loop(Agents,Counters) ->
             logger:logLocalStats(parallel,fitness,Fitness),
             logger:logLocalStats(parallel,population,length(Agents)),
             {VarianceSum, VarianceMin} = misc_util:hybridDiversity(Agents),
-%%%%            io:format("SUM: ~p, MIN~p~n",[VarianceSum,VarianceMin]),
             logger:logLocalStats(parallel,stddevsum, VarianceSum),
             logger:logLocalStats(parallel,stddevmin, VarianceMin),
 
