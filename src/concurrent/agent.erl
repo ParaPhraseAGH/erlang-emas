@@ -50,6 +50,6 @@ loop(Agent,Arenas) ->
             NewEnergy = ring:call(Arenas#arenas.fight,Agent),
             loop({Solution,Fitness,NewEnergy},Arenas);
         migration ->
-            [Ring,Bar,Port] = port:call(Arenas#arenas.migration),
+            [Ring,Bar,Port] = port:call(Arenas#arenas.migration,Agent),
             loop(Agent,#arenas{fight = Ring, reproduction = Bar, migration = Port})
     end.

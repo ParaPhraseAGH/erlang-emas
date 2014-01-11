@@ -6,7 +6,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/2, newAgent/2, sendAgents/2, unlinkAgent/2, linkAgent/2, reportFromArena/3, close/1]).
+-export([start/2, newAgent/2, sendAgents/2, unlinkAgent/3, linkAgent/3, reportFromArena/3, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -31,14 +31,14 @@ sendAgents(Pid,Agents) ->
     gen_server:cast(Pid,{newAgents,Agents}).
 
 %% @doc Funkcja usuwa link miedzy supervisorem, a danym agentem. Zapytanie synchroniczne.
--spec unlinkAgent(pid(),pid()) -> ok.
-unlinkAgent(Pid,AgentPid) ->
-    gen_server:call(Pid,{emigrant,AgentPid}).
+-spec unlinkAgent(pid(),pid(),agent()) -> ok.
+unlinkAgent(Pid,AgentPid,Agent) ->
+    gen_server:call(Pid,{emigrant,AgentPid,Agent}).
 
 %% @doc Funkcja tworzy link miedzy supervisorem, a danym agentem. Zapytanie synchroniczne.
--spec linkAgent(pid(),{pid(),reference()}) -> ok.
-linkAgent(Pid,AgentFrom) ->
-    gen_server:call(Pid,{immigrant,AgentFrom}).
+-spec linkAgent(pid(),{pid(),reference()},agent()) -> ok.
+linkAgent(Pid,AgentFrom,Agent) ->
+    gen_server:call(Pid,{immigrant,AgentFrom,Agent}).
 
 -spec reportFromArena(pid(),fight | reproduction | migration, non_neg_integer()) -> ok.
 reportFromArena(Pid,Arena,Value) ->
@@ -82,17 +82,19 @@ init([King,ProblemSize]) ->
                                                     {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
-handle_call({emigrant,AgentPid},_From,State) ->
+handle_call({emigrant,AgentPid,{Solution,_,_}},_From,State) ->
     erlang:unlink(AgentPid),
-    Population = State#state.population,
-    {reply,ok,State#state{population = Population - 1}};
+    NewPopulation = State#state.population - 1,
+    {Mean,StdDev,_,_} = State#state.diversity,
+    {Sum,Min,NewMean,NewStddev} = misc_util:concurrentDiversity(Solution,delete,NewPopulation,Mean,StdDev),
+    {reply,ok,State#state{population = NewPopulation, diversity = {NewMean,NewStddev,Sum,Min}}};
 
-handle_call({immigrant,AgentFrom},_From,State) ->
+handle_call({immigrant,AgentFrom,Agent},_From,State) ->
     {AgentPid,_} = AgentFrom,
     erlang:link(AgentPid),
     gen_server:reply(AgentFrom,State#state.arenas),
-    Population = State#state.population,
-    {reply,ok,State#state{population = Population + 1}}.
+    newAgent(self(),Agent),
+    {reply,ok,State}.
 
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
