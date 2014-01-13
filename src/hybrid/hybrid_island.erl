@@ -49,12 +49,12 @@ loop(Agents,Counters) ->
                       end,
             logger:logLocalStats(parallel,fitness,Fitness),
             logger:logLocalStats(parallel,population,length(Agents)),
-            {VarianceSum, VarianceMin} = misc_util:hybridDiversity(Agents),
+            {VarianceSum, VarianceMin, VarianceVar} = misc_util:hybridDiversity(Agents),
+            logger:logLocalStats(parallel,stddevvar, VarianceVar),
             logger:logLocalStats(parallel,stddevsum, VarianceSum),
             logger:logLocalStats(parallel,stddevmin, VarianceMin),
-
             logger:logGlobalStats(parallel,{Counters#counter.death,Counters#counter.fight,Counters#counter.reproduction,Counters#counter.migration}),
-            %%       io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,length(Agents)]),
+            %% io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,length(Agents)]),
             timer:send_after(config:writeInterval(),{write,Fitness}),
             loop(Agents,#counter{});
         {agent,_Pid,A} ->
