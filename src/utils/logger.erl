@@ -126,7 +126,7 @@ prepareParDictionary([H|T], Dict, Path) ->
                          file:make_dir(NewPath),
                          NewPath
                  end,
-    NewDict = dict:store(H, createFDs(IslandPath, dict:new(), [fitness, population, stddevsum, stddevmin]), Dict), % Key = pid(), Value = dictionary of file descriptors
+    NewDict = dict:store(H, createFDs(IslandPath, dict:new(), [fitness, population, stddevsum, stddevmin, stddevvar]), Dict), % Key = pid(), Value = dictionary of file descriptors
     prepareParDictionary(T, NewDict, Path).
 
 %% @doc Tworzy duzy slownik z mniejszymi slownikami deskryptorow dla kazdej z wysp dla modelow sekwencyjnych

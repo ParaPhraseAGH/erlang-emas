@@ -76,13 +76,14 @@ averageNumber(Probability,List) ->
 %% @doc Funkcja wyliczajaca sume i minimum odchylen standardowych genotypow agentow
 -spec hybridDiversity([agent()]) -> {float(), float()}.
 hybridDiversity([]) ->
-    {-1.0, -1.0};
+    {-1.0, -1.0, 0.0};
 hybridDiversity(Agents) ->
     Solutions = [Sol || {Sol, _, _} <- Agents],
-    variances = [variance(Sol) || Sol <- transpose(Solutions)],
-    Sum = lists:sum(variances),
-    Min = lists:min(variances),
-    {Sum, Min}.
+    Variances = [variance(Sol) || Sol <- transpose(Solutions)],
+    Sum = lists:sum(Variances),
+    Min = lists:min(Variances),
+    Var = variance(Variances),
+    {Sum, Min, Var}.
 
 %% @doc Funkcja online wyliczajaca sume i minimum odchylen standardowych genotypow agentow
 -spec concurrentDiversity(genetic:solution(), atom(), integer(), [float()],[float()]) -> {float(),float(),[float()], [float()]}.
