@@ -89,7 +89,8 @@ hybridDiversity(Agents) ->
 -spec concurrentDiversity(genetic:solution(), atom(), integer(), [float()],[float()]) -> {float(),float(),[float()], [float()]}.
 concurrentDiversity(_Solution, _Action, N, PrevMeans, PrevStds) when N < 1 ->
     %%     io:format("Diversity incalculable~n"),
-    {-1.0,-1.0,PrevMeans,PrevStds};
+    {-1.0,-1.0,-1.0,PrevMeans,PrevStds};
+
 concurrentDiversity(Solution, add, N, PrevMeans, PrevMs) ->
     {NewMeans, Ms} = lists:unzip(lists:map(fun ({Xn, Mean, M}) ->
                                                    NewMean = Mean + (Xn - Mean)/N,
@@ -98,7 +99,9 @@ concurrentDiversity(Solution, add, N, PrevMeans, PrevMs) ->
     Stds = [X/N || X <- Ms],
     Sum = lists:sum(Stds),
     Min = lists:min(Stds),
-    {Sum, Min, NewMeans, Ms};
+    Var = variance(Stds),
+    {Sum, Min, Var, NewMeans, Ms};
+
 concurrentDiversity(Solution, delete, N, PrevMeans, PrevMs) ->
     {NewMeans, Ms} = lists:unzip(lists:map(fun ({Xn, Mean, M}) ->
                                                    NewMean = Mean - (Xn - Mean)/N,
@@ -107,7 +110,8 @@ concurrentDiversity(Solution, delete, N, PrevMeans, PrevMs) ->
     Stds = [X/N || X <- Ms],
     Sum = lists:sum(Stds),
     Min = lists:min(Stds),
-    {Sum, Min, NewMeans, Ms}.
+    Var = variance(Stds),
+    {Sum, Min, Var, NewMeans, Ms}.
 
 
 
@@ -210,7 +214,7 @@ variance(L) ->
     {Sum2} = lists:foldl(fun (X, {K}) ->
                                  {K+(X-Mean)*(X-Mean)}
                          end, {0}, L),
-%%     Variance =
+    %%     Variance =
     Sum2/(Len-1).
 %%     math:sqrt(Variance).
 %%     Variance = logBadValues(Sum2/(Len-1),Sum2, Len, Mean),

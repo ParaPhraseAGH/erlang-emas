@@ -53,7 +53,7 @@ close(Pid) ->
 %% ====================================================================
 -record(state, {best = -999999.9 :: float() | islandEmpty,
                 population = 0 :: pos_integer(),
-                diversity :: {Mean::[float()],StdDev::[float()],DevSum::float(),DevMin::float()},
+                diversity :: {Mean::[float()],StdDev::[float()],DevSum::float(),DevMin::float(),VarVar::float()},
                 deathCounter = 0 :: non_neg_integer(),
                 reports = dict:new() :: dict(),
                 arenas :: [pid()]}).
@@ -73,7 +73,7 @@ init([King,ProblemSize]) ->
     [spawn_link(agent,start,[self(),ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
     timer:send_interval(config:writeInterval(),write),
     Vector = lists:duplicate(ProblemSize,0.0),
-    {ok,#state{arenas = Arenas, diversity = {Vector,Vector,0.0,0.0}},config:supervisorTimeout()}.
+    {ok,#state{arenas = Arenas, diversity = {Vector,Vector,0.0,0.0,0.0}},config:supervisorTimeout()}.
 
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -85,9 +85,9 @@ init([King,ProblemSize]) ->
 handle_call({emigrant,AgentPid,{Solution,_,_}},_From,State) ->
     erlang:unlink(AgentPid),
     NewPopulation = State#state.population - 1,
-    {Mean,StdDev,_,_} = State#state.diversity,
-    {Sum,Min,NewMean,NewStddev} = misc_util:concurrentDiversity(Solution,delete,NewPopulation,Mean,StdDev),
-    {reply,ok,State#state{population = NewPopulation, diversity = {NewMean,NewStddev,Sum,Min}}};
+    {Mean,StdDev,_,_,_} = State#state.diversity,
+    {Sum,Min,VarVar,NewMean,NewStddev} = misc_util:concurrentDiversity(Solution,delete,NewPopulation,Mean,StdDev),
+    {reply,ok,State#state{population = NewPopulation, diversity = {NewMean,NewStddev,Sum,Min,VarVar}}};
 
 handle_call({immigrant,AgentFrom,Agent},_From,State) ->
     {AgentPid,_} = AgentFrom,
@@ -103,19 +103,19 @@ handle_call({immigrant,AgentFrom,Agent},_From,State) ->
 handle_cast({newAgents,AgentList},State) ->
     [spawn_link(agent,start,[A|State#state.arenas]) || A <- AgentList],
     Result = misc_util:result(AgentList),
-    {{NewMean,NewM,NewSum,NewMin},NewPopulation} = lists:foldl(fun({Solution,_,_},{{Mean,M,_,_},Population}) ->
-                                                                       {Sum,Min,MidMean,MidM} = misc_util:concurrentDiversity(Solution,add,Population+1,Mean,M),
-                                                                       {{MidMean,MidM,Sum,Min},Population+1}
+    {{NewMean,NewM,NewSum,NewMin,NewVarVar},NewPopulation} = lists:foldl(fun({Solution,_,_},{{Mean,M,_,_,_},Population}) ->
+                                                                       {Sum,Min,VarVar,MidMean,MidM} = misc_util:concurrentDiversity(Solution,add,Population+1,Mean,M),
+                                                                       {{MidMean,MidM,Sum,Min,VarVar},Population+1}
                                                                end,{State#state.diversity,State#state.population},AgentList),
     {noreply,State#state{best = lists:max([Result,State#state.best]),
                          population = NewPopulation,
-                         diversity = {NewMean,NewM,NewSum,NewMin}},config:supervisorTimeout()};
+                         diversity = {NewMean,NewM,NewSum,NewMin,NewVarVar}},config:supervisorTimeout()};
 
 handle_cast({newAgent,{Solution,_,_}},State) ->
     N = State#state.population + 1,
-    {Mean,StdDev,_,_} = State#state.diversity,
-    {Sum,Min,NewMean,NewStddev} = misc_util:concurrentDiversity(Solution,add,N,Mean,StdDev),
-    {noreply,State#state{population = N,diversity = {NewMean,NewStddev,Sum,Min}},config:supervisorTimeout()};
+    {Mean,StdDev,_,_,_} = State#state.diversity,
+    {Sum,Min,VarVar,NewMean,NewStddev} = misc_util:concurrentDiversity(Solution,add,N,Mean,StdDev),
+    {noreply,State#state{population = N,diversity = {NewMean,NewStddev,Sum,Min,VarVar}},config:supervisorTimeout()};
 
 handle_cast({reportFromArena,Arena,Value},State) ->
     Dict = State#state.reports,
@@ -137,10 +137,10 @@ handle_cast(close,State) ->
                                      {stop,term(),state()}.
 handle_info({'EXIT',_,{dying,{Solution,_,_}}},State) ->
     Population = State#state.population - 1,
-    {Mean,StdDev,_,_} = State#state.diversity,
-    {Sum,Min,NewMean,NewStddev} = misc_util:concurrentDiversity(Solution,delete,Population,Mean,StdDev),
+    {Mean,StdDev,_,_,_} = State#state.diversity,
+    {Sum,Min,VarVar,NewMean,NewStddev} = misc_util:concurrentDiversity(Solution,delete,Population,Mean,StdDev),
     DeathCounter = State#state.deathCounter,
-    {noreply,State#state{population = Population, deathCounter = DeathCounter + 1, diversity = {NewMean,NewStddev,Sum,Min}},config:supervisorTimeout()};
+    {noreply,State#state{population = Population, deathCounter = DeathCounter + 1, diversity = {NewMean,NewStddev,Sum,Min,VarVar}},config:supervisorTimeout()};
 
 handle_info({'EXIT',Pid,Reason},State) ->
     case lists:member(Pid,State#state.arenas) of
