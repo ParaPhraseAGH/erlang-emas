@@ -75,6 +75,8 @@ averageNumber(Probability,List) ->
 
 %% @doc Funkcja wyliczajaca sume i minimum odchylen standardowych genotypow agentow
 -spec hybridDiversity([agent()]) -> {float(), float()}.
+hybridDiversity([]) ->
+    {-1.0, -1.0};
 hybridDiversity(Agents) ->
     Solutions = [Sol || {Sol, _, _} <- Agents],
     Stddevs = [stddev(Sol) || Sol <- transpose(Solutions)],
@@ -197,6 +199,8 @@ mapIndex(Elem,Index,[H|T],F,Acc) ->
 
 %% @doc Funkcja wyliczajaca odchylenie standardowe rozkladu zadanego przez liste liczb
 -spec stddev([float()]) -> float().
+stddev([_Sol]) ->
+    0.0;
 stddev(L) ->
     {Sum, Len} = lists:foldl(fun (X, {S,N}) ->
                                      {S+X,N+1}

@@ -16,7 +16,7 @@ def readlines(filepath):
 
 def read_run_stats(instance_name):
     statslist = ["death", "fight", "migration", "reproduction"]
-    island_statslist = ["fitness", "population"]
+    island_statslist = ["fitness", "population", "stddevsum", "stddevmin"]
     common_data = {}
     island_data = []
     islands = [name for name in os.listdir(instance_name) if name.startswith('island')]
@@ -155,9 +155,12 @@ def fetch_instance(instance_name):
 
     best_fitness = DataToPlot.from_list(islands, 'max', 'fitness', scale='log')
     sum_population = DataToPlot.from_list(islands, 'sum', 'population')
-    spread_population = DataToPlot.from_list(islands, 'spread', 'population')
+    # spread_population = DataToPlot.from_list(islands, 'spread', 'population')
+    stddevmin = DataToPlot.from_list(islands, 'mean', 'stddevmin') #, scale='log')
+    stddevsum = DataToPlot.from_list(islands, 'mean', 'stddevsum') #, scale='log')
 
-    subplots_data = [best_fitness, sum_population, spread_population]
+    # subplots_data = [best_fitness, sum_population, spread_population]
+    subplots_data = [best_fitness, sum_population, stddevmin, stddevsum]
     common_data = [DataToPlot(data, attr) for attr, data in common.items()]
     instance_data = subplots_data + common_data
 
