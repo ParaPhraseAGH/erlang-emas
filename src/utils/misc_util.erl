@@ -79,9 +79,9 @@ hybridDiversity([]) ->
     {-1.0, -1.0};
 hybridDiversity(Agents) ->
     Solutions = [Sol || {Sol, _, _} <- Agents],
-    Stddevs = [stddev(Sol) || Sol <- transpose(Solutions)],
-    Sum = lists:sum(Stddevs),
-    Min = lists:min(Stddevs),
+    variances = [variance(Sol) || Sol <- transpose(Solutions)],
+    Sum = lists:sum(variances),
+    Min = lists:min(variances),
     {Sum, Min}.
 
 %% @doc Funkcja online wyliczajaca sume i minimum odchylen standardowych genotypow agentow
@@ -198,10 +198,10 @@ mapIndex(Elem,Index,[H|T],F,Acc) ->
 
 
 %% @doc Funkcja wyliczajaca odchylenie standardowe rozkladu zadanego przez liste liczb
--spec stddev([float()]) -> float().
-stddev([_Sol]) ->
+-spec variance([float()]) -> float().
+variance([_Sol]) ->
     0.0;
-stddev(L) ->
+variance(L) ->
     {Sum, Len} = lists:foldl(fun (X, {S,N}) ->
                                      {S+X,N+1}
                              end, {0,0}, L),
@@ -209,8 +209,9 @@ stddev(L) ->
     {Sum2} = lists:foldl(fun (X, {K}) ->
                                  {K+(X-Mean)*(X-Mean)}
                          end, {0}, L),
-    Variance = Sum2/(Len-1),
-    math:sqrt(Variance).
+%%     Variance =
+    Sum2/(Len-1).
+%%     math:sqrt(Variance).
 %%     Variance = logBadValues(Sum2/(Len-1),Sum2, Len, Mean),
 %%     math:sqrt(SqSum/Len-Mean*Mean).
 
