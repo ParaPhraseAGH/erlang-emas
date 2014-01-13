@@ -104,9 +104,9 @@ handle_cast({newAgents,AgentList},State) ->
     [spawn_link(agent,start,[A|State#state.arenas]) || A <- AgentList],
     Result = misc_util:result(AgentList),
     {{NewMean,NewM,NewSum,NewMin,NewVarVar},NewPopulation} = lists:foldl(fun({Solution,_,_},{{Mean,M,_,_,_},Population}) ->
-                                                                       {Sum,Min,VarVar,MidMean,MidM} = misc_util:concurrentDiversity(Solution,add,Population+1,Mean,M),
-                                                                       {{MidMean,MidM,Sum,Min,VarVar},Population+1}
-                                                               end,{State#state.diversity,State#state.population},AgentList),
+                                                                                 {Sum,Min,VarVar,MidMean,MidM} = misc_util:concurrentDiversity(Solution,add,Population+1,Mean,M),
+                                                                                 {{MidMean,MidM,Sum,Min,VarVar},Population+1}
+                                                                         end,{State#state.diversity,State#state.population},AgentList),
     {noreply,State#state{best = lists:max([Result,State#state.best]),
                          population = NewPopulation,
                          diversity = {NewMean,NewM,NewSum,NewMin,NewVarVar}},config:supervisorTimeout()};
@@ -156,12 +156,12 @@ handle_info({'EXIT',Pid,Reason},State) ->
 handle_info(write,State) ->
     Fitness = State#state.best,
     Population = State#state.population,
-    {_,_,StdSum,StdMin} = State#state.diversity,
+    {_,_,StdSum,StdMin,StdVar} = State#state.diversity,
     logger:logLocalStats(parallel,fitness,Fitness),
     logger:logLocalStats(parallel,population,Population),
     logger:logLocalStats(parallel,stddevsum,StdSum),
     logger:logLocalStats(parallel,stddevmin,StdMin),
-    %%     io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,Population]),
+    logger:logLocalStats(parallel,stddevvar,StdVar),
     {noreply,State,config:supervisorTimeout()};
 
 handle_info(timeout,State) ->
