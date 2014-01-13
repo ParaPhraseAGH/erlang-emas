@@ -11,6 +11,7 @@
 
 -spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
 start(ProblemSize,Time,Islands,Topology,Path) ->
+    io:format("{Model=Concurrent,ProblemSize=~p,Time=~p,Islands=~p,Topology=~p}~n",[ProblemSize,Time,Islands,Topology]),
     misc_util:clearInbox(),
     topology:start_link(Islands,Topology),
     Supervisors = [conc_supervisor:start(self(),ProblemSize) || _ <- lists:seq(1,Islands)],

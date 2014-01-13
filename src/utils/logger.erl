@@ -44,7 +44,6 @@ close() ->
 
 -spec init(term()) -> {ok,state()}.
 init([Model, Path]) ->
-    io:format("Start time: ~p~n",[erlang:now()]),
     NewPath = case Path of
                   "standard_io" -> standard_io;
                   X -> X

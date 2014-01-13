@@ -22,6 +22,7 @@ start([A,B,C,D,E],Fun) ->
 
 -spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string(), fun()) -> ok.
 start(ProblemSize,Time,Islands,Topology,Path,Fun) ->
+    io:format("{Model=Sequential,ProblemSize=~p,Time=~p,Islands=~p,Topology=~p}~n",[ProblemSize,Time,Islands,Topology]),
     misc_util:seedRandom(),
     misc_util:clearInbox(),
     {_Time,_Result} = timer:tc(Fun, [ProblemSize,Time,Islands,Topology,Path]),
