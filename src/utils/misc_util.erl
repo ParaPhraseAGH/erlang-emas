@@ -89,18 +89,18 @@ concurrentDiversity(_Solution, _Action, N, PrevMeans, PrevStds) when N < 1 ->
     {-1.0,-1.0,PrevMeans,PrevStds};
 concurrentDiversity(Solution, add, N, PrevMeans, PrevMs) ->
     {NewMeans, Ms} = lists:unzip(lists:map(fun ({Xn, Mean, M}) ->
-                                                          NewMean = Mean + (Xn - Mean)/N,
-                                                          {NewMean, M + (Xn - Mean)*(Xn - NewMean)}
-                                                  end, lists:zip3(Solution, PrevMeans, PrevMs))),
+                                                   NewMean = Mean + (Xn - Mean)/N,
+                                                   {NewMean, M + (Xn - Mean)*(Xn - NewMean)}
+                                           end, lists:zip3(Solution, PrevMeans, PrevMs))),
     Stds = [X/N || X <- Ms],
     Sum = lists:sum(Stds),
     Min = lists:min(Stds),
     {Sum, Min, NewMeans, Ms};
 concurrentDiversity(Solution, delete, N, PrevMeans, PrevMs) ->
     {NewMeans, Ms} = lists:unzip(lists:map(fun ({Xn, Mean, M}) ->
-                                                          NewMean = Mean - (Xn - Mean)/N,
-                                                          {NewMean, M - (Xn - Mean)*(Xn - NewMean)}
-                                                  end, lists:zip3(Solution, PrevMeans, PrevMs))),
+                                                   NewMean = Mean - (Xn - Mean)/N,
+                                                   {NewMean, M - (Xn - Mean)*(Xn - NewMean)}
+                                           end, lists:zip3(Solution, PrevMeans, PrevMs))),
     Stds = [X/N || X <- Ms],
     Sum = lists:sum(Stds),
     Min = lists:min(Stds),
@@ -198,11 +198,24 @@ mapIndex(Elem,Index,[H|T],F,Acc) ->
 %% @doc Funkcja wyliczajaca odchylenie standardowe rozkladu zadanego przez liste liczb
 -spec stddev([float()]) -> float().
 stddev(L) ->
-    {SqSum, Sum, Len} = lists:foldl(fun (X, {K,S,N}) ->
-                                            {K+X*X,S+X,N+1}
-                                    end, {0,0,0}, L),
+    {Sum, Len} = lists:foldl(fun (X, {S,N}) ->
+                                     {S+X,N+1}
+                             end, {0,0}, L),
     Mean = Sum/Len,
-    math:sqrt(SqSum/Len-Mean*Mean).
+    {Sum2} = lists:foldl(fun (X, {K}) ->
+                                 {K+(X-Mean)*(X-Mean)}
+                         end, {0}, L),
+    Variance = Sum2/(Len-1),
+    math:sqrt(Variance).
+%%     Variance = logBadValues(Sum2/(Len-1),Sum2, Len, Mean),
+%%     math:sqrt(SqSum/Len-Mean*Mean).
+
+%% logBadValues(Variance, Sum, Len, Mean) when Variance < 0 ->
+%%     io:format("VARIANCE: ~p sum: ~p  N: ~p Mean: ~p ~n",[Variance, Sum, Len, Mean]),
+%%     0;
+%%
+%% logBadValues(Variance, _Sum, _Len, _Mean) ->
+%%     Variance.
 
 %% @doc Funkcja wykonujaca operacje zip na dowolnej liczbie list wejsciowych
 %% http://erlang.org/pipermail/erlang-questions/2012-October/069856.html
