@@ -40,7 +40,7 @@ start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
 loop(Agent,Arenas) ->
     case misc_util:behavior(Agent) of
         death ->
-            exit({dying,Agent});
+            exit(dying);
         reproduction ->
             {Solution,Fitness,_} = Agent,
             NewEnergy = bar:call(Arenas#arenas.reproduction,Agent),

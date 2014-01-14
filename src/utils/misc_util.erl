@@ -4,7 +4,7 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
-         seedRandom/0, countGroups/2, addCounters/2, hybridDiversity/1, concurrentDiversity/5]).
+         seedRandom/0, countGroups/2, addCounters/2, diversity/1, onlineDiversity/5]).
 
 -record(counter,{fight = 0 :: non_neg_integer(),
                  reproduction = 0 :: non_neg_integer(),
@@ -74,10 +74,10 @@ averageNumber(Probability,List) ->
 
 
 %% @doc Funkcja wyliczajaca sume i minimum odchylen standardowych genotypow agentow
--spec hybridDiversity([agent()]) -> {float(), float()}.
-hybridDiversity([]) ->
+-spec diversity([agent()]) -> {float(), float()}.
+diversity([]) ->
     {-1.0, -1.0, 0.0};
-hybridDiversity(Agents) ->
+diversity(Agents) ->
     Solutions = [Sol || {Sol, _, _} <- Agents],
     Variances = [variance(Sol) || Sol <- transpose(Solutions)],
     Sum = lists:sum(Variances),
@@ -86,12 +86,12 @@ hybridDiversity(Agents) ->
     {Sum, Min, Var}.
 
 %% @doc Funkcja online wyliczajaca sume i minimum odchylen standardowych genotypow agentow
--spec concurrentDiversity(genetic:solution(), atom(), integer(), [float()],[float()]) -> {float(),float(),[float()], [float()]}.
-concurrentDiversity(_Solution, _Action, N, PrevMeans, PrevStds) when N < 1 ->
+-spec onlineDiversity(genetic:solution(), atom(), integer(), [float()],[float()]) -> {float(),float(),[float()], [float()]}.
+onlineDiversity(_Solution, _Action, N, PrevMeans, PrevStds) when N < 1 ->
     %%     io:format("Diversity incalculable~n"),
     {-1.0,-1.0,-1.0,PrevMeans,PrevStds};
 
-concurrentDiversity(Solution, add, N, PrevMeans, PrevMs) ->
+onlineDiversity(Solution, add, N, PrevMeans, PrevMs) ->
     {NewMeans, Ms} = lists:unzip(lists:map(fun ({Xn, Mean, M}) ->
                                                    NewMean = Mean + (Xn - Mean)/N,
                                                    {NewMean, M + (Xn - Mean)*(Xn - NewMean)}
@@ -102,7 +102,7 @@ concurrentDiversity(Solution, add, N, PrevMeans, PrevMs) ->
     Var = variance(Stds),
     {Sum, Min, Var, NewMeans, Ms};
 
-concurrentDiversity(Solution, delete, N, PrevMeans, PrevMs) ->
+onlineDiversity(Solution, delete, N, PrevMeans, PrevMs) ->
     {NewMeans, Ms} = lists:unzip(lists:map(fun ({Xn, Mean, M}) ->
                                                    NewMean = Mean - (Xn - Mean)/N,
                                                    {NewMean, M - (Xn - Mean)*(Xn - NewMean)}

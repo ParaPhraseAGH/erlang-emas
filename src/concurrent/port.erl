@@ -96,6 +96,10 @@ handle_info(report,State) ->
     conc_supervisor:reportFromArena(State#state.mySupervisor,migration,State#state.counter),
     {noreply,State#state{counter = 0}};
 
+handle_info({Ref,ok},State) when is_reference(Ref) ->
+    %%   Opoznione przyjscie potwierdzenia od supervisora. Juz i tak jest po wszystkim.
+    {noreply,State};
+
 handle_info([Supervisor,King], _UndefinedState) ->
     AllSupervisors = concurrent:getAddresses(King),
     {noreply, #state{mySupervisor = Supervisor, allSupervisors = AllSupervisors}}.

@@ -23,7 +23,7 @@ start(King,ProblemSize) ->
 
 -spec newAgent(pid(),agent()) -> ok.
 newAgent(Pid,Agent) ->
-    gen_server:cast(Pid,{newAgent,Agent}).
+    gen_server:cast(Pid,{newAgent,self(),Agent}).
 
 %% @doc Funkcja za pomoca ktorej mozna wyslac supervisorowi liste nowych agentow.
 -spec sendAgents(pid(),[agent()]) -> ok.
@@ -52,8 +52,7 @@ close(Pid) ->
 %% Callbacks
 %% ====================================================================
 -record(state, {best = -999999.9 :: float() | islandEmpty,
-                population = 0 :: pos_integer(),
-                diversity :: {Mean::[float()],StdDev::[float()],DevSum::float(),DevMin::float(),VarVar::float()},
+                agents = gb_trees:empty() :: gb_tree(),
                 deathCounter = 0 :: non_neg_integer(),
                 reports = dict:new() :: dict(),
                 arenas :: [pid()]}).
@@ -72,8 +71,7 @@ init([King,ProblemSize]) ->
     io_util:printArenas(Arenas),
     [spawn_link(agent,start,[self(),ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
     timer:send_interval(config:writeInterval(),write),
-    Vector = lists:duplicate(ProblemSize,0.0),
-    {ok,#state{arenas = Arenas, diversity = {Vector,Vector,0.0,0.0,0.0}},config:supervisorTimeout()}.
+    {ok,#state{arenas = Arenas},config:supervisorTimeout()}.
 
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -82,40 +80,34 @@ init([King,ProblemSize]) ->
                                                     {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
-handle_call({emigrant,AgentPid,{Solution,_,_}},_From,State) ->
+handle_call({emigrant,AgentPid,_Agent},_From,State) ->
     erlang:unlink(AgentPid),
-    NewPopulation = State#state.population - 1,
-    {Mean,StdDev,_,_,_} = State#state.diversity,
-    {Sum,Min,VarVar,NewMean,NewStddev} = misc_util:concurrentDiversity(Solution,delete,NewPopulation,Mean,StdDev),
-    {reply,ok,State#state{population = NewPopulation, diversity = {NewMean,NewStddev,Sum,Min,VarVar}}};
+    NewAgentList = gb_trees:delete(AgentPid,State#state.agents), % delete_any/2 is safe, this one crashes when not found
+    {reply,ok,State#state{agents = NewAgentList}};
 
 handle_call({immigrant,AgentFrom,Agent},_From,State) ->
     {AgentPid,_} = AgentFrom,
     erlang:link(AgentPid),
     gen_server:reply(AgentFrom,State#state.arenas),
-    newAgent(self(),Agent),
-    {reply,ok,State}.
+    NewAgentList = gb_trees:insert(AgentPid,Agent,State#state.agents),
+    {reply,ok,State#state{agents = NewAgentList}}.
 
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
 handle_cast({newAgents,AgentList},State) ->
-    [spawn_link(agent,start,[A|State#state.arenas]) || A <- AgentList],
+    Pids = [spawn_link(agent,start,[A|State#state.arenas]) || A <- AgentList],
     Result = misc_util:result(AgentList),
-    {{NewMean,NewM,NewSum,NewMin,NewVarVar},NewPopulation} = lists:foldl(fun({Solution,_,_},{{Mean,M,_,_,_},Population}) ->
-                                                                                 {Sum,Min,VarVar,MidMean,MidM} = misc_util:concurrentDiversity(Solution,add,Population+1,Mean,M),
-                                                                                 {{MidMean,MidM,Sum,Min,VarVar},Population+1}
-                                                                         end,{State#state.diversity,State#state.population},AgentList),
+    NewAgentList = lists:foldl(fun({Pid,Agent},Tree) ->
+                                       gb_trees:insert(Pid,Agent,Tree)
+                               end,State#state.agents,lists:zip(Pids,AgentList)),
     {noreply,State#state{best = lists:max([Result,State#state.best]),
-                         population = NewPopulation,
-                         diversity = {NewMean,NewM,NewSum,NewMin,NewVarVar}},config:supervisorTimeout()};
+                         agents = NewAgentList},config:supervisorTimeout()};
 
-handle_cast({newAgent,{Solution,_,_}},State) ->
-    N = State#state.population + 1,
-    {Mean,StdDev,_,_,_} = State#state.diversity,
-    {Sum,Min,VarVar,NewMean,NewStddev} = misc_util:concurrentDiversity(Solution,add,N,Mean,StdDev),
-    {noreply,State#state{population = N,diversity = {NewMean,NewStddev,Sum,Min,VarVar}},config:supervisorTimeout()};
+handle_cast({newAgent,Pid,Agent},State) ->
+    NewAgentList = gb_trees:insert(Pid,Agent,State#state.agents),
+    {noreply,State#state{agents = NewAgentList},config:supervisorTimeout()};
 
 handle_cast({reportFromArena,Arena,Value},State) ->
     Dict = State#state.reports,
@@ -135,12 +127,10 @@ handle_cast(close,State) ->
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_info({'EXIT',_,{dying,{Solution,_,_}}},State) ->
-    Population = State#state.population - 1,
-    {Mean,StdDev,_,_,_} = State#state.diversity,
-    {Sum,Min,VarVar,NewMean,NewStddev} = misc_util:concurrentDiversity(Solution,delete,Population,Mean,StdDev),
-    DeathCounter = State#state.deathCounter,
-    {noreply,State#state{population = Population, deathCounter = DeathCounter + 1, diversity = {NewMean,NewStddev,Sum,Min,VarVar}},config:supervisorTimeout()};
+handle_info({'EXIT',Pid,dying},State) ->
+    NewAgentList = gb_trees:delete(Pid,State#state.agents),
+    DeathCounter = State#state.deathCounter + 1,
+    {noreply,State#state{deathCounter = DeathCounter, agents = NewAgentList},config:supervisorTimeout()};
 
 handle_info({'EXIT',Pid,Reason},State) ->
     case lists:member(Pid,State#state.arenas) of
@@ -148,20 +138,19 @@ handle_info({'EXIT',Pid,Reason},State) ->
             io:format("Error w arenie, zamykamy impreze na wyspie ~p~n",[self()]),
             exit(Reason);
         false ->
-            io:format("Error w agencie, karawana jedzie dalej~n"),
-            Population = State#state.population,
-            {noreply,State#state{population = Population - 1},config:supervisorTimeout()}
+            io:format("Error w agencie, karawana jedzie dalej. Powod: ~p~n",[Reason]),
+            NewAgentList = gb_trees:delete(Pid,State#state.agents),
+            {noreply,State#state{agents = NewAgentList},config:supervisorTimeout()}
     end;
 
 handle_info(write,State) ->
     Fitness = State#state.best,
-    Population = State#state.population,
-    {_,_,StdSum,StdMin,StdVar} = State#state.diversity,
+    {SumVar,MinVar,VarVar} = misc_util:diversity([Val || {_Key,Val} <- gb_trees:to_list(State#state.agents)]),
     logger:logLocalStats(parallel,fitness,Fitness),
-    logger:logLocalStats(parallel,population,Population),
-    logger:logLocalStats(parallel,stddevsum,StdSum),
-    logger:logLocalStats(parallel,stddevmin,StdMin),
-    logger:logLocalStats(parallel,stddevvar,StdVar),
+    logger:logLocalStats(parallel,population,gb_trees:size(State#state.agents)),
+    logger:logLocalStats(parallel,stddevsum,SumVar),
+    logger:logLocalStats(parallel,stddevmin,MinVar),
+    logger:logLocalStats(parallel,stddevvar,VarVar),
     {noreply,State,config:supervisorTimeout()};
 
 handle_info(timeout,State) ->

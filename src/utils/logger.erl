@@ -152,6 +152,7 @@ createFDs(standard_io, InitDict, Files) ->
                         dict:store(Atom, standard_io, Dict)
                 end, InitDict,
                 Files);
+
 createFDs(Path, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         Filename = atom_to_list(Atom) ++ ".txt",
