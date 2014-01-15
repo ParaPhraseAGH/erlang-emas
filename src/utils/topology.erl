@@ -24,9 +24,9 @@ start_link(IslandsNr,Topology) ->
 close() ->
     gen_server:cast(whereis(?MODULE),close).
 
--spec getDestination(integer()) -> integer().
 %% @doc Funkcja komunikujaca sie synchronicznie z procesem topology i zwracajaca docelowa wyspe
 %%  na podstawie przeslanego argumentu
+-spec getDestination(integer()) -> integer().
 getDestination(X) ->
     gen_server:call(whereis(?MODULE),{destination,X}).
 
@@ -63,19 +63,14 @@ handle_call({destination, X}, _From, State) ->
                               _ -> NewIsland
                           end;
                       mesh ->
-                          randomMesh(N,X);
+                          Destinations = [I || I <- lists:seq(1,N), I =/= X],
+                          Index = random:uniform(length(Destinations)),
+                          lists:nth(Index,Destinations);
                       _ ->
                           erlang:error(wrongTopology)
                   end
           end,
     {reply, Ans, State}.
-
--spec randomMesh(non_neg_integer(),non_neg_integer()) -> non_neg_integer().
-randomMesh(N,From) ->
-    Destination = random:uniform(N),
-    if Destination == From -> randomMesh(N,From);
-       Destination =/= From -> Destination
-    end.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |

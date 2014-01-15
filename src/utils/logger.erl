@@ -44,11 +44,15 @@ close() ->
 
 -spec init(term()) -> {ok,state()}.
 init([Model, Path]) ->
+    NewPath = case Path of
+                  "standard_io" -> standard_io;
+                  X -> X
+              end,
     Dict = case Model of
                {sequential, IslandsNr} ->
-                   prepareSeqDictionary(IslandsNr, dict:new(), Path);
+                   prepareSeqDictionary(IslandsNr, dict:new(), NewPath);
                {parallel, Pids} when is_list(Pids) ->
-                   prepareParDictionary(Pids, dict:new(), Path)
+                   prepareParDictionary(Pids, dict:new(), NewPath)
            end,
     {ok, #state{dict = Dict}}.
 
@@ -66,10 +70,10 @@ handle_call(_Request, _From, State) ->
                                      {stop,term(),state()}.
 handle_cast({parallel, Stat, Pid, Value}, State) ->
     logLocal(State#state.dict, Pid, Stat, Value),
-    {noreply, State};
+    {noreply,State};
 handle_cast({sequential, Stat, _Pid, Values}, State) ->
     logList(Stat, 1, Values, State#state.dict),
-    {noreply, State};
+    {noreply,State};
 handle_cast({counter, {Deaths, Fights, Reproductions, Migrations}}, State) ->
     Dict = State#state.dict,
     logGlobal(Dict, death, Deaths),
@@ -113,8 +117,14 @@ code_change(_OldVsn, State, _Extra) ->
 prepareParDictionary([], Dict, Path) ->
     createFDs(Path, Dict, [death, fight, reproduction, migration]);
 prepareParDictionary([H|T], Dict, Path) ->
-    IslandPath = filename:join([Path, "island" ++ integer_to_list(length(T) + 1)]),
-    file:make_dir(IslandPath),
+    IslandPath = case Path of
+                     standard_io ->
+                         standard_io;
+                     _ ->
+                         NewPath = filename:join([Path, "island" ++ integer_to_list(length(T) + 1)]),
+                         file:make_dir(NewPath),
+                         NewPath
+                 end,
     NewDict = dict:store(H, createFDs(IslandPath, dict:new(), [fitness, population]), Dict), % Key = pid(), Value = dictionary of file descriptors
     prepareParDictionary(T, NewDict, Path).
 
@@ -123,13 +133,24 @@ prepareParDictionary([H|T], Dict, Path) ->
 prepareSeqDictionary(0, Dict, Path) ->
     createFDs(Path, Dict, [death, fight, reproduction, migration]);
 prepareSeqDictionary(IslandNr, Dict, Path) ->
-    IslandPath = filename:join([Path, "island" ++ integer_to_list(IslandNr)]),
-    file:make_dir(IslandPath),
+    IslandPath = case Path of
+                     standard_io ->
+                         standard_io;
+                     _ ->
+                         NewPath = filename:join([Path, "island" ++ integer_to_list(IslandNr)]),
+                         file:make_dir(NewPath),
+                         NewPath
+                 end,
     NewDict = dict:store(IslandNr, createFDs(IslandPath, dict:new(), [fitness, population]), Dict), % Key = IslandNumber, Value = dictionary of file descriptors
     prepareSeqDictionary(IslandNr - 1, NewDict, Path).
 
 %% @doc Tworzy pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
 -spec createFDs(string(), dict(), [atom()]) -> FDs :: dict().
+createFDs(standard_io, InitDict, Files) ->
+    lists:foldl(fun(Atom, Dict) ->
+                        dict:store(Atom, standard_io, Dict)
+                end, InitDict,
+                Files);
 createFDs(Path, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         Filename = atom_to_list(Atom) ++ ".txt",
@@ -150,13 +171,13 @@ logList(Stat, Index, [H|T], Dict) ->
 logLocal(Dictionary, Key, Statistic, Value) ->
     FDs = dict:fetch(Key, Dictionary),
     FD = dict:fetch(Statistic, FDs),
-    file:write(FD, io_lib:fwrite("~p\n", [Value])).
+    file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Statistic, Key, Value])).
 
 %% @doc Dokonuje buforowanego zapisu do pliku globalnej statystyki. W argumencie podany glowny slownik, nazwa statystyki i wartosc do wpisania.
 -spec logGlobal(dict(), atom(), term()) -> ok.
 logGlobal(Dictionary, Stat, Value) ->
     FD = dict:fetch(Stat, Dictionary),
-    file:write(FD, io_lib:fwrite("~p\n", [Value])).
+    file:write(FD, io_lib:fwrite("~p ~p\n", [Stat,Value])).
 
 %% @doc Zamyka pliki podane w argumencie
 -spec closeFiles(dict()) -> any().

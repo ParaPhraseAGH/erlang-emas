@@ -9,13 +9,6 @@
 %% API functions
 %% ====================================================================
 
-%% @doc Rozmiar wektora pojedynczego osobnika
-%problemSize() -> 50.
-%% @doc Czas wykonywania algorytmu
-%totalTime() -> 5000.
-%% @doc Ilosc wysp na ktorych generowana jest populacja
-%islandsNr() -> 4.
-
 %% @doc Poczatkowa wielkosc populacji
 populationSize() -> 100.
 %% @doc Energia poczatkowa osobnika.
@@ -51,4 +44,3 @@ topologyTimeout() -> 10000.
 arenaTimeout() -> 3000.
 %% @doc Ilosc milisekund, ktore czeka agent na jakas wiadomosc
 processTimeout() -> 3000.
-

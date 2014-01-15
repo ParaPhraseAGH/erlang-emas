@@ -32,30 +32,30 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
--spec init(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> float().
 %% @doc Funkcja tworzaca odpowiednia ilosc wysp i przechodzaca do glownej petli.
 %% Zwracany jest koncowy wynik.
+-spec init(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> float().
 init(ProblemSize,Time,IslandsNr,Topology,Path) ->
     Islands = [genetic:generatePopulation(ProblemSize) || _ <- lists:seq(1,IslandsNr)],
     sequential:init(Time,IslandsNr,Topology,Path),
     loop(Islands,#counter{}).
 
+%% @doc Glowa petla programu. Kazda iteracja powoduje ewolucje nowej generacji osobnikow.
 -spec loop([island()],counter()) -> float().
-%% @doc Glowa petla programu. KaÄąÄ˝da iteracja powoduje ewolucjĂ„â„˘ nowej generacji osobnikow.
 loop(Islands,Counter) ->
     receive
         write ->
-            logger:logGlobalStats(sequential,{Counter#counter.death,
-                                              Counter#counter.fight,
-                                              Counter#counter.reproduction,
-                                              Counter#counter.migration}),
             logger:logLocalStats(sequential,
                                  fitness,
                                  [misc_util:result(I) || I <- Islands]),
             logger:logLocalStats(sequential,
                                  population,
                                  [length(I) || I <- Islands]),
-            io_util:printSeq(Islands),
+            logger:logGlobalStats(sequential,{Counter#counter.death,
+                                              Counter#counter.fight,
+                                              Counter#counter.reproduction,
+                                              Counter#counter.migration}),
+            %%             io_util:printSeq(Islands),
             timer:send_after(config:writeInterval(),write),
             loop(Islands,#counter{});
         theEnd ->
@@ -69,8 +69,8 @@ loop(Islands,Counter) ->
             loop(NewIslands,NewCounter#counter{migration = NrOfEmigrants + Counter#counter.migration})
     end.
 
--spec countAllIslands([list()],counter()) -> counter().
 %% @doc Liczy kategorie (ile fights,deaths etc.) na wszystkich wyspach i dodaje do Counter.
+-spec countAllIslands([list()],counter()) -> counter().
 countAllIslands(GroupedIslands,Counter) ->
     CountedIslands = [misc_util:countGroups(I,#counter{}) || I <- GroupedIslands],
     lists:foldl(fun misc_util:addCounters/2,Counter,CountedIslands).

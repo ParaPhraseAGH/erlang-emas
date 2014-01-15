@@ -21,18 +21,18 @@ start(King,ProblemSize) ->
     {ok,Pid} = gen_server:start(?MODULE,[King,ProblemSize],[]),
     Pid.
 
+%% @doc Funkcja za pomoca ktorej mozna wyslac supervisorowi liste nowych agentow.
 -spec sendAgents(pid(),[agent()]) -> ok.
-%% @doc Funkcja za pomocĂ„â€¦ ktÄ‚Ĺ‚rej moÄąÄ˝na wysÄąâ€šaĂ„â€ˇ supervisorowi listĂ„â„˘ nowych agentÄ‚Ĺ‚w.
 sendAgents(Pid,Agents) ->
     gen_server:cast(Pid,{newAgents,Agents}).
 
+%% @doc Funkcja usuwa link miedzy supervisorem, a danym agentem. Zapytanie synchroniczne.
 -spec unlinkAgent(pid(),pid()) -> ok.
-%% @doc Funkcja usuwa link miĂ„â„˘dzy supervisorem, a danym agentem. Zapytanie synchroniczne.
 unlinkAgent(Pid,AgentPid) ->
     gen_server:call(Pid,{emigrant,AgentPid}).
 
+%% @doc Funkcja tworzy link miedzy supervisorem, a danym agentem. Zapytanie synchroniczne.
 -spec linkAgent(pid(),{pid(),reference()}) -> ok.
-%% @doc Funkcja tworzy link miĂ„â„˘dzy supervisorem, a danym agentem. Zapytanie synchroniczne.
 linkAgent(Pid,AgentFrom) ->
     gen_server:call(Pid,{immigrant,AgentFrom}).
 
@@ -65,7 +65,7 @@ init([King,ProblemSize]) ->
     Arenas = [Ring,Bar,Port],
     io_util:printArenas(Arenas),
     [spawn_link(agent,start,[ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
-    timer:send_after(config:writeInterval(),write),
+    timer:send_interval(config:writeInterval(),write),
     {ok,#state{arenas = Arenas},config:supervisorTimeout()}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -95,18 +95,13 @@ handle_cast({newAgents,AgentList},State) ->
     {noreply,State#state{best = lists:max([Result,State#state.best]), population = NewPopulation},config:supervisorTimeout()};
 handle_cast({reportFromArena,Arena,Value},State) ->
     Dict = State#state.reports,
-    case dict:find(Arena,Dict) of
-        {ok,_} ->
-            error("Double report from the same arena");
-        error ->
-            NewDict = dict:store(Arena,Value,Dict),
-            case dict:size(NewDict) of
-                3 ->
-                    logger:logGlobalStats(parallel,{State#state.deathCounter,dict:fetch(fight,NewDict),dict:fetch(reproduction,NewDict),dict:fetch(migration,NewDict)}),
-                    {noreply,State#state{reports = dict:new(), deathCounter = 0},config:supervisorTimeout()};
-                _ ->
-                    {noreply,State#state{reports = NewDict},config:supervisorTimeout()}
-            end
+    NewDict = dict:store(Arena,Value,Dict),
+    case dict:size(NewDict) of
+        3 ->
+            logger:logGlobalStats(parallel,{State#state.deathCounter,dict:fetch(fight,NewDict),dict:fetch(reproduction,NewDict),dict:fetch(migration,NewDict)}),
+            {noreply,State#state{reports = dict:new(), deathCounter = 0},config:supervisorTimeout()};
+        _ ->
+            {noreply,State#state{reports = NewDict},config:supervisorTimeout()}
     end;
 handle_cast(close,State) ->
     {stop,normal,State}.
@@ -121,18 +116,18 @@ handle_info({'EXIT',_,dying},State) ->
 handle_info({'EXIT',Pid,Reason},State) ->
     case lists:member(Pid,State#state.arenas) of
         true ->
-            io:format("Error w arenie, zamykamy impreze~n"),
+            io:format("Error w arenie, zamykamy impreze na wyspie ~p~n",[self()]),
             exit(Reason);
         false ->
-            io:format("Error w agencie, karawana jedzie dalej~n")
-    end,
-    {noreply,State,config:supervisorTimeout()};
+            io:format("Error w agencie, karawana jedzie dalej~n"),
+            Population = State#state.population,
+            {noreply,State#state{population = Population - 1},config:supervisorTimeout()}
+    end;
 handle_info(write,State) ->
     Fitness = State#state.best,
     logger:logLocalStats(parallel,fitness,Fitness),
     logger:logLocalStats(parallel,population,State#state.population),
-    io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,State#state.population]),
-    timer:send_after(config:writeInterval(),write),
+    %%     io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,State#state.population]),
     {noreply,State,config:supervisorTimeout()};
 handle_info(timeout,State) ->
     {stop,timeout,State}.
