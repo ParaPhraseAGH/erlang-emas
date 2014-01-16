@@ -18,28 +18,31 @@
 %% ====================================================================
 -spec start() -> ok.
 start() ->
-    sequential:start(fun start/5).
+    file:make_dir("tmp"),
+    start(40,5000,2,mesh,"tmp").
 
 -spec start(list()) -> ok.
-start(Args) ->
-    sequential:start(Args,fun start/5).
+start([A,B,C,D,E]) ->
+    start(list_to_integer(A),
+          list_to_integer(B),
+          list_to_integer(C),
+          list_to_atom(D),E).
 
 -spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
 start(ProblemSize,Time,Islands,Topology,Path) ->
-    sequential:start(ProblemSize,Time,Islands,Topology,Path,fun init/5).
+    io:format("{Model=sequential_mixed,ProblemSize=~p,Time=~p,Islands=~p,Topology=~p}~n",[ProblemSize,Time,Islands,Topology]),
+    misc_util:seedRandom(),
+    misc_util:clearInbox(),
+    topology:start_link(Islands,Topology),
+    logger:start_link({sequential,Islands},Path),
+    Population = lists:append([[{X,genetic:generateAgent(ProblemSize)} || _ <- lists:seq(1,config:populationSize())] || X <- lists:seq(1,Islands)]),
+    timer:send_after(Time,theEnd),
+    timer:send_after(config:writeInterval(),write),
+    {_Time,_Result} = timer:tc(fun loop/2, [Population,#counter{}]),
+    topology:close(),
+    logger:close().
 
-%% ====================================================================
-%% Internal functions
-%% ====================================================================
-%% @doc Funkcja tworzaca odpowiednia ilosc wysp i przechodzaca do glownej petli.
-%% Zwracany jest koncowy wynik.
--spec init(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> float().
-init(ProblemSize,Time,IslandsNr,Topology,Path) ->
-    Population = lists:append([[{X,genetic:generateAgent(ProblemSize)} || _ <- lists:seq(1,config:populationSize())] || X <- lists:seq(1,IslandsNr)]),
-    sequential:init(Time,IslandsNr,Topology,Path),
-    loop(Population,#counter{}).
-
-%% @doc Glowa petla programu. KaĹĽda iteracja powoduje ewolucjÄ™ nowej generacji osobnikow.
+%% @doc Glowa petla programu. Kazda iteracja powoduje ewolucje nowej generacji osobnikow.
 -spec loop([agent()],counter()) -> float().
 loop(Population,Counter) ->
     receive
@@ -47,7 +50,10 @@ loop(Population,Counter) ->
             Islands = lists:sort(misc_util:groupBy(Population)),
             logger:logLocalStats(sequential,fitness,[misc_util:result(Agents) || {_,Agents} <- Islands]),
             logger:logLocalStats(sequential,population,[length(Agents) || {_,Agents} <- Islands]),
-            logger:logGlobalStats(sequential,{Counter#counter.death,Counter#counter.fight,Counter#counter.reproduction,Counter#counter.migration}),
+            logger:logGlobalStats(sequential,[{death,Counter#counter.death},
+                                              {fight,Counter#counter.fight},
+                                              {reproduction,Counter#counter.reproduction},
+                                              {migration,Counter#counter.migration}]),
             PrintAgents = [A || {_,A} <- Population],
             Best = misc_util:result(PrintAgents),
             io:format("Best: ~p  Energy:~p~n",[Best,io_util:sumEnergy(PrintAgents)]),

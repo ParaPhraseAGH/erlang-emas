@@ -19,26 +19,33 @@
 %% ====================================================================
 -spec start() -> ok.
 start() ->
-    sequential:start(fun start/5).
+    file:make_dir("tmp"),
+    start(40,5000,2,mesh,"tmp").
 
 -spec start(list()) -> ok.
-start(Args) ->
-    sequential:start(Args,fun start/5).
+start([A,B,C,D,E]) ->
+    start(list_to_integer(A),
+          list_to_integer(B),
+          list_to_integer(C),
+          list_to_atom(D),E).
 
 -spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
 start(ProblemSize,Time,Islands,Topology,Path) ->
-    sequential:start(ProblemSize,Time,Islands,Topology,Path,fun init/5).
+    io:format("{Model=sequential_lists,ProblemSize=~p,Time=~p,Islands=~p,Topology=~p}~n",[ProblemSize,Time,Islands,Topology]),
+    misc_util:seedRandom(),
+    misc_util:clearInbox(),
+    topology:start_link(Islands,Topology),
+    logger:start_link({sequential,Islands},Path),
+    InitIslands = [genetic:generatePopulation(ProblemSize) || _ <- lists:seq(1,Islands)],
+    timer:send_after(Time,theEnd),
+    timer:send_after(config:writeInterval(),write),
+    {_Time,_Result} = timer:tc(fun loop/2, [InitIslands,#counter{}]),
+    topology:close(),
+    logger:close().
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-%% @doc Funkcja tworzaca odpowiednia ilosc wysp i przechodzaca do glownej petli.
-%% Zwracany jest koncowy wynik.
--spec init(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> float().
-init(ProblemSize,Time,IslandsNr,Topology,Path) ->
-    Islands = [genetic:generatePopulation(ProblemSize) || _ <- lists:seq(1,IslandsNr)],
-    sequential:init(Time,IslandsNr,Topology,Path),
-    loop(Islands,#counter{}).
 
 %% @doc Glowa petla programu. Kazda iteracja powoduje ewolucje nowej generacji osobnikow.
 -spec loop([island()],counter()) -> float().
@@ -51,10 +58,10 @@ loop(Islands,Counter) ->
             logger:logLocalStats(sequential,
                                  population,
                                  [length(I) || I <- Islands]),
-            logger:logGlobalStats(sequential,{Counter#counter.death,
-                                              Counter#counter.fight,
-                                              Counter#counter.reproduction,
-                                              Counter#counter.migration}),
+            logger:logGlobalStats(sequential,[{death,Counter#counter.death},
+                                              {fight,Counter#counter.fight},
+                                              {reproduction,Counter#counter.reproduction},
+                                              {migration,Counter#counter.migration}]),
             %%             io_util:printSeq(Islands),
             timer:send_after(config:writeInterval(),write),
             loop(Islands,#counter{});

@@ -9,6 +9,9 @@
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
+-define(LOCAL_STATS, [fitness, population, stddevsum, stddevmin, stddevvar]).
+-define(GLOBAL_STATS, [death, fight, reproduction, migration]).
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
@@ -23,7 +26,7 @@ logLocalStats(Mode, Stat, Value) ->
     gen_server:cast(whereis(?MODULE), {Mode, Stat, self(), Value}).
 
 %% @doc Zapisuje globalne statystyki (deaths,fights etc.) do plikow.
--spec logGlobalStats(sequential | parallel, tuple()) -> ok.
+-spec logGlobalStats(sequential | parallel, [tuple()]) -> ok.
 logGlobalStats(sequential, Counter) ->
     gen_server:cast(whereis(?MODULE), {counter, Counter});
 logGlobalStats(parallel, Counter) ->
@@ -38,13 +41,12 @@ close() ->
 %%%===================================================================
 
 -record(state, {dict :: dict(),
-                counters = {0, 0, 0, 0} :: {integer(), integer(), integer(), integer()},
+                counters = [] :: [tuple()],
                 n = 0 :: non_neg_integer()}).
 -type state() :: #state{}.
 
 -spec init(term()) -> {ok,state()}.
 init([Model, Path]) ->
-    io:format("Start time: ~p~n",[erlang:now()]),
     NewPath = case Path of
                   "standard_io" -> standard_io;
                   X -> X
@@ -75,19 +77,15 @@ handle_cast({parallel, Stat, Pid, Value}, State) ->
 handle_cast({sequential, Stat, _Pid, Values}, State) ->
     logList(Stat, 1, Values, State#state.dict),
     {noreply,State};
-handle_cast({counter, {Deaths, Fights, Reproductions, Migrations}}, State) ->
-    Dict = State#state.dict,
-    logGlobal(Dict, death, Deaths),
-    logGlobal(Dict, fight, Fights),
-    logGlobal(Dict, reproduction, Reproductions),
-    logGlobal(Dict, migration, Migrations),
+handle_cast({counter, GlobalStats}, State) ->
+    [logGlobal(State#state.dict,StatName,StatVal) || {StatName,StatVal} <- GlobalStats],
     {noreply, State};
 handle_cast({agregate, _Pid, Counters}, State) ->
-    N = length(dict:to_list(State#state.dict)) - 4,
+    N = dict:size(State#state.dict) - 4,
     case State#state.n + 1 of
         N ->
             logGlobalStats(sequential, addCounters(Counters, State#state.counters)),
-            {noreply, #state{dict = State#state.dict}};
+            {noreply, State#state{dict = State#state.dict, n = 0, counters = []}};
         X ->
             OldCounters = State#state.counters,
             {noreply, State#state{n = X, counters = addCounters(Counters, OldCounters)}}
@@ -116,7 +114,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% @doc Tworzy duzy slownik z mniejszymi slownikami deskryptorow dla kazdej z wysp dla modelow niesekwencyjnych
 -spec prepareParDictionary([pid()], dict(), string()) -> dict().
 prepareParDictionary([], Dict, Path) ->
-    createFDs(Path, Dict, [death, fight, reproduction, migration]);
+    createFDs(Path, Dict, ?GLOBAL_STATS);
 prepareParDictionary([H|T], Dict, Path) ->
     IslandPath = case Path of
                      standard_io ->
@@ -126,13 +124,13 @@ prepareParDictionary([H|T], Dict, Path) ->
                          file:make_dir(NewPath),
                          NewPath
                  end,
-    NewDict = dict:store(H, createFDs(IslandPath, dict:new(), [fitness, population, stddevsum, stddevmin, stddevvar]), Dict), % Key = pid(), Value = dictionary of file descriptors
+    NewDict = dict:store(H, createFDs(IslandPath, dict:new(), ?LOCAL_STATS), Dict), % Key = pid(), Value = dictionary of file descriptors
     prepareParDictionary(T, NewDict, Path).
 
 %% @doc Tworzy duzy slownik z mniejszymi slownikami deskryptorow dla kazdej z wysp dla modelow sekwencyjnych
 -spec prepareSeqDictionary(non_neg_integer(), dict(), string()) -> dict().
 prepareSeqDictionary(0, Dict, Path) ->
-    createFDs(Path, Dict, [death, fight, reproduction, migration]);
+    createFDs(Path, Dict, ?GLOBAL_STATS);
 prepareSeqDictionary(IslandNr, Dict, Path) ->
     IslandPath = case Path of
                      standard_io ->
@@ -142,7 +140,7 @@ prepareSeqDictionary(IslandNr, Dict, Path) ->
                          file:make_dir(NewPath),
                          NewPath
                  end,
-    NewDict = dict:store(IslandNr, createFDs(IslandPath, dict:new(), [fitness, population]), Dict), % Key = IslandNumber, Value = dictionary of file descriptors
+    NewDict = dict:store(IslandNr, createFDs(IslandPath, dict:new(), ?LOCAL_STATS), Dict), % Key = IslandNumber, Value = dictionary of file descriptors
     prepareSeqDictionary(IslandNr - 1, NewDict, Path).
 
 %% @doc Tworzy pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
@@ -189,6 +187,16 @@ closeFiles(Dict) ->
          {_Id, D} -> [file:close(FD) || {_Stat, FD} <- dict:to_list(D)]
      end || X <- dict:to_list(Dict)].
 
--spec addCounters(tuple(), tuple()) -> tuple().
-addCounters({D1, F1, R1, M1}, {D2, F2, R2, M2}) ->
-    {D1 + D2, F1 + F2, R1 + R2, M1 + M2}.
+-spec addCounters([tuple()], [tuple()]) -> [tuple()].
+addCounters([],Other) ->
+    Other;
+addCounters(Other,[]) ->
+    Other;
+addCounters(L1,L2) ->
+    addCounters(L1,L2,[]).
+
+addCounters([],_Other,Result) ->
+    Result;
+addCounters([{Name,Val1}|T],Other,Result) ->
+    {Name,Val2} = lists:keyfind(Name,1,Other),
+    addCounters(T,Other,[{Name,Val1 + Val2}|Result]).

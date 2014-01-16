@@ -53,8 +53,11 @@ loop(Agents,Counters) ->
             logger:logLocalStats(parallel,stddevvar, VarianceVar),
             logger:logLocalStats(parallel,stddevsum, VarianceSum),
             logger:logLocalStats(parallel,stddevmin, VarianceMin),
-            logger:logGlobalStats(parallel,{Counters#counter.death,Counters#counter.fight,Counters#counter.reproduction,Counters#counter.migration}),
             %% io:format("Island ~p Fitness ~p Population ~p~n",[self(),Fitness,length(Agents)]),
+            logger:logGlobalStats(parallel,[{death,Counters#counter.death},
+                                            {fight,Counters#counter.fight},
+                                            {reproduction,Counters#counter.reproduction},
+                                            {migration,Counters#counter.migration}]),
             timer:send_after(config:writeInterval(),{write,Fitness}),
             loop(Agents,#counter{});
         {agent,_Pid,A} ->
