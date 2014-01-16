@@ -98,7 +98,10 @@ handle_cast({reportFromArena,Arena,Value},State) ->
     NewDict = dict:store(Arena,Value,Dict),
     case dict:size(NewDict) of
         3 ->
-            logger:logGlobalStats(parallel,{State#state.deathCounter,dict:fetch(fight,NewDict),dict:fetch(reproduction,NewDict),dict:fetch(migration,NewDict)}),
+            logger:logGlobalStats(parallel,[{death,State#state.deathCounter},
+                                            {fight,dict:fetch(fight,NewDict)},
+                                            {reproduction,dict:fetch(reproduction,NewDict)},
+                                            {migration,dict:fetch(migration,NewDict)}]),
             {noreply,State#state{reports = dict:new(), deathCounter = 0},config:supervisorTimeout()};
         _ ->
             {noreply,State#state{reports = NewDict},config:supervisorTimeout()}
