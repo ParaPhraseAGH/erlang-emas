@@ -4,7 +4,7 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
-         seedRandom/0, countGroups/2, addCounters/2]).
+         seedRandom/0, countGroups/2, addCounters/2, arenaReport/4]).
 
 -record(counter,{fight = 0 :: non_neg_integer(),
                  reproduction = 0 :: non_neg_integer(),
@@ -70,6 +70,20 @@ averageNumber(Probability,List) ->
                 false -> 0
             end;
        N >=1 -> trunc(N)
+    end.
+
+-spec arenaReport(pid(),atom(),erlang:timestamp(),term()) -> term().
+arenaReport(Pid,Arena,LastLog,Value) ->
+    Now = os:timestamp(),
+    Diff = timer:now_diff(Now,LastLog),
+    IntervalInMicros = config:writeInterval()*1000,
+    if
+        Diff >= IntervalInMicros ->
+            io:format("Arena ~p loguje ~p~n",[Arena,Value]),
+            conc_supervisor:reportFromArena(Pid,Arena,Value),
+            {0,Now};
+        true ->
+            {Value,LastLog}
     end.
 
 %% @doc Zwraca liczby agentow nalezacych do poszczegolnych kategorii w formie rekordu

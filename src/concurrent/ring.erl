@@ -37,7 +37,8 @@ close(Pid) ->
 %% ====================================================================
 -record(state, {supervisor :: pid(),
                 waitlist = [] :: [tuple()],
-                counter = 0 :: non_neg_integer()}).
+                counter = 0 :: non_neg_integer(),
+                lastLog :: erlang:timestamp()}).
 -type state() :: #state{} | cleaning.
 
 
@@ -45,8 +46,7 @@ close(Pid) ->
                       {ok,state(),non_neg_integer()}.
 init([Supervisor]) ->
     misc_util:seedRandom(),
-    timer:send_interval(config:writeInterval(),report),
-    {ok, #state{supervisor = Supervisor}, config:arenaTimeout()}.
+    {ok, #state{supervisor = Supervisor, lastLog = os:timestamp()}, config:arenaTimeout()}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
                                                     {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
@@ -54,8 +54,6 @@ init([Supervisor]) ->
                                                     {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
-handle_call(getStats,_From,State) ->
-    {reply,State#state.counter,State#state{counter = 0}};
 handle_call(_Agent,_From,cleaning) ->
     {reply,0,cleaning,config:arenaTimeout()};
 handle_call({_,Fitness,Energy}, From, State) ->
@@ -67,8 +65,9 @@ handle_call({_,Fitness,Energy}, From, State) ->
         true ->
             NewAgents = evolution:eachFightsAll([Agent|Waitlist]),
             [gen_server:reply(NewFrom,NewEnergy) || {NewFrom,_,NewEnergy} <- NewAgents],
-            NewCounter = State#state.counter + (config:fightNumber() * (config:fightNumber() - 1) div 2), % liczba spotkan dla wektora dlugosci n wynosi n(n-1)/2
-            {noreply,State#state{waitlist = [], counter = NewCounter},config:arenaTimeout()}
+            Counter = State#state.counter + (config:fightNumber() * (config:fightNumber() - 1) div 2), % liczba spotkan dla wektora dlugosci n wynosi n(n-1)/2
+            {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,fight,State#state.lastLog,Counter),
+            {noreply,State#state{waitlist = [], counter = NewCounter, lastLog = NewLog},config:arenaTimeout()}
     end.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
@@ -81,11 +80,6 @@ handle_cast(close, State) ->
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_info(report,cleaning) ->
-    {noreply,cleaning,config:arenaTimeout()};
-handle_info(report,State) ->
-    conc_supervisor:reportFromArena(State#state.supervisor,fight,State#state.counter),
-    {noreply,State#state{counter = 0}};
 handle_info(timeout,cleaning) ->
     {stop,normal,cleaning};
 handle_info(timeout,State) ->
@@ -96,7 +90,9 @@ handle_info(timeout,State) ->
             io:format("Ring ~p daje do walki niepelna liczbe osobnikow!~n",[self()]),
             Agents = evolution:eachFightsAll(X),
             [gen_server:reply(From,Energy) || {From,_,Energy} <- Agents],
-            {noreply,State#state{waitlist = []},config:arenaTimeout()}
+            Counter = State#state.counter + (X * (X - 1) div 2), % liczba spotkan dla wektora dlugosci n wynosi n(n-1)/2
+            {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,fight,State#state.lastLog,Counter),
+            {noreply,State#state{waitlist = [], counter = NewCounter, lastLog = NewLog},config:arenaTimeout()}
     end.
 
 -spec terminate(term(),state()) -> no_return().

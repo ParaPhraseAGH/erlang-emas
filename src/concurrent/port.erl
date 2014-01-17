@@ -35,7 +35,8 @@ close(Pid) ->
 %% ====================================================================
 -record(state, {mySupervisor :: pid(),
                 allSupervisors :: [pid()],
-                counter = 0 :: non_neg_integer()}).
+                counter = 0 :: non_neg_integer(),
+                lastLog :: erlang:timestamp()}).
 -type state() :: #state{} | cleaning.
 
 -spec init(term()) -> {ok,state()} |
@@ -43,8 +44,7 @@ close(Pid) ->
 init(Args) ->
     misc_util:seedRandom(),
     self() ! Args, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
-    timer:send_interval(config:writeInterval(),report),
-    {ok, #state{mySupervisor = undefined, allSupervisors = undefined}}.
+    {ok, #state{mySupervisor = undefined, allSupervisors = undefined, lastLog = os:timestamp()}}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
                                                     {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
@@ -67,8 +67,8 @@ handle_call(emigrate, From, State) ->
             end;
         _ -> exit(HisPid,finished)
     end,
-    OldCounter = State#state.counter,
-    {noreply,State#state{counter = OldCounter + 1}}.
+    {NewCounter,NewLog} = misc_util:arenaReport(State#state.mySupervisor,migration,State#state.lastLog,State#state.counter + 1),
+    {noreply,State#state{counter = NewCounter, lastLog = NewLog}}.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
@@ -81,14 +81,9 @@ handle_cast(close, _State) ->
                                      {stop,term(),state()}.
 handle_info(timeout,cleaning) ->
     {stop,normal,cleaning};
-handle_info(report,cleaning) ->
-    {noreply,cleaning,config:arenaTimeout()};
-handle_info(report,State) ->
-    conc_supervisor:reportFromArena(State#state.mySupervisor,migration,State#state.counter),
-    {noreply,State#state{counter = 0}};
-handle_info([Supervisor,King], _UndefinedState) ->
+handle_info([Supervisor,King], State) ->
     AllSupervisors = concurrent:getAddresses(King),
-    {noreply, #state{mySupervisor = Supervisor, allSupervisors = AllSupervisors}}.
+    {noreply, State#state{mySupervisor = Supervisor, allSupervisors = AllSupervisors}}.
 
 -spec terminate(term(),state()) -> no_return().
 terminate(_Reason, _State) ->
