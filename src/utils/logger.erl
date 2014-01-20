@@ -80,12 +80,12 @@ handle_cast({sequential, Stat, _Pid, Values}, State) ->
 handle_cast({counter, GlobalStats}, State) ->
     [logGlobal(State#state.dict,StatName,StatVal) || {StatName,StatVal} <- GlobalStats],
     {noreply, State};
-handle_cast({agregate, _Pid, Counters}, State) ->
+handle_cast({agregate, _Pid, Counters}, State) ->  % todo przepisac, zeby odroznial wyspy
     N = dict:size(State#state.dict) - 4,
     case State#state.n + 1 of
         N ->
             logGlobalStats(sequential, addCounters(Counters, State#state.counters)),
-            {noreply, State#state{dict = State#state.dict, n = 0, counters = []}};
+            {noreply, State#state{n = 0, counters = []}};
         X ->
             OldCounters = State#state.counters,
             {noreply, State#state{n = X, counters = addCounters(Counters, OldCounters)}}
@@ -194,6 +194,7 @@ addCounters(Other,[]) ->
 addCounters(L1,L2) ->
     addCounters(L1,L2,[]).
 
+-spec addCounters([tuple()], [tuple()], [tuple()]) -> [tuple()].
 addCounters([],_Other,Result) ->
     Result;
 addCounters([{Name,Val1}|T],Other,Result) ->

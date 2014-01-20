@@ -44,6 +44,7 @@ close(Pid) ->
 init(Args) ->
     misc_util:seedRandom(),
     self() ! Args, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
+    timer:send_interval(config:writeInterval(),timer),
     {ok, #state{mySupervisor = undefined, allSupervisors = undefined, lastLog = os:timestamp()}}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -67,8 +68,10 @@ handle_call(emigrate, From, State) ->
             end;
         _ -> exit(HisPid,finished)
     end,
-    {NewCounter,NewLog} = misc_util:arenaReport(State#state.mySupervisor,migration,State#state.lastLog,State#state.counter + 1),
-    {noreply,State#state{counter = NewCounter, lastLog = NewLog}}.
+%%     {NewCounter,NewLog} = misc_util:arenaReport(State#state.mySupervisor,migration,State#state.lastLog,State#state.counter + 1),
+%%     {noreply,State#state{counter = NewCounter, lastLog = NewLog}}. todo Trzeba odkomentowac dla wysokiej migrationRate
+    Counter = State#state.counter,
+    {noreply,State#state{counter = Counter + 1}}.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
@@ -81,6 +84,11 @@ handle_cast(close, _State) ->
                                      {stop,term(),state()}.
 handle_info(timeout,cleaning) ->
     {stop,normal,cleaning};
+handle_info(timer,cleaning) ->
+    {noreply,cleaning,config:writeInterval()/2};
+handle_info(timer,State) ->
+    conc_supervisor:reportFromArena(State#state.mySupervisor,migration,State#state.counter), % Dla wysokiej migrationRate trzeba sprawdzac kiedy byl ostatni log
+    {noreply,State#state{counter = 0},config:arenaTimeout()};
 handle_info([Supervisor,King], State) ->
     AllSupervisors = concurrent:getAddresses(King),
     {noreply, State#state{mySupervisor = Supervisor, allSupervisors = AllSupervisors}}.

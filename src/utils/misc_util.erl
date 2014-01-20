@@ -79,7 +79,6 @@ arenaReport(Pid,Arena,LastLog,Value) ->
     IntervalInMicros = config:writeInterval()*1000,
     if
         Diff >= IntervalInMicros ->
-            io:format("Arena ~p loguje ~p~n",[Arena,Value]),
             conc_supervisor:reportFromArena(Pid,Arena,Value),
             {0,Now};
         true ->
