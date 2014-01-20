@@ -6,7 +6,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/2, go/2, newAgent/2, sendAgents/2, unlinkAgent/2, linkAgent/2, reportFromArena/3, close/1]).
+-export([start/1, go/2, newAgent/2, sendAgents/2, unlinkAgent/3, linkAgent/3, reportFromArena/3, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
