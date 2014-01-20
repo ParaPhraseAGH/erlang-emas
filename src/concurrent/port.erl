@@ -46,7 +46,7 @@ close(Pid) ->
                       {ok,state(),non_neg_integer()}.
 init(Args) ->
     misc_util:seedRandom(),
-    self() ! Args, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
+    self() ! {init,Args}, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
     timer:send_interval(config:writeInterval(),timer),
     {ok, #state{mySupervisor = undefined, allSupervisors = undefined, lastLog = os:timestamp()}}.
 
@@ -99,7 +99,7 @@ handle_info(timer,State) ->
 handle_info({Ref,ok},State) when is_reference(Ref) ->
     %%   Opoznione przyjscie potwierdzenia od supervisora. Juz i tak jest po wszystkim.
     {noreply,State};
-handle_info([Supervisor,King], State) ->
+handle_info({init,[Supervisor,King]}, State) ->
     AllSupervisors = concurrent:getAddresses(King),
     {noreply, State#state{mySupervisor = Supervisor, allSupervisors = AllSupervisors}}.
 

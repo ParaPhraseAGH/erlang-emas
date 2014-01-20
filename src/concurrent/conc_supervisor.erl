@@ -6,7 +6,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/2, newAgent/2, sendAgents/2, unlinkAgent/3, linkAgent/3, reportFromArena/3, close/1]).
+-export([start/2, go/2, newAgent/2, sendAgents/2, unlinkAgent/2, linkAgent/2, reportFromArena/3, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -16,14 +16,18 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start(King::pid(), ProblemSize::pos_integer()) -> pid().
-start(King,ProblemSize) ->
-    {ok,Pid} = gen_server:start(?MODULE,[King,ProblemSize],[]),
+-spec start(King::pid()) -> pid().
+start(King) ->
+    {ok,Pid} = gen_server:start(?MODULE,[King],[]),
     Pid.
 
 -spec newAgent(pid(),agent()) -> ok.
 newAgent(Pid,Agent) ->
     gen_server:cast(Pid,{newAgent,self(),Agent}).
+
+-spec go(pid(),non_neg_integer()) -> ok.
+go(Pid,ProblemSize) ->
+    gen_server:cast(Pid,{go,ProblemSize}).
 
 %% @doc Funkcja za pomoca ktorej mozna wyslac supervisorowi liste nowych agentow.
 -spec sendAgents(pid(),[agent()]) -> ok.
@@ -61,7 +65,7 @@ close(Pid) ->
 
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
-init([King,ProblemSize]) ->
+init([King]) ->
     misc_util:seedRandom(),
     process_flag(trap_exit, true),
     {ok,Ring} = ring:start_link(self()),
@@ -69,8 +73,6 @@ init([King,ProblemSize]) ->
     {ok,Port} = port:start_link(self(),King),
     Arenas = [Ring,Bar,Port],
     io_util:printArenas(Arenas),
-    [spawn_link(agent,start,[self(),ProblemSize|Arenas]) || _ <- lists:seq(1,config:populationSize())],
-    timer:send_interval(config:writeInterval(),write),
     {ok,#state{arenas = Arenas},config:supervisorTimeout()}.
 
 
@@ -122,6 +124,10 @@ handle_cast({reportFromArena,Arena,Value},State) ->
         _ ->
             {noreply,State#state{reports = NewDict},config:supervisorTimeout()}
     end;
+handle_cast({go,ProblemSize},State) ->
+    [spawn_link(agent,start,[self(),ProblemSize|State#state.arenas]) || _ <- lists:seq(1,config:populationSize())],
+    timer:send_interval(config:writeInterval(),write),
+    {noreply,State,config:supervisorTimeout()};
 
 handle_cast(close,State) ->
     {stop,normal,State}.
@@ -138,7 +144,7 @@ handle_info({'EXIT',Pid,dying},State) ->
 handle_info({'EXIT',Pid,Reason},State) ->
     case lists:member(Pid,State#state.arenas) of
         true ->
-            io:format("Error w arenie, zamykamy impreze na wyspie ~p~n",[self()]),
+            io:format("Error na arenie, zamykamy impreze na wyspie ~p~n",[self()]),
             exit(Reason);
         false ->
             io:format("Error w agencie, karawana jedzie dalej. Powod: ~p~n",[Reason]),
@@ -147,9 +153,8 @@ handle_info({'EXIT',Pid,Reason},State) ->
     end;
 
 handle_info(write,State) ->
-    Fitness = State#state.best,
     {SumVar,MinVar,VarVar} = misc_util:diversity([Val || {_Key,Val} <- gb_trees:to_list(State#state.agents)]),
-    logger:logLocalStats(parallel,fitness,Fitness),
+    logger:logLocalStats(parallel,fitness,State#state.best),
     logger:logLocalStats(parallel,population,gb_trees:size(State#state.agents)),
     logger:logLocalStats(parallel,stddevsum,SumVar),
     logger:logLocalStats(parallel,stddevmin,MinVar),
