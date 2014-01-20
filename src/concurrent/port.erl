@@ -43,7 +43,7 @@ close(Pid) ->
                       {ok,state(),non_neg_integer()}.
 init(Args) ->
     misc_util:seedRandom(),
-    self() ! Args, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
+    self() ! {init,Args}, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
     timer:send_interval(config:writeInterval(),timer),
     {ok, #state{mySupervisor = undefined, allSupervisors = undefined, lastLog = os:timestamp()}}.
 
@@ -89,7 +89,7 @@ handle_info(timer,cleaning) ->
 handle_info(timer,State) ->
     conc_supervisor:reportFromArena(State#state.mySupervisor,migration,State#state.counter), % Dla wysokiej migrationRate trzeba sprawdzac kiedy byl ostatni log
     {noreply,State#state{counter = 0},config:arenaTimeout()};
-handle_info([Supervisor,King], State) ->
+handle_info({init,[Supervisor,King]}, State) ->
     AllSupervisors = concurrent:getAddresses(King),
     {noreply, State#state{mySupervisor = Supervisor, allSupervisors = AllSupervisors}}.
 

@@ -14,9 +14,10 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
     io:format("{Model=Concurrent,ProblemSize=~p,Time=~p,Islands=~p,Topology=~p}~n",[ProblemSize,Time,Islands,Topology]),
     misc_util:clearInbox(),
     topology:start_link(Islands,Topology),
-    Supervisors = [conc_supervisor:start(self(),ProblemSize) || _ <- lists:seq(1,Islands)],
+    Supervisors = [conc_supervisor:start(self()) || _ <- lists:seq(1,Islands)],
     logger:start_link({parallel,Supervisors},Path),
     giveAddresses(Supervisors,Islands),
+    trigger(Supervisors,ProblemSize),
     timer:sleep(Time),
     [conc_supervisor:close(Pid) || Pid <- Supervisors],
     logger:close(),
@@ -47,7 +48,7 @@ getAddresses(Pid) ->
         {'DOWN', Ref, process, Pid, Reason} ->
             io:format("The king is dead, long live the king!~n",[]),
             erlang:error(Reason)
-    after 5000 ->
+    after 1000 ->
             io:format("Proces ~p nie dostal wiadomosci z adresami~n",[self()]),
             erlang:error(timeout)
     end.
@@ -69,3 +70,7 @@ giveAddresses(Supervisors,NoIslands) ->
             erlang:error(noMsgFromPorts),
             timeout
     end.
+
+-spec trigger([pid()],pos_integer()) -> [ok].
+trigger(Supervisors,ProblemSize) ->
+    [conc_supervisor:go(Pid,ProblemSize) || Pid <- Supervisors].
