@@ -44,7 +44,8 @@ sendAgent(Agent) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--spec init(term()) -> {ok,state()}.
+-spec init(term()) -> {ok,state()} |
+                      {ok,state(),non_neg_integer()}.
 init([ProblemSize,Time,Islands,Topology,Path]) ->
     timer:send_after(Time,theEnd),
     Pids = [spawn_link(hybrid_island,start,[ProblemSize]) || _ <- lists:seq(1,Islands)],

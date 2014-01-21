@@ -90,7 +90,7 @@ handle_info(timeout,State) ->
             io:format("Ring ~p daje do walki niepelna liczbe osobnikow!~n",[self()]),
             Agents = evolution:eachFightsAll(X),
             [gen_server:reply(From,Energy) || {From,_,Energy} <- Agents],
-            Counter = State#state.counter + (X * (X - 1) div 2), % liczba spotkan dla wektora dlugosci n wynosi n(n-1)/2
+            Counter = State#state.counter + (length(X) * (length(X) - 1) div 2), % liczba spotkan dla wektora dlugosci n wynosi n(n-1)/2
             {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,fight,State#state.lastLog,Counter),
             {noreply,State#state{waitlist = [], counter = NewCounter, lastLog = NewLog},config:arenaTimeout()}
     end.
