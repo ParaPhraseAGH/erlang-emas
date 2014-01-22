@@ -3,8 +3,8 @@
 %% @doc Modul odpowiedzialny za logike pojedynczego agenta.
 
 -module(agent).
--export([start/4, start/5]).
--record(arenas,{fight,reproduction,migration}).
+-export([start/2, start/6]).
+-record(arenas,{fight,reproduction,migration,cemetery}).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type arenas() :: #arenas{}.
@@ -15,20 +15,19 @@
 
 %% @doc Funkcja generujaca dane i startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac.
--spec start(pid(), pos_integer(), Ring::pid(), Bar::pid(), Port::pid()) -> no_return().
-start(Supervisor,ProblemSize,Ring,Bar,Port) when is_integer(ProblemSize) ->
+-spec start(pid(), pos_integer(), Ring::pid(), Bar::pid(), Port::pid(), Cemetery::pid()) -> ok.
+start(Supervisor,ProblemSize,Ring,Bar,Port,Cemetery) ->
     misc_util:seedRandom(),
     Agent = genetic:generateAgent(ProblemSize),
     conc_supervisor:newAgent(Supervisor,Agent),
-    Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
+    Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port, cemetery = Cemetery},
     loop(Agent,Arenas).
-%% @doc Funkcja startujaca danego agenta. W argumencie
-%% adresy aren do ktorych agent ma sie zglaszac oraz dane agenta.
--spec start(agent(), Ring::pid(), Bar::pid(), Port::pid()) -> no_return().
-start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
+
+-spec start(agent(), Supervisor::pid()) -> ok.
+start(Agent,Supervisor) ->
     random:seed(erlang:now()),
-    Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
-    loop(Agent,Arenas).
+    [Ring,Bar,Port,Cemetery] = conc_supervisor:getArenas(Supervisor),
+    loop(Agent,#arenas{fight = Ring, reproduction = Bar, migration = Port, cemetery = Cemetery}).
 
 %% ====================================================================
 %% Internal functions
@@ -40,7 +39,7 @@ start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
 loop(Agent,Arenas) ->
     case misc_util:behavior(Agent) of
         death ->
-            exit(dying);
+            cemetery:cast(Arenas#arenas.cemetery);
         reproduction ->
             {Solution,Fitness,_} = Agent,
             NewEnergy = bar:call(Arenas#arenas.reproduction,Agent),

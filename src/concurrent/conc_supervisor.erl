@@ -6,7 +6,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/1, go/2, newAgent/2, sendAgents/2, unlinkAgent/3, linkAgent/3, reportFromArena/3, close/1]).
+-export([start/1, go/2, getArenas/1, newAgent/2, sendAgents/2, unlinkAgent/3, linkAgent/3, reportFromArena/3, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -28,6 +28,10 @@ newAgent(Pid,Agent) ->
 -spec go(pid(),non_neg_integer()) -> ok.
 go(Pid,ProblemSize) ->
     gen_server:cast(Pid,{go,ProblemSize}).
+
+-spec getArenas(pid()) -> tuple().
+getArenas(Pid) ->
+    gen_server:call(Pid,getArenas).
 
 %% @doc Funkcja za pomoca ktorej mozna wyslac supervisorowi liste nowych agentow.
 -spec sendAgents(pid(),[agent()]) -> ok.
@@ -55,9 +59,7 @@ close(Pid) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--record(state, {best = -999999.9 :: float() | islandEmpty,
-                agents = gb_trees:empty() :: gb_tree(),
-                deathCounter = 0 :: non_neg_integer(),
+-record(state, {agents = gb_trees:empty() :: gb_tree(),
                 reports = dict:new() :: dict(),
                 arenas :: [pid()]}).
 -type state() :: #state{}.
@@ -71,7 +73,8 @@ init([King]) ->
     {ok,Ring} = ring:start_link(self()),
     {ok,Bar} = bar:start_link(self()),
     {ok,Port} = port:start_link(self(),King),
-    Arenas = [Ring,Bar,Port],
+    {ok,Cemetery} = cemetery:start_link(self()),
+    Arenas = [Ring,Bar,Port,Cemetery],
     io_util:printArenas(Arenas),
     {ok,#state{arenas = Arenas},config:supervisorTimeout()}.
 
@@ -82,50 +85,38 @@ init([King]) ->
                                                     {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
+handle_call(getArenas,_From,State) ->
+    {reply,State#state.arenas,State,config:supervisorTimeout()};
+
 handle_call({emigrant,AgentPid,_Agent},_From,State) ->
     erlang:unlink(AgentPid),
     NewAgentList = gb_trees:delete(AgentPid,State#state.agents), % delete_any/2 is safe, this one crashes when not found
-    {reply,ok,State#state{agents = NewAgentList}};
+    {reply,ok,State#state{agents = NewAgentList},config:supervisorTimeout()};
 
 handle_call({immigrant,AgentFrom,Agent},_From,State) ->
     {AgentPid,_} = AgentFrom,
     erlang:link(AgentPid),
     gen_server:reply(AgentFrom,State#state.arenas),
     NewAgentList = gb_trees:insert(AgentPid,Agent,State#state.agents),
-    {reply,ok,State#state{agents = NewAgentList}}.
+    {reply,ok,State#state{agents = NewAgentList},config:supervisorTimeout()}.
 
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_cast({newAgents,AgentList},State) ->
-    Pids = [spawn_link(agent,start,[A|State#state.arenas]) || A <- AgentList],
-    Result = misc_util:result(AgentList),
-    NewAgentList = lists:foldl(fun({Pid,Agent},Tree) ->
-                                       gb_trees:insert(Pid,Agent,Tree)
-                               end,State#state.agents,lists:zip(Pids,AgentList)),
-    {noreply,State#state{best = lists:max([Result,State#state.best]),
-                         agents = NewAgentList},config:supervisorTimeout()};
-
-handle_cast({newAgent,Pid,Agent},State) ->
-    NewAgentList = gb_trees:insert(Pid,Agent,State#state.agents),
-    {noreply,State#state{agents = NewAgentList},config:supervisorTimeout()};
-
 handle_cast({reportFromArena,Arena,Value},State) ->
     Dict = State#state.reports,
     NewDict = dict:store(Arena,Value,Dict),
     case dict:size(NewDict) of
-        3 ->
-            logger:logGlobalStats(parallel,[{death,State#state.deathCounter},
-                                            {fight,dict:fetch(fight,NewDict)},
-                                            {reproduction,dict:fetch(reproduction,NewDict)},
-                                            {migration,dict:fetch(migration,NewDict)}]),
-            {noreply,State#state{reports = dict:new(), deathCounter = 0},config:supervisorTimeout()};
+        4 ->
+            Agents = logStats(NewDict,State),
+            {noreply,State#state{reports = dict:new(), agents = Agents},config:supervisorTimeout()};
         _ ->
             {noreply,State#state{reports = NewDict},config:supervisorTimeout()}
     end;
+
 handle_cast({go,ProblemSize},State) ->
-    [spawn_link(agent,start,[self(),ProblemSize|State#state.arenas]) || _ <- lists:seq(1,config:populationSize())],
+    [spawn(agent,start,[self(),ProblemSize|State#state.arenas]) || _ <- lists:seq(1,config:populationSize())],
     timer:send_interval(config:writeInterval(),write),
     {noreply,State,config:supervisorTimeout()};
 
@@ -136,43 +127,44 @@ handle_cast(close,State) ->
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_info({'EXIT',Pid,dying},State) ->
-    NewAgentList = gb_trees:delete(Pid,State#state.agents),
-    DeathCounter = State#state.deathCounter + 1,
-    {noreply,State#state{deathCounter = DeathCounter, agents = NewAgentList},config:supervisorTimeout()};
-
-handle_info({'EXIT',Pid,Reason},State) ->
-    case lists:member(Pid,State#state.arenas) of
-        true ->
-            io:format("Error na arenie, zamykamy impreze na wyspie ~p~n",[self()]),
-            exit(Reason);
-        false ->
-            io:format("Error w agencie, karawana jedzie dalej. Powod: ~p~n",[Reason]),
-            NewAgentList = gb_trees:delete(Pid,State#state.agents),
-            {noreply,State#state{agents = NewAgentList},config:supervisorTimeout()}
-    end;
-
-handle_info(write,State) ->
-    {SumVar,MinVar,VarVar} = misc_util:diversity([Val || {_Key,Val} <- gb_trees:to_list(State#state.agents)]),
-    logger:logLocalStats(parallel,fitness,State#state.best),
-    logger:logLocalStats(parallel,population,gb_trees:size(State#state.agents)),
-    logger:logLocalStats(parallel,stddevsum,SumVar),
-    logger:logLocalStats(parallel,stddevmin,MinVar),
-    logger:logLocalStats(parallel,stddevvar,VarVar),
-    {noreply,State,config:supervisorTimeout()};
-
 handle_info(timeout,State) ->
     {stop,timeout,State}.
 
 
 -spec terminate(term(),state()) -> no_return().
 terminate(_Reason,State) ->
-    [Ring,Bar,Port] = State#state.arenas,
+    [Ring,Bar,Port,Cemetery] = State#state.arenas,
     port:close(Port),
     bar:close(Bar),
-    ring:close(Ring).
+    ring:close(Ring),
+    cemetery:close(Cemetery).
 
 
 -spec code_change(term(),state(),term()) -> {ok, state()}.
 code_change(_OldVsn,State,_Extra) ->
     {ok, State}.
+
+%% ====================================================================
+%% Internal functions
+%% ====================================================================
+
+logStats(Dict,State) ->
+    Deaths = dict:fetch(death,Dict),
+    {Best,Reproductions} = dict:fetch(reproduction,Dict),
+    OldPopulation = lists:foldl(fun({Key,Val},Tree) ->
+                                        gb_trees:insert(Key,Val,Tree)
+                                end, State#state.agents, Reproductions),
+    NewAgents = lists:foldl(fun(Pid,Tree) ->
+                                    gb_trees:delete(Pid,Tree)
+                            end, OldPopulation, Deaths),
+    {SumVar,MinVar,VarVar} = misc_util:diversity([Val || {_Key,Val} <- gb_trees:to_list(NewAgents)]),
+    logger:logLocalStats(parallel,fitness,Best),
+    logger:logLocalStats(parallel,population,gb_trees:size(NewAgents)),
+    logger:logLocalStats(parallel,stddevsum,SumVar),
+    logger:logLocalStats(parallel,stddevmin,MinVar),
+    logger:logLocalStats(parallel,stddevvar,VarVar),
+    logger:logGlobalStats(parallel,[{death,length(Deaths)},
+                                    {fight,dict:fetch(fight,Dict)},
+                                    {reproduction,length(Reproductions)},
+                                    {migration,dict:fetch(migration,Dict)}]),
+    gb_trees:balance(NewAgents).
