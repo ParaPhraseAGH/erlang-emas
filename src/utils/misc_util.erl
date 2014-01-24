@@ -87,7 +87,7 @@ arenaReport(Pid,Arena,LastLog,Value) ->
 
 
 %% @doc Funkcja wyliczajaca sume i minimum odchylen standardowych genotypow agentow
--spec diversity([agent()]) -> {float(), float()}.
+-spec diversity([agent()]) -> {float(), float(), float()}.
 diversity([]) ->
     {-1.0, -1.0, 0.0};
 diversity(Agents) ->
@@ -99,7 +99,7 @@ diversity(Agents) ->
     {Sum, Min, Var}.
 
 %% @doc Funkcja online wyliczajaca sume i minimum odchylen standardowych genotypow agentow
--spec onlineDiversity(genetic:solution(), atom(), integer(), [float()],[float()]) -> {float(),float(),[float()], [float()]}.
+-spec onlineDiversity(genetic:solution(), atom(), integer(), [float()],[float()]) -> {float(),float(),float(), [float()], [float()]}.
 onlineDiversity(_Solution, _Action, N, PrevMeans, PrevStds) when N < 1 ->
     %%     io:format("Diversity incalculable~n"),
     {-1.0,-1.0,-1.0,PrevMeans,PrevStds};

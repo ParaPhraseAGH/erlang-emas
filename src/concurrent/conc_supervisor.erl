@@ -29,7 +29,7 @@ newAgent(Pid,Agent) ->
 go(Pid,ProblemSize) ->
     gen_server:cast(Pid,{go,ProblemSize}).
 
--spec getArenas(pid()) -> tuple().
+-spec getArenas(pid()) -> [pid()].
 getArenas(Pid) ->
     gen_server:call(Pid,getArenas).
 
@@ -48,7 +48,7 @@ unlinkAgent(Pid,AgentPid,Agent) ->
 linkAgent(Pid,AgentFrom,Agent) ->
     gen_server:call(Pid,{immigrant,AgentFrom,Agent}).
 
--spec reportFromArena(pid(),fight | reproduction | migration, non_neg_integer()) -> ok.
+-spec reportFromArena(pid(),fight | reproduction | migration, term()) -> ok.
 reportFromArena(Pid,Arena,Value) ->
     gen_server:cast(Pid,{reportFromArena,Arena,Value}).
 
@@ -61,6 +61,8 @@ close(Pid) ->
 %% ====================================================================
 -record(state, {agents = gb_trees:empty() :: gb_tree(),
                 reports = dict:new() :: dict(),
+                immigrants = [] :: [pid()],
+                db4b = [] :: [pid()],
                 arenas :: [pid()]}).
 -type state() :: #state{}.
 
@@ -88,17 +90,15 @@ init([King]) ->
 handle_call(getArenas,_From,State) ->
     {reply,State#state.arenas,State,config:supervisorTimeout()};
 
-handle_call({emigrant,AgentPid,_Agent},_From,State) ->
-    erlang:unlink(AgentPid),
-    NewAgentList = gb_trees:delete(AgentPid,State#state.agents), % delete_any/2 is safe, this one crashes when not found
-    {reply,ok,State#state{agents = NewAgentList},config:supervisorTimeout()};
+handle_call({emigrant,_AgentPid,_Agent},_From,State) ->
+                                                %NewAgentList = gb_trees:delete(AgentPid,State#state.agents), % delete_any/2 is safe, this one crashes when not found
+    {reply,ok,State,config:supervisorTimeout()};
 
 handle_call({immigrant,AgentFrom,Agent},_From,State) ->
     {AgentPid,_} = AgentFrom,
-    erlang:link(AgentPid),
     gen_server:reply(AgentFrom,State#state.arenas),
-    NewAgentList = gb_trees:insert(AgentPid,Agent,State#state.agents),
-    {reply,ok,State#state{agents = NewAgentList},config:supervisorTimeout()}.
+    NewImmigrants = [{AgentPid,Agent}|State#state.immigrants], %gb_trees:insert(AgentPid,Agent,State#state.agents),
+    {reply,ok,State#state{immigrants = NewImmigrants},config:supervisorTimeout()}.
 
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
@@ -106,18 +106,22 @@ handle_call({immigrant,AgentFrom,Agent},_From,State) ->
                                      {stop,term(),state()}.
 handle_cast({reportFromArena,Arena,Value},State) ->
     Dict = State#state.reports,
+    error = dict:find(Arena,Dict), % debug
     NewDict = dict:store(Arena,Value,Dict),
     case dict:size(NewDict) of
         4 ->
-            Agents = logStats(NewDict,State),
-            {noreply,State#state{reports = dict:new(), agents = Agents},config:supervisorTimeout()};
+            {Agents,Db4b} = logStats(NewDict,State),
+            {noreply,State#state{reports = dict:new(), agents = Agents, immigrants = [], db4b = Db4b},config:supervisorTimeout()};
         _ ->
             {noreply,State#state{reports = NewDict},config:supervisorTimeout()}
     end;
 
+handle_cast({newAgent,Pid,Agent},State) ->
+    NewPopulation = gb_trees:insert(Pid,Agent,State#state.agents),
+    {noreply,State#state{agents = NewPopulation},config:supervisorTimeout()};
+
 handle_cast({go,ProblemSize},State) ->
     [spawn(agent,start,[self(),ProblemSize|State#state.arenas]) || _ <- lists:seq(1,config:populationSize())],
-    timer:send_interval(config:writeInterval(),write),
     {noreply,State,config:supervisorTimeout()};
 
 handle_cast(close,State) ->
@@ -150,13 +154,28 @@ code_change(_OldVsn,State,_Extra) ->
 
 logStats(Dict,State) ->
     Deaths = dict:fetch(death,Dict),
+    Emigrations = dict:fetch(migration,Dict),
+    Immigrations = State#state.immigrants,
     {Best,Reproductions} = dict:fetch(reproduction,Dict),
-    OldPopulation = lists:foldl(fun({Key,Val},Tree) ->
-                                        gb_trees:insert(Key,Val,Tree)
-                                end, State#state.agents, Reproductions),
-    NewAgents = lists:foldl(fun(Pid,Tree) ->
-                                    gb_trees:delete(Pid,Tree)
-                            end, OldPopulation, Deaths),
+    Add1 = Reproductions ++ Immigrations,
+    Del1 = Deaths ++ Emigrations,
+    Db4b = State#state.db4b -- [X || X <- State#state.db4b, lists:keymember(X,1,Add1)],
+    Add2 = Add1 -- State#state.db4b,
+    Overlap = [X || {X,_} <- Add2, lists:member(X,Del1)],
+    Add3 = [{Pid,Agent} || {Pid,Agent} <- Add2, not lists:member(Pid,Overlap)], %% dobrze byloby moc to wywalic
+    Del3 = Del1 -- Overlap, %% dobrze byloby moc to wywalic
+    Population1 = lists:foldl(fun({Key,Val},Tree) ->
+                                      gb_trees:insert(Key,Val,Tree) % insert czy enter?
+                              end, State#state.agents, Add3),
+    {NewAgents,NewDb4b} = lists:foldl(fun(Pid,{Tree,TMPdb4b}) ->
+                                                case gb_trees:is_defined(Pid,Tree) of
+                                                    false ->
+                                                        {Tree,[Pid|TMPdb4b]};
+                                                    true ->
+                                                        {gb_trees:delete(Pid,Tree),TMPdb4b}
+                                                end
+                                        end, {Population1,Db4b}, Del3),
+
     {SumVar,MinVar,VarVar} = misc_util:diversity([Val || {_Key,Val} <- gb_trees:to_list(NewAgents)]),
     logger:logLocalStats(parallel,fitness,Best),
     logger:logLocalStats(parallel,population,gb_trees:size(NewAgents)),
@@ -166,5 +185,5 @@ logStats(Dict,State) ->
     logger:logGlobalStats(parallel,[{death,length(Deaths)},
                                     {fight,dict:fetch(fight,Dict)},
                                     {reproduction,length(Reproductions)},
-                                    {migration,dict:fetch(migration,Dict)}]),
-    gb_trees:balance(NewAgents).
+                                    {migration,length(Emigrations)}]),
+    {gb_trees:balance(NewAgents),NewDb4b}.

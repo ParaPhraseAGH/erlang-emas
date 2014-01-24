@@ -14,7 +14,7 @@
 
 -record(state, {supervisor :: pid(),
                 deaths = [] :: [pid()],
-                lastLog :: tuple()}).
+                lastLog :: erlang:timestamp()}).
 
 %%%===================================================================
 %%% API
@@ -73,7 +73,12 @@ handle_cast(close, State) ->
 handle_cast({died,Pid}, State) ->
     Deaths = [Pid|State#state.deaths],
     {NewDeaths,NewLog} = misc_util:arenaReport(State#state.supervisor,death,State#state.lastLog,Deaths),
-    {noreply, State#state{deaths = NewDeaths, lastLog = NewLog}, config:arenaTimeout()}.
+    case NewDeaths of
+        0 ->
+            {noreply,State#state{lastLog = NewLog, deaths = []},config:arenaTimeout()};
+        _ ->
+            {noreply,State#state{deaths = NewDeaths},config:arenaTimeout()}
+    end.
 
 
 -spec handle_info(Info :: timeout() | term(), State :: #state{}) ->

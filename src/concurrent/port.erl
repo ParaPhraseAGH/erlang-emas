@@ -37,7 +37,7 @@ close(Pid) ->
 %% ====================================================================
 -record(state, {mySupervisor :: pid(),
                 allSupervisors :: [pid()],
-                counter = 0 :: non_neg_integer(),
+                emigrants = [] :: [pid()],
                 lastLog :: erlang:timestamp()}).
 -type state() :: #state{} | cleaning.
 
@@ -75,8 +75,8 @@ handle_call({emigrate,Agent}, From, State) ->
     end,
 %%     {NewCounter,NewLog} = misc_util:arenaReport(State#state.mySupervisor,migration,State#state.lastLog,State#state.counter + 1),
 %%     {noreply,State#state{counter = NewCounter, lastLog = NewLog}}. todo Trzeba odkomentowac dla wysokiej migrationRate
-    Counter = State#state.counter,
-    {noreply,State#state{counter = Counter + 1}}.
+    Emigrants = State#state.emigrants,
+    {noreply,State#state{emigrants = [HisPid|Emigrants]}}.
 
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
@@ -94,8 +94,8 @@ handle_info(timeout,cleaning) ->
 handle_info(timer,cleaning) ->
     {noreply,cleaning,config:writeInterval()/2};
 handle_info(timer,State) ->
-    conc_supervisor:reportFromArena(State#state.mySupervisor,migration,State#state.counter), % Dla wysokiej migrationRate trzeba sprawdzac kiedy byl ostatni log
-    {noreply,State#state{counter = 0},config:arenaTimeout()};
+    conc_supervisor:reportFromArena(State#state.mySupervisor,migration,State#state.emigrants), % Dla wysokiej migrationRate trzeba sprawdzac kiedy byl ostatni log
+    {noreply,State#state{emigrants = []},config:arenaTimeout()};
 handle_info({Ref,ok},State) when is_reference(Ref) ->
     %%   Opoznione przyjscie potwierdzenia od supervisora. Juz i tak jest po wszystkim.
     {noreply,State};
