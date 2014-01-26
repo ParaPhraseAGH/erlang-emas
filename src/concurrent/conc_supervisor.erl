@@ -160,7 +160,10 @@ logStats(Dict,State) ->
     Add1 = Reproductions ++ Immigrations,
     Del1 = Deaths ++ Emigrations,
     Db4b = State#state.db4b -- [X || X <- State#state.db4b, lists:keymember(X,1,Add1)],
-    Add2 = Add1 -- State#state.db4b,
+    Add2 = lists:filter(fun({Pid,_Agent}) ->
+                                not lists:member(Pid,State#state.db4b)
+                        end,Add1),
+    io:format(" Fixed: ~p~n",[length(Add1) - length(Add2)]),
     Overlap = [X || {X,_} <- Add2, lists:member(X,Del1)],
     Add3 = [{Pid,Agent} || {Pid,Agent} <- Add2, not lists:member(Pid,Overlap)], %% dobrze byloby moc to wywalic
     Del3 = Del1 -- Overlap, %% dobrze byloby moc to wywalic
@@ -168,14 +171,14 @@ logStats(Dict,State) ->
                                       gb_trees:insert(Key,Val,Tree) % insert czy enter?
                               end, State#state.agents, Add3),
     {NewAgents,NewDb4b} = lists:foldl(fun(Pid,{Tree,TMPdb4b}) ->
-                                                case gb_trees:is_defined(Pid,Tree) of
-                                                    false ->
-                                                        {Tree,[Pid|TMPdb4b]};
-                                                    true ->
-                                                        {gb_trees:delete(Pid,Tree),TMPdb4b}
-                                                end
-                                        end, {Population1,Db4b}, Del3),
-
+                                              case gb_trees:is_defined(Pid,Tree) of
+                                                  false ->
+                                                      {Tree,[Pid|TMPdb4b]};
+                                                  true ->
+                                                      {gb_trees:delete(Pid,Tree),TMPdb4b}
+                                              end
+                                      end, {Population1,Db4b}, Del3),
+    io:format("Broke: ~p",[length(NewDb4b) - length(Db4b)]),
     {SumVar,MinVar,VarVar} = misc_util:diversity([Val || {_Key,Val} <- gb_trees:to_list(NewAgents)]),
     logger:logLocalStats(parallel,fitness,Best),
     logger:logLocalStats(parallel,population,gb_trees:size(NewAgents)),
