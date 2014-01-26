@@ -72,10 +72,10 @@ close(Pid) ->
 init([King]) ->
     misc_util:seedRandom(),
     process_flag(trap_exit, true),
-    {ok,Ring} = ring:start_link(self()),
-    {ok,Bar} = bar:start_link(self()),
-    {ok,Port} = port:start_link(self(),King),
     {ok,Cemetery} = cemetery:start_link(self()),
+    {ok,Ring} = ring:start_link(self()),
+    {ok,Port} = port:start_link(self(),King),
+    {ok,Bar} = bar:start_link(self()),
     Arenas = [Ring,Bar,Port,Cemetery],
     io_util:printArenas(Arenas),
     {ok,#state{arenas = Arenas},config:supervisorTimeout()}.
@@ -106,7 +106,7 @@ handle_call({immigrant,AgentFrom,Agent},_From,State) ->
                                      {stop,term(),state()}.
 handle_cast({reportFromArena,Arena,Value},State) ->
     Dict = State#state.reports,
-    error = dict:find(Arena,Dict), % debug
+        error = dict:find(Arena,Dict), % debug - tu wyskakuje error!
     NewDict = dict:store(Arena,Value,Dict),
     case dict:size(NewDict) of
         4 ->
@@ -159,14 +159,33 @@ logStats(Dict,State) ->
     {Best,Reproductions} = dict:fetch(reproduction,Dict),
     Add1 = Reproductions ++ Immigrations,
     Del1 = Deaths ++ Emigrations,
-    Db4b = State#state.db4b -- [X || X <- State#state.db4b, lists:keymember(X,1,Add1)],
-    Add2 = lists:filter(fun({Pid,_Agent}) ->
-                                not lists:member(Pid,State#state.db4b)
-                        end,Add1),
-    io:format(" Fixed: ~p~n",[length(Add1) - length(Add2)]),
-    Overlap = [X || {X,_} <- Add2, lists:member(X,Del1)],
-    Add3 = [{Pid,Agent} || {Pid,Agent} <- Add2, not lists:member(Pid,Overlap)], %% dobrze byloby moc to wywalic
-    Del3 = Del1 -- Overlap, %% dobrze byloby moc to wywalic
+    Db4b = State#state.db4b -- [Pid || {Pid,_} <- Add1],
+    Add2 = lists:foldl(fun(Pid,List) ->
+                               lists:keydelete(Pid,1,List)
+                       end,Add1,State#state.db4b),
+    Add3 = lists:foldl(fun(Pid,List) ->
+                               lists:keydelete(Pid,1,List)
+                       end,Add2,Del1),
+    Del3 = Del1 -- [X || {X,_} <- Add2],
+    case lists:sort([P || {P,_} <- Add3]) == lists:usort([P || {P,_} <- Add3]) of
+        true ->
+            nothing;
+        false ->
+                error("DUPLICATE!")
+%%             Dupl = lists:sort([P || {P,_} <- Add3]),
+%%             BezDupl = lists:usort([P || {P,_} <- Add3]),
+%%             Diff = Dupl -- BezDupl,
+%%             logger:logLocalStats(parallel,fitness,Diff),
+%%             [Our|_] = Diff,
+%%             logger:logLocalStats(parallel,population,[lists:member(Our,Del1),lists:member(Our,Del3)]),
+%%             logger:logLocalStats(parallel,stddevvar,{[X || {X,_} <- lists:filter(fun({Pid,_}) -> Pid == Our end,Add1)],
+%%                                                      lists:filter(fun(Pid) -> Pid == Our end,Del1),
+%%                                                      lists:filter(fun(Pid) -> Pid == Our end,Del3)}),
+%%             logger:logLocalStats(parallel,stddevmin,[State#state.db4b,Db4b])
+    end,
+    true = lists:all(fun({Pid,_}) ->
+                             not gb_trees:is_defined(Pid,State#state.agents)
+                     end,Add3),
     Population1 = lists:foldl(fun({Key,Val},Tree) ->
                                       gb_trees:insert(Key,Val,Tree) % insert czy enter?
                               end, State#state.agents, Add3),
@@ -178,7 +197,6 @@ logStats(Dict,State) ->
                                                       {gb_trees:delete(Pid,Tree),TMPdb4b}
                                               end
                                       end, {Population1,Db4b}, Del3),
-    io:format("Broke: ~p",[length(NewDb4b) - length(Db4b)]),
     {SumVar,MinVar,VarVar} = misc_util:diversity([Val || {_Key,Val} <- gb_trees:to_list(NewAgents)]),
     logger:logLocalStats(parallel,fitness,Best),
     logger:logLocalStats(parallel,population,gb_trees:size(NewAgents)),
