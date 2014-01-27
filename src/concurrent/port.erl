@@ -51,7 +51,7 @@ close(Pid) ->
                       {ok,state(),non_neg_integer()}.
 init([Supervisor,{Ring,Bar,Cemetery}]) ->
     misc_util:seedRandom(),
-    topology_conc:helloPort(),
+    conc_topology:helloPort(),
     timer:send_interval(config:writeInterval(),timer),
     {ok, #state{mySupervisor = Supervisor, arenas = [Ring,Bar,self(),Cemetery],  lastLog = os:timestamp()}}.
 
@@ -68,7 +68,7 @@ handle_call({emigrate,_Agent},{Pid,_},cleaning) ->
 
 handle_call({emigrate,Agent}, From, State) ->
     {HisPid, _} = From,
-    topology_conc:emigrant({Agent,From}),
+    conc_topology:emigrant({Agent,From}),
     %%     {NewCounter,NewLog} = misc_util:arenaReport(State#state.mySupervisor,migration,State#state.lastLog,State#state.counter + 1),
     %%     {noreply,State#state{counter = NewCounter, lastLog = NewLog}}. todo Trzeba odkomentowac dla wysokiej migrationRate
     Emigrants = State#state.emigrants,
@@ -98,6 +98,7 @@ handle_info(timer,cleaning) ->
 
 handle_info(timer,State) ->
     conc_supervisor:reportFromArena(State#state.mySupervisor,migration,{State#state.emigrants,State#state.immigrants}), % Dla wysokiej migrationRate trzeba sprawdzac kiedy byl ostatni log
+    conc_logger:log(migration,{State#state.emigrants,State#state.immigrants}),
     {noreply,State#state{emigrants = [], immigrants = []},config:arenaTimeout()}.
 
 

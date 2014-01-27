@@ -13,7 +13,7 @@
 start(ProblemSize,Time,Islands,Topology,Path) ->
     io:format("{Model=Concurrent,ProblemSize=~p,Time=~p,Islands=~p,Topology=~p}~n",[ProblemSize,Time,Islands,Topology]),
     misc_util:clearInbox(),
-    topology_conc:start_link(self(),Islands,Topology),
+    conc_topology:start_link(self(),Islands,Topology),
     Supervisors = [conc_supervisor:start() || _ <- lists:seq(1,Islands)],
     logger:start_link({parallel,Supervisors},Path),
     receive
@@ -23,7 +23,7 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
     timer:sleep(Time),
     [conc_supervisor:close(Pid) || Pid <- Supervisors],
     logger:close(),
-    topology_conc:close().
+    conc_topology:close().
 
 -spec start([string()]) -> ok.
 start([A,B,C,D,E]) ->

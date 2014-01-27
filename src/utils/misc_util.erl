@@ -80,6 +80,15 @@ arenaReport(Pid,Arena,LastLog,Value) ->
     if
         Diff >= IntervalInMicros ->
             conc_supervisor:reportFromArena(Pid,Arena,Value),
+            case Arena of
+                reproduction ->
+                    {Best,Reproductions} = Value,
+                    conc_logger:log(Arena,{Best,length(Reproductions)});
+                death ->
+                    conc_logger:log(Arena,length(Value));
+                fight ->
+                    conc_logger:log(Arena,Value)
+            end,
             {0,Now};
         true ->
             {Value,LastLog}
