@@ -79,15 +79,15 @@ arenaReport(Pid,Arena,LastLog,Value) ->
     IntervalInMicros = config:writeInterval()*1000,
     if
         Diff >= IntervalInMicros ->
-            conc_supervisor:reportFromArena(Pid,Arena,Value),
+%%             conc_supervisor:reportFromArena(Pid,Arena,Value),
             case Arena of
                 reproduction ->
                     {Best,Reproductions} = Value,
-                    conc_logger:log(Arena,{Best,length(Reproductions)});
+                    conc_logger:log(Arena,Pid,{Best,length(Reproductions)});
                 death ->
-                    conc_logger:log(Arena,length(Value));
+                    conc_logger:log(Arena,Pid,length(Value));
                 fight ->
-                    conc_logger:log(Arena,Value)
+                    conc_logger:log(Arena,Pid,Value)
             end,
             {0,Now};
         true ->

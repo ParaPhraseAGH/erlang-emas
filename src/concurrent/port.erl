@@ -97,8 +97,8 @@ handle_info(timer,cleaning) ->
     {noreply,cleaning,config:writeInterval()/2};
 
 handle_info(timer,State) ->
-    conc_supervisor:reportFromArena(State#state.mySupervisor,migration,{State#state.emigrants,State#state.immigrants}), % Dla wysokiej migrationRate trzeba sprawdzac kiedy byl ostatni log
-    conc_logger:log(migration,{State#state.emigrants,State#state.immigrants}),
+%%     conc_supervisor:reportFromArena(State#state.mySupervisor,migration,{State#state.emigrants,State#state.immigrants}), % Dla wysokiej migrationRate trzeba sprawdzac kiedy byl ostatni log
+    conc_logger:log(migration,State#state.mySupervisor,{length(State#state.emigrants),length(State#state.immigrants)}),
     {noreply,State#state{emigrants = [], immigrants = []},config:arenaTimeout()}.
 
 

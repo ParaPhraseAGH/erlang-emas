@@ -6,7 +6,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/0, go/2, getArenas/1, newAgent/2, sendAgents/2, reportFromArena/3, close/1]).
+-export([start/0, go/2, getArenas/1, newAgent/2, reportFromArena/3, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -33,11 +33,6 @@ go(Pid,ProblemSize) ->
 getArenas(Pid) ->
     gen_server:call(Pid,getArenas).
 
-%% @doc Funkcja za pomoca ktorej mozna wyslac supervisorowi liste nowych agentow.
--spec sendAgents(pid(),[agent()]) -> ok.
-sendAgents(Pid,Agents) ->
-    gen_server:cast(Pid,{newAgents,Agents}).
-
 -spec reportFromArena(pid(),fight | reproduction | migration | death, term()) -> ok.
 reportFromArena(Pid,Arena,Value) ->
     gen_server:cast(Pid,{reportFromArena,Arena,Value}).
@@ -60,14 +55,13 @@ close(Pid) ->
                       {ok,state(),non_neg_integer()}.
 init([]) ->
     misc_util:seedRandom(),
-    process_flag(trap_exit, true),
     {ok,Cemetery} = cemetery:start_link(self()),
     {ok,Ring} = ring:start_link(self()),
     {ok,Bar} = bar:start_link(self()),
     {ok,Port} = port:start_link(self(),{Ring,Bar,Cemetery}),
     Arenas = [Ring,Bar,Port,Cemetery],
     io_util:printArenas(Arenas),
-    {ok,#state{arenas = Arenas},config:supervisorTimeout()}.
+    {ok,#state{arenas = Arenas}}.
 
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -77,31 +71,30 @@ init([]) ->
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
 handle_call(getArenas,_From,State) ->
-    {reply,State#state.arenas,State,config:supervisorTimeout()}.
+    {reply,State#state.arenas,State}.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
 handle_cast({reportFromArena,Arena,Value},State) ->
-%%     io:format("~p~n",[Arena]),
     Dict = State#state.reports,
-    error = dict:find(Arena,Dict), % debug - tu wyskakuje error!
+%%     error = dict:find(Arena,Dict), % debug - tu wyskakuje error!
     NewDict = dict:store(Arena,Value,Dict),
     case dict:size(NewDict) of
         4 ->
             {Agents,Db4b} = logStats(NewDict,State),
             {noreply,State#state{reports = dict:new(), agents = Agents, db4b = Db4b},config:supervisorTimeout()};
         _ ->
-            {noreply,State#state{reports = NewDict},config:supervisorTimeout()}
+            {noreply,State#state{reports = NewDict}}
     end;
 
 handle_cast({newAgent,Pid,Agent},State) ->
     NewPopulation = gb_trees:insert(Pid,Agent,State#state.agents),
-    {noreply,State#state{agents = NewPopulation},config:supervisorTimeout()};
+    {noreply,State#state{agents = NewPopulation}};
 
 handle_cast({go,ProblemSize},State) ->
     [spawn(agent,start,[self(),ProblemSize|State#state.arenas]) || _ <- lists:seq(1,config:populationSize())],
-    {noreply,State,config:supervisorTimeout()};
+    {noreply,State};
 
 handle_cast(close,State) ->
     {stop,normal,State}.
@@ -134,7 +127,7 @@ code_change(_OldVsn,State,_Extra) ->
 logStats(Dict,State) ->
     Deaths = dict:fetch(death,Dict),
     {Emigrations,Immigrations} = dict:fetch(migration,Dict),
-    {Best,Reproductions} = dict:fetch(reproduction,Dict),
+    {_Best,Reproductions} = dict:fetch(reproduction,Dict),
     Add1 = Reproductions ++ Immigrations,
     Del1 = Deaths ++ Emigrations,
     Db4b = State#state.db4b -- [Pid || {Pid,_} <- Add1],
@@ -150,16 +143,6 @@ logStats(Dict,State) ->
             nothing;
         false ->
             error("DUPLICATE!")
-            %%             Dupl = lists:sort([P || {P,_} <- Add3]),
-            %%             BezDupl = lists:usort([P || {P,_} <- Add3]),
-            %%             Diff = Dupl -- BezDupl,
-            %%             logger:logLocalStats(parallel,fitness,Diff),
-            %%             [Our|_] = Diff,
-            %%             logger:logLocalStats(parallel,population,[lists:member(Our,Del1),lists:member(Our,Del3)]),
-            %%             logger:logLocalStats(parallel,stddevvar,{[X || {X,_} <- lists:filter(fun({Pid,_}) -> Pid == Our end,Add1)],
-            %%                                                      lists:filter(fun(Pid) -> Pid == Our end,Del1),
-            %%                                                      lists:filter(fun(Pid) -> Pid == Our end,Del3)}),
-            %%             logger:logLocalStats(parallel,stddevmin,[State#state.db4b,Db4b])
     end,
     true = lists:all(fun({Pid,_}) ->
                              not gb_trees:is_defined(Pid,State#state.agents)
@@ -176,13 +159,13 @@ logStats(Dict,State) ->
                                               end
                                       end, {Population1,Db4b}, Del3),
     {SumVar,MinVar,VarVar} = misc_util:diversity([Val || {_Key,Val} <- gb_trees:to_list(NewAgents)]),
-    logger:logLocalStats(parallel,fitness,Best),
-    logger:logLocalStats(parallel,population,gb_trees:size(NewAgents)),
-    logger:logLocalStats(parallel,stddevsum,SumVar),
-    logger:logLocalStats(parallel,stddevmin,MinVar),
-    logger:logLocalStats(parallel,stddevvar,VarVar),
-    logger:logGlobalStats(parallel,[{death,length(Deaths)},
-                                    {fight,dict:fetch(fight,Dict)},
-                                    {reproduction,length(Reproductions)},
-                                    {migration,length(Emigrations)}]),
+%%     logger:logLocalStats(parallel,fitness,Best),
+%%     logger:logLocalStats(parallel,population,gb_trees:size(NewAgents)),
+%%     logger:logLocalStats(parallel,stddevsum,SumVar),
+%%     logger:logLocalStats(parallel,stddevmin,MinVar),
+%%     logger:logLocalStats(parallel,stddevvar,VarVar),
+%%     logger:logGlobalStats(parallel,[{death,length(Deaths)},
+%%                                     {fight,dict:fetch(fight,Dict)},
+%%                                     {reproduction,length(Reproductions)},
+%%                                     {migration,length(Emigrations)}]),
     {gb_trees:balance(NewAgents),NewDb4b}.

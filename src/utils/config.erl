@@ -29,7 +29,7 @@ mutationChance() -> 0.75.
 %% @doc Prawdopodobienstwo skrzyzowania osobnikow
 recombinationChance() -> 0.3.
 %% @doc Prawdopodobienstwo migracji dowolnego osobnika o niezerowej energii na inna wyspe
-migrationProbability() -> 0.
+migrationProbability() -> 0.0001.
 
 %% @doc Liczba agentow, na ktorych czeka ring aby rozpoczac walke (kazdy z kazdym)
 fightNumber() -> 2.

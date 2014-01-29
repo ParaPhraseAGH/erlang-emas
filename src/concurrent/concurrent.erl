@@ -15,14 +15,14 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
     misc_util:clearInbox(),
     conc_topology:start_link(self(),Islands,Topology),
     Supervisors = [conc_supervisor:start() || _ <- lists:seq(1,Islands)],
-    logger:start_link({parallel,Supervisors},Path),
+    conc_logger:start_link(Supervisors,Path),
     receive
         ready ->
             trigger(Supervisors,ProblemSize)
     end,
     timer:sleep(Time),
     [conc_supervisor:close(Pid) || Pid <- Supervisors],
-    logger:close(),
+    conc_logger:close(),
     conc_topology:close().
 
 -spec start([string()]) -> ok.
