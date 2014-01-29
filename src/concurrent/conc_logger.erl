@@ -43,7 +43,6 @@ init([Pids, Path]) ->
                   X -> X
               end,
     timer:send_interval(config:writeInterval(),timer),
-    self() ! sleep,
     FDs = prepareParDictionary(Pids, dict:new(), NewPath),
     Counters = createCounter(-999999.9,config:populationSize()*length(Pids)),
     {ok, #state{fds = FDs, counters = Counters}}.
@@ -90,9 +89,6 @@ handle_cast(close, State) ->
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_info(sleep,State) ->
-    timer:sleep(100),
-    {noreply,State};
 handle_info(timer, State) ->
     Dict = State#state.counters,
     FDs = State#state.fds,
