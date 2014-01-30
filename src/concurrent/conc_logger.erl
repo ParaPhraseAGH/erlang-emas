@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/2, log/3, close/0]).
+-export([start_link/0, init/2, log/3, close/0]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
@@ -15,9 +15,13 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start_link([pid()], string()) -> {ok, pid()}.
-start_link(Pids, Path) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [Pids, Path], []).
+-spec start_link() -> {ok, pid()}.
+start_link() ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+-spec init([pid()],string()) -> ok.
+init(Pids,Path) ->
+    gen_server:cast(whereis(?MODULE),{init,Pids,Path}).
 
 -spec log(atom(),pid(),term()) -> ok.
 log(Arena,Supervisor,Value) ->
@@ -31,21 +35,13 @@ close() ->
 %%% Callbacks
 %%%===================================================================
 
--record(state, {fds :: dict(),
-                counters = dict:new() :: dict(),
-                n = 0 :: non_neg_integer()}).
+-record(state, {fds = undefined :: dict(),
+                counters = undefined :: dict()}).
 -type state() :: #state{}.
 
 -spec init(term()) -> {ok,state()}.
-init([Pids, Path]) ->
-    NewPath = case Path of
-                  "standard_io" -> standard_io;
-                  X -> X
-              end,
-    timer:send_interval(config:writeInterval(),timer),
-    FDs = prepareParDictionary(Pids, dict:new(), NewPath),
-    Counters = createCounter(Pids),
-    {ok, #state{fds = FDs, counters = Counters}}.
+init([]) ->
+    {ok, #state{}}.
 
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -84,6 +80,16 @@ handle_cast({report,Arena,Supervisor,Value},State) ->
     LocalDict = dict:fetch(Supervisor,State#state.counters),
     AddValue = dict:update_counter(Arena,Value,LocalDict),
     {noreply,State#state{counters = dict:store(Supervisor,AddValue,State#state.counters)}};
+
+handle_cast({init,Pids,Path},State) ->
+    NewPath = case Path of
+                  "standard_io" -> standard_io;
+                  X -> X
+              end,
+    timer:send_interval(config:writeInterval(),timer),
+    FDs = prepareParDictionary(Pids, dict:new(), NewPath),
+    Counters = createCounter(Pids),
+    {noreply,State#state{counters = Counters, fds = FDs}};
 
 handle_cast(close, State) ->
     {stop, normal, State}.

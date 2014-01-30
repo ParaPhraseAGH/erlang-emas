@@ -14,8 +14,9 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
     io:format("{Model=Concurrent,ProblemSize=~p,Time=~p,Islands=~p,Topology=~p}~n",[ProblemSize,Time,Islands,Topology]),
     misc_util:clearInbox(),
     conc_topology:start_link(self(),Islands,Topology),
+    conc_logger:start_link(),
     Supervisors = [conc_supervisor:start() || _ <- lists:seq(1,Islands)],
-    conc_logger:start_link(Supervisors,Path),
+    conc_logger:init(Supervisors,Path),
     receive
         ready ->
             trigger(Supervisors,ProblemSize)
