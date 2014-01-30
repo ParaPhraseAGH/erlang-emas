@@ -101,7 +101,7 @@ handle_info(timer, State) ->
               Pid,
               fitness,
               dict:fetch(fitness,dict:fetch(Pid,BigDict))) || Pid <- dict:fetch_keys(BigDict)],
-    NewBigDict = lists:foldl(fun({Pid,LocalDict},NewDict) ->
+    NewBigDict = dict:fold(fun(Pid,LocalDict,NewDict) ->
                                      OldPopulation = dict:fetch(population,LocalDict),
                                      NewPopulation = OldPopulation + dict:fetch(reproduction,LocalDict) + dict:fetch(immigration,LocalDict)
                                          - dict:fetch(death,LocalDict) - dict:fetch(emigration,LocalDict),
@@ -110,7 +110,7 @@ handle_info(timer, State) ->
                                                                      dict:store(Stat,0,TMPDict)
                                                              end,UpdatePopulation,[reproduction,death,fight,emigration,immigration]),
                                      dict:store(Pid,WithZeros,NewDict)
-                             end,dict:new(),dict:to_list(BigDict)),
+                             end,dict:new(),BigDict),
     [logLocal(FDs,
               Pid,
               population,
@@ -134,7 +134,7 @@ gatherStats(BigDict) ->
     Acc0 = lists:foldl(fun(Stat,Dict) ->
                                dict:store(Stat,0,Dict)
                        end,dict:new(),?GLOBAL_STATS),
-    lists:foldl(fun({_Pid,LocalDict},Acc) ->
+    dict:fold(fun(_Pid,LocalDict,Acc) ->
                         lists:foldl(fun(Stat,InnerAcc) ->
                                             case Stat of
                                                 migration ->
@@ -143,7 +143,7 @@ gatherStats(BigDict) ->
                                                     dict:update_counter(Stat,dict:fetch(Stat,LocalDict),InnerAcc)
                                             end
                                     end,Acc,?GLOBAL_STATS)
-                end,Acc0,dict:to_list(BigDict)).
+                end,Acc0,BigDict).
 
 -spec createCounter([pid()]) -> dict().
 createCounter(Pids) ->

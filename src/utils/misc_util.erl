@@ -87,7 +87,10 @@ arenaReport(Pid,Arena,LastLog,Value) ->
                 death ->
                     conc_logger:log(Arena,Pid,length(Value));
                 fight ->
-                    conc_logger:log(Arena,Pid,Value)
+                    conc_logger:log(Arena,Pid,Value);
+                migration ->
+                    {Emigrants,Immigrants} = Value,
+                    conc_logger:log(Arena,Pid,{length(Emigrants),length(Immigrants)})
             end,
             {0,Now};
         true ->

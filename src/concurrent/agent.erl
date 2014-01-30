@@ -46,5 +46,5 @@ loop(Agent,Arenas) ->
             NewEnergy = ring:call(Ring,Agent),
             loop({Solution,Fitness,NewEnergy},Arenas);
         migration ->
-            loop(Agent,port:call(Port,Agent))
+            loop(Agent,port:emigrate(Port,Agent))
     end.
