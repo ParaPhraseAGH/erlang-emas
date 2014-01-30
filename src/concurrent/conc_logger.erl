@@ -9,8 +9,8 @@
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--define(LOCAL_STATS, []).
--define(GLOBAL_STATS, [death, fight, reproduction, migration, fitness, population]).
+-define(LOCAL_STATS, [fitness, population]).
+-define(GLOBAL_STATS, [death, fight, reproduction, migration]).
 
 %% ====================================================================
 %% API functions
@@ -44,7 +44,7 @@ init([Pids, Path]) ->
               end,
     timer:send_interval(config:writeInterval(),timer),
     FDs = prepareParDictionary(Pids, dict:new(), NewPath),
-    Counters = createCounter(-999999.9,config:populationSize()*length(Pids)),
+    Counters = createCounter(Pids),
     {ok, #state{fds = FDs, counters = Counters}}.
 
 
@@ -62,25 +62,28 @@ handle_call(_Request, _From, State) ->
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
 
-handle_cast({report,migration,_Supervisor,{Emigrants,Immigrants}},State) ->
-    AddImmigrants = dict:update_counter(immigration,Immigrants,State#state.counters),
+handle_cast({report,migration,Supervisor,{Emigrants,Immigrants}},State) ->
+    LocalDict = dict:fetch(Supervisor,State#state.counters),
+    AddImmigrants = dict:update_counter(immigration,Immigrants,LocalDict),
     AddEmigrants = dict:update_counter(emigration,Emigrants,AddImmigrants),
-    {noreply,State#state{counters = AddEmigrants}};
+    {noreply,State#state{counters = dict:store(Supervisor,AddEmigrants,State#state.counters)}};
 
-handle_cast({report,reproduction,_Supervisor,{BestFitness,Reproductions}},State) ->
-    AddReproductions = dict:update_counter(reproduction,Reproductions,State#state.counters),
-    OldFitness = dict:fetch(fitness,State#state.counters),
+handle_cast({report,reproduction,Supervisor,{BestFitness,Reproductions}},State) ->
+    LocalDict = dict:fetch(Supervisor,State#state.counters),
+    AddReproductions = dict:update_counter(reproduction,Reproductions,LocalDict),
+    OldFitness = dict:fetch(fitness,LocalDict),
     UpdateFitness = case BestFitness > OldFitness of
                         true ->
                             dict:store(fitness,BestFitness,AddReproductions);
                         false ->
                             AddReproductions
                     end,
-    {noreply,State#state{counters = UpdateFitness}};
+    {noreply,State#state{counters = dict:store(Supervisor,UpdateFitness,State#state.counters)}};
 
-handle_cast({report,Arena,_Supervisor,Value},State) ->
-    AddValue = dict:update_counter(Arena,Value,State#state.counters),
-    {noreply,State#state{counters = AddValue}};
+handle_cast({report,Arena,Supervisor,Value},State) ->
+    LocalDict = dict:fetch(Supervisor,State#state.counters),
+    AddValue = dict:update_counter(Arena,Value,LocalDict),
+    {noreply,State#state{counters = dict:store(Supervisor,AddValue,State#state.counters)}};
 
 handle_cast(close, State) ->
     {stop, normal, State}.
@@ -90,15 +93,29 @@ handle_cast(close, State) ->
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
 handle_info(timer, State) ->
-    Dict = State#state.counters,
+    BigDict = State#state.counters,
+    Acc = gatherStats(BigDict),
     FDs = State#state.fds,
-    [logGlobal(FDs,X,dict:fetch(X,Dict)) || X <- [reproduction,fight,death,fitness]],
-    Migration = (dict:fetch(emigration,Dict) + dict:fetch(immigration,Dict)) div 2,
-    logGlobal(FDs,migration,Migration),
-    NewPopulation = dict:fetch(reproduction,Dict) - dict:fetch(death,Dict) + dict:fetch(population,Dict),
-    logGlobal(FDs,population,NewPopulation),
-    Best = dict:fetch(fitness,Dict),
-    {noreply, State#state{counters = createCounter(Best,NewPopulation)}}.
+    [logGlobal(FDs,X,dict:fetch(X,Acc)) || X <- ?GLOBAL_STATS],
+    [logLocal(FDs,
+              Pid,
+              fitness,
+              dict:fetch(fitness,dict:fetch(Pid,BigDict))) || Pid <- dict:fetch_keys(BigDict)],
+    NewBigDict = lists:foldl(fun({Pid,LocalDict},NewDict) ->
+                                     OldPopulation = dict:fetch(population,LocalDict),
+                                     NewPopulation = OldPopulation + dict:fetch(reproduction,LocalDict) + dict:fetch(immigration,LocalDict)
+                                         - dict:fetch(death,LocalDict) - dict:fetch(emigration,LocalDict),
+                                     UpdatePopulation = dict:store(population,NewPopulation,LocalDict),
+                                     WithZeros = lists:foldl(fun(Stat,TMPDict) ->
+                                                                     dict:store(Stat,0,TMPDict)
+                                                             end,UpdatePopulation,[reproduction,death,fight,emigration,immigration]),
+                                     dict:store(Pid,WithZeros,NewDict)
+                             end,dict:new(),dict:to_list(BigDict)),
+    [logLocal(FDs,
+              Pid,
+              population,
+              dict:fetch(population,dict:fetch(Pid,NewBigDict))) || Pid <- dict:fetch_keys(NewBigDict)],
+    {noreply, State#state{counters = NewBigDict}}.
 
 -spec terminate(term(),state()) -> no_return().
 terminate(_Reason, State) ->
@@ -112,17 +129,32 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
--spec createCounter(float(),integer()) -> dict().
-createCounter(Fitness,Population) ->
-    lists:foldl(fun({Key,Val},Dict) ->
-                        dict:store(Key,Val,Dict)
-                end,dict:new(),[{reproduction,0},
-                                {death,0},
-                                {emigration,0},
-                                {immigration,0},
-                                {fight,0},
-                                {population,Population},
-                                {fitness,Fitness}]).
+-spec gatherStats(dict()) -> dict().
+gatherStats(BigDict) ->
+    Acc0 = lists:foldl(fun(Stat,Dict) ->
+                               dict:store(Stat,0,Dict)
+                       end,dict:new(),?GLOBAL_STATS),
+    lists:foldl(fun({_Pid,LocalDict},Acc) ->
+                        lists:foldl(fun(Stat,InnerAcc) ->
+                                            case Stat of
+                                                migration ->
+                                                    dict:update_counter(migration,dict:fetch(emigration,LocalDict),InnerAcc);
+                                                _ ->
+                                                    dict:update_counter(Stat,dict:fetch(Stat,LocalDict),InnerAcc)
+                                            end
+                                    end,Acc,?GLOBAL_STATS)
+                end,Acc0,dict:to_list(BigDict)).
+
+-spec createCounter([pid()]) -> dict().
+createCounter(Pids) ->
+    BasicStat = lists:foldl(fun(Stat,Dict) ->
+                                    dict:store(Stat,0,Dict)
+                            end,dict:new(),[reproduction,fight,death,emigration,immigration]),
+    WithFitness = dict:store(fitness,-99999.9,BasicStat),
+    IslandDict = dict:store(population,config:populationSize(),WithFitness),
+    lists:foldl(fun(Pid,Dict) ->
+                        dict:store(Pid,IslandDict,Dict)
+                end,dict:new(),Pids).
 
 %% @doc Tworzy duzy slownik z mniejszymi slownikami deskryptorow dla kazdej z wysp dla modelow niesekwencyjnych
 -spec prepareParDictionary([pid()], dict(), string()) -> dict().
@@ -146,23 +178,14 @@ prepareParDictionary([H|T], Dict, Path) ->
 createFDs(standard_io, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         dict:store(Atom, standard_io, Dict)
-                end, InitDict,
-                Files);
+                end, InitDict, Files);
 
 createFDs(Path, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         Filename = atom_to_list(Atom) ++ ".txt",
                         {ok, Descriptor} = file:open(filename:join([Path, Filename]), [append, delayed_write, raw]),
                         dict:store(Atom, Descriptor, Dict)
-                end, InitDict,
-                Files).
-
--spec logList(atom(), pos_integer(), [term()], dict()) -> ok.
-logList(_, _, [], _) ->
-    ok;
-logList(Stat, Index, [H|T], Dict) ->
-    logLocal(Dict, Index, Stat, H),
-    logList(Stat, Index + 1, T, Dict).
+                end, InitDict, Files).
 
 %% @doc Dokonuje buforowanego zapisu do pliku lokalnej statystyki. W argumencie podany glowny slownik, klucz, nazwa statystyki i wartosc do wpisania.
 -spec logLocal(dict(), term(), atom(), term()) -> ok.
@@ -184,21 +207,3 @@ closeFiles(Dict) ->
          {Id, FD} when is_atom(Id) -> file:close(FD);
          {_Id, D} -> [file:close(FD) || {_Stat, FD} <- dict:to_list(D)]
      end || X <- dict:to_list(Dict)].
-
--spec addCounters([tuple()], [tuple()]) -> [tuple()].
-addCounters([],Other) ->
-    Other;
-
-addCounters(Other,[]) ->
-    Other;
-
-addCounters(L1,L2) ->
-    addCounters(L1,L2,[]).
-
--spec addCounters([tuple()], [tuple()], [tuple()]) -> [tuple()].
-addCounters([],_Other,Result) ->
-    Result;
-
-addCounters([{Name,Val1}|T],Other,Result) ->
-    {Name,Val2} = lists:keyfind(Name,1,Other),
-    addCounters(T,Other,[{Name,Val1 + Val2}|Result]).
