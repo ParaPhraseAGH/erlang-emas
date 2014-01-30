@@ -51,7 +51,7 @@ close(Pid) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--record(state, {best = -999999.9 :: float() | islandEmpty,
+-record(state, {%% best = -999999.9 :: float() | islandEmpty,
                 population = config:populationSize() :: pos_integer(),
                 deathCounter = 0 :: non_neg_integer(),
                 reports = dict:new() :: dict(),
@@ -92,18 +92,19 @@ handle_call({immigrant,AgentFrom},_From,State) ->
                                      {stop,term(),state()}.
 handle_cast({newAgents,AgentList},State) ->
     [spawn_link(agent,start,[A|State#state.arenas]) || A <- AgentList],
-    Result = misc_util:result(AgentList),
     NewPopulation = State#state.population + length(AgentList),
-    {noreply,State#state{best = lists:max([Result,State#state.best]), population = NewPopulation},config:supervisorTimeout()};
+    {noreply,State#state{population = NewPopulation},config:supervisorTimeout()};
 handle_cast({reportFromArena,Arena,Value},State) ->
     Dict = State#state.reports,
     NewDict = dict:store(Arena,Value,Dict),
     case dict:size(NewDict) of
         3 ->
+            {Best,Reproductions} = dict:fetch(reproduction,NewDict),
             logger:logGlobalStats(parallel,[{death,State#state.deathCounter},
                                             {fight,dict:fetch(fight,NewDict)},
-                                            {reproduction,dict:fetch(reproduction,NewDict)},
+                                            {reproduction,Reproductions},
                                             {migration,dict:fetch(migration,NewDict)}]),
+            logger:logLocalStats(parallel,fitness,Best),
             {noreply,State#state{reports = dict:new(), deathCounter = 0},config:supervisorTimeout()};
         _ ->
             {noreply,State#state{reports = NewDict},config:supervisorTimeout()}
@@ -133,7 +134,6 @@ handle_info({'EXIT',Pid,Reason},State) ->
             {noreply,State#state{population = Population - 1},config:supervisorTimeout()}
     end;
 handle_info(write,State) ->
-    logger:logLocalStats(parallel,fitness,State#state.best),
     logger:logLocalStats(parallel,population,State#state.population),
     {noreply,State,config:supervisorTimeout()};
 handle_info(timeout,State) ->

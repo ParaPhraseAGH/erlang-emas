@@ -128,13 +128,11 @@ find(Elem,List) ->
 
 %% @doc Funkcja okreslajaca najlepszy wynik na podstawie przeslanej listy agentow
 -spec result([agent()]) -> float() | islandEmpty.
+result([]) ->
+    islandEmpty;
+
 result(Agents) ->
-    case Agents of
-        [] ->
-            islandEmpty;
-        _ ->
-            lists:max([ Fitness || {_ ,Fitness, _} <- Agents])
-    end.
+    lists:max([ Fitness || {_ ,Fitness, _} <- Agents]).
 
 -spec seedRandom() -> {integer(),integer(),integer()}.
 seedRandom() ->
