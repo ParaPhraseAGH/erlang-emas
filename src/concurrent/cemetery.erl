@@ -5,12 +5,8 @@
 -export([start_link/1, start/1, cast/1, close/1]).
 
 %% gen_server callbacks
--export([init/1,
-         handle_call/3,
-         handle_cast/2,
-         handle_info/2,
-         terminate/2,
-         code_change/3]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+         terminate/2, code_change/3]).
 
 -record(state, {supervisor :: pid(),
                 deaths = [] :: [pid()],
@@ -20,10 +16,9 @@
 %%% API
 %%%===================================================================
 
--spec start_link(pid()) ->
-                        {ok, Pid :: pid()} |
-                        {error, Reason :: term()} |
-                        ignore.
+-spec start_link(pid()) -> {ok, Pid :: pid()} |
+                           {error, Reason :: term()} |
+                           ignore.
 start_link(Supervisor) ->
     gen_server:start_link(?MODULE, [Supervisor], []).
 

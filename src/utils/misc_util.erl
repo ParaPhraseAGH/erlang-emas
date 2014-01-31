@@ -79,20 +79,23 @@ arenaReport(Pid,Arena,LastLog,Value) ->
     IntervalInMicros = config:writeInterval()*1000,
     if
         Diff >= IntervalInMicros ->
-%%             conc_supervisor:reportFromArena(Pid,Arena,Value),
             case Arena of
                 reproduction ->
                     {Best,Reproductions} = Value,
+                    %%             diversity:report(Pid,Arena,Value),
                     conc_logger:log(Arena,Pid,{Best,length(Reproductions)});
                 death ->
+                    %%             diversity:report(Pid,Arena,Value),
                     conc_logger:log(Arena,Pid,length(Value));
                 fight ->
                     conc_logger:log(Arena,Pid,Value);
                 migration ->
+                    %%             diversity:report(Pid,Arena,Value),
                     {Emigrants,Immigrants} = Value,
                     conc_logger:log(Arena,Pid,{length(Emigrants),length(Immigrants)})
             end,
-            {0,Now};
+            {Mega,Sec,Micro} = LastLog,
+            {0,{Mega,Sec+1,Micro}};
         true ->
             {Value,LastLog}
     end.
@@ -183,13 +186,11 @@ find(Elem,List) ->
 
 %% @doc Funkcja okreslajaca najlepszy wynik na podstawie przeslanej listy agentow
 -spec result([agent()]) -> float() | islandEmpty.
+result([]) ->
+    islandEmpty;
+
 result(Agents) ->
-    case Agents of
-        [] ->
-            islandEmpty;
-        _ ->
-            lists:max([ Fitness || {_ ,Fitness, _} <- Agents])
-    end.
+    lists:max([ Fitness || {_ ,Fitness, _} <- Agents]).
 
 -spec seedRandom() -> {integer(),integer(),integer()}.
 seedRandom() ->
