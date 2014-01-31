@@ -51,8 +51,7 @@ close(Pid) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--record(state, {%% best = -999999.9 :: float() | islandEmpty,
-                population = config:populationSize() :: pos_integer(),
+-record(state, {population = config:populationSize() :: pos_integer(),
                 deathCounter = 0 :: non_neg_integer(),
                 reports = dict:new() :: dict(),
                 arenas :: [pid()]}).
