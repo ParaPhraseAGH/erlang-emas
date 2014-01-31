@@ -58,8 +58,10 @@ init([]) ->
     {ok,Cemetery} = cemetery:start_link(self()),
     {ok,Ring} = ring:start_link(self()),
     {ok,Bar} = bar:start_link(self()),
-    {ok,Port} = port:start_link(self(),{Ring,Bar,Cemetery}),
+    {ok,Port} = port:start_link(self()),
     Arenas = [Ring,Bar,Port,Cemetery],
+    bar:giveArenas(Bar,Arenas),
+    port:giveArenas(Port,Arenas),
     io_util:printArenas(Arenas),
     {ok,#state{arenas = Arenas}}.
 

@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/2, start/2, immigrate/2, emigrate/2, close/1]).
+-export([start_link/1, start/2, giveArenas/2, immigrate/2, emigrate/2, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -15,13 +15,17 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start_link(pid(),tuple()) -> {ok,pid()}.
-start_link(Supervisor,Arenas) ->
-    gen_server:start_link(?MODULE, [Supervisor,Arenas], []).
+-spec start_link(pid()) -> {ok,pid()}.
+start_link(Supervisor) ->
+    gen_server:start_link(?MODULE, [Supervisor], []).
 
 -spec start(pid(),[pid()]) -> {ok,pid()}.
 start(Supervisor,Arenas) ->
     gen_server:start(?MODULE, [Supervisor,Arenas], []).
+
+-spec giveArenas(pid(),[pid()]) -> ok.
+giveArenas(Pid,Arenas) ->
+    gen_server:cast(Pid,{arenas,Arenas}).
 
 -spec immigrate(pid(),tuple()) -> ok.
 immigrate(Pid,AgentInfo) ->
@@ -49,11 +53,10 @@ close(Pid) ->
 
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
-init([Supervisor,{Ring,Bar,Cemetery}]) ->
+init([Supervisor]) ->
     misc_util:seedRandom(),
-    conc_topology:helloPort(),
     timer:send_after(config:writeInterval(),timer),
-    {ok, #state{mySupervisor = Supervisor, arenas = [Ring,Bar,self(),Cemetery],  lastLog = os:timestamp()}}.
+    {ok, #state{mySupervisor = Supervisor, lastLog = os:timestamp()}}.
 
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -87,6 +90,10 @@ handle_cast({immigrant,{Agent,From}}, State) ->
     {HisPid, _} = From,
     {noreply,State#state{immigrants = [{HisPid,Agent}|Immigrants], emigrants = Emigrants, lastLog = LastLog},config:arenaTimeout()};
 
+handle_cast({arenas,Arenas}, State) ->
+    conc_topology:helloPort(),
+    {noreply,State#state{arenas = Arenas},config:arenaTimeout()};
+
 handle_cast(close, _State) ->
     {noreply,cleaning,config:arenaTimeout()}.
 
@@ -101,8 +108,6 @@ handle_info(timer,cleaning) ->
     {noreply,cleaning,config:writeInterval()/2};
 
 handle_info(timer,State) ->
-%%     conc_supervisor:reportFromArena(State#state.mySupervisor,migration,{State#state.emigrants,State#state.immigrants}), % Dla wysokiej migrationRate trzeba sprawdzac kiedy byl ostatni log
-%%     conc_logger:log(migration,State#state.mySupervisor,{length(State#state.emigrants),length(State#state.immigrants)}),
     {Emigrants,Immigrants,LastLog} = check(State),
     {noreply,State#state{emigrants = Emigrants, immigrants = Immigrants, lastLog = LastLog},config:arenaTimeout()}.
 

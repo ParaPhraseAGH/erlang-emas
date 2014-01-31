@@ -16,7 +16,7 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
     conc_topology:start_link(self(),Islands,Topology),
     conc_logger:start_link(),
     Supervisors = [conc_supervisor:start() || _ <- lists:seq(1,Islands)],
-    conc_logger:init(Supervisors,Path),
+    conc_logger:initialise(Supervisors,Path),
     receive
         ready ->
             trigger(Supervisors,ProblemSize)

@@ -20,10 +20,10 @@ start(Supervisor,ProblemSize,Ring,Bar,Port,Cemetery) ->
     conc_supervisor:newAgent(Supervisor,Agent),
     loop(Agent,[Ring,Bar,Port,Cemetery]).
 
--spec start(agent(), Supervisor::pid()) -> ok.
-start(Agent,Supervisor) ->
+-spec start(agent(), [pid()]) -> ok.
+start(Agent,Arenas) ->
     random:seed(erlang:now()),
-    loop(Agent,conc_supervisor:getArenas(Supervisor)).
+    loop(Agent,Arenas).
 
 %% ====================================================================
 %% Internal functions

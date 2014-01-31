@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, start/1, call/2, close/1]).
+-export([start_link/1, start/1, giveArenas/2, call/2, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -23,6 +23,10 @@ start_link(Supervisor) ->
 start(Supervisor) ->
     gen_server:start(?MODULE, [Supervisor], []).
 
+-spec giveArenas(pid(),[pid()]) -> ok.
+giveArenas(Pid,Arenas) ->
+    gen_server:cast(Pid,{arenas,Arenas}).
+
 %% @doc Funkcja wysylajaca zgloszenie agenta do baru
 -spec call(pid(),agent()) -> Energy :: integer().
 call(Pid,Agent) ->
@@ -38,6 +42,7 @@ close(Pid) ->
 -record(state, {supervisor :: pid(),
                 waitlist = [] :: [tuple()],
                 newborns = [] :: [pid()],
+                arenas = [] :: [pid()],
                 best = -999999.9 :: float(),
                 lastLog :: erlang:timestamp()}).
 -type state() :: #state{} | cleaning.
@@ -66,7 +71,7 @@ handle_call(Agent1, From1, State) ->
             gen_server:reply(From2,NewEnergy2),
             AgentList = [NewAgent1,NewAgent2],
             NewBest = lists:max([misc_util:result(AgentList),State#state.best]),
-            Pids = [spawn(agent,start,[A,State#state.supervisor]) || A <- AgentList],
+            Pids = [spawn(agent,start,[A,State#state.arenas]) || A <- AgentList],
             NewNewborns = lists:append(State#state.newborns,lists:zip(Pids,AgentList)),
             {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,reproduction,State#state.lastLog,{NewBest,NewNewborns}),
             case NewCounter of
@@ -85,6 +90,10 @@ handle_call(Agent1, From1, State) ->
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
+
+handle_cast({arenas,Arenas}, State) ->
+    {noreply,State#state{arenas = Arenas},config:arenaTimeout()};
+
 handle_cast(close, State) ->
     [gen_server:reply(From,0) || {From,_} <- State#state.waitlist],
     {noreply,cleaning,config:arenaTimeout()}.
@@ -103,7 +112,7 @@ handle_info(timeout,State) ->
             [{_,_,NewEnergy},NewAgent] = evolution:doReproduce({Agent}),
             gen_server:reply(From,NewEnergy),
             NewBest = lists:max([misc_util:result([NewAgent]),State#state.best]),
-            Pid = spawn(agent,start,[NewAgent,State#state.supervisor]),
+            Pid = spawn(agent,start,[NewAgent,State#state.arenas]),
             NewNewborns = [{Pid,NewAgent}|State#state.newborns],
             {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,reproduction,State#state.lastLog,{NewBest,NewNewborns}),
             case NewCounter of
