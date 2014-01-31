@@ -36,6 +36,7 @@ close(Pid) ->
 %% Callbacks
 %% ====================================================================
 -record(state, {supervisor :: pid(),
+                best = -99999.9 :: integer(),
                 waitlist = [] :: [tuple()],
                 counter = 0 :: non_neg_integer(),
                 lastLog :: erlang:timestamp()}).
@@ -63,9 +64,20 @@ handle_call(Agent1, From1, State) ->
             [{_,_,NewEnergy1},{_,_,NewEnergy2},NewAgent1,NewAgent2] = evolution:doReproduce({Agent1,Agent2}),
             gen_server:reply(From1,NewEnergy1),
             gen_server:reply(From2,NewEnergy2),
+            NewBest = case State#state.best < misc_util:result([NewAgent1,NewAgent2]) of
+                          true ->
+                              misc_util:result([NewAgent1,NewAgent2]);
+                          false ->
+                              State#state.best
+                      end,
             conc_supervisor:sendAgents(State#state.supervisor,[NewAgent1,NewAgent2]),
-            {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,reproduction,State#state.lastLog,State#state.counter + 1),
-            {noreply,State#state{waitlist = [], counter = NewCounter, lastLog = NewLog},config:arenaTimeout()}
+            {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,reproduction,State#state.lastLog,{NewBest,State#state.counter + 1}),
+            case NewCounter of
+                0 ->
+                    {noreply,State#state{waitlist = [], counter = 0, lastLog = NewLog, best = NewBest},config:arenaTimeout()};
+                {Fitness,Counter} ->
+                    {noreply,State#state{waitlist = [], counter = Counter, lastLog = NewLog, best = Fitness},config:arenaTimeout()}
+            end
     end.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
