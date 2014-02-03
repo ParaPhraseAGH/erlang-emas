@@ -26,7 +26,7 @@ start(Supervisor) ->
 %% @doc Funkcja wysylajaca zgloszenie agenta do ringu.
 -spec call(pid(),agent()) -> Energy :: integer().
 call(Pid,Agent) ->
-    gen_server:call(Pid,Agent).
+    gen_server:call(Pid,Agent,infinity).
 
 -spec close(pid()) -> ok.
 close(Pid) ->

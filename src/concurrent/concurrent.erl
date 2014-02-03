@@ -22,7 +22,7 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
             trigger(Supervisors,ProblemSize)
     end,
     timer:sleep(Time),
-    [conc_supervisor:close(Pid) || Pid <- Supervisors],
+    [ok = conc_supervisor:close(Pid) || Pid <- Supervisors],
     conc_logger:close(),
     conc_topology:close().
 

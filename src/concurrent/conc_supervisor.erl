@@ -25,7 +25,7 @@ go(Pid,ProblemSize) ->
 
 -spec close(pid()) -> ok.
 close(Pid) ->
-    gen_server:cast(Pid,close).
+    gen_server:call(Pid,close,infinity).
 
 %% ====================================================================
 %% Callbacks
@@ -55,8 +55,13 @@ init([]) ->
                                                     {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
-handle_call(_Request,_From,State) ->
-    {noreply,State}.
+handle_call(close,_From,State) ->
+    [Ring,Bar,Port,Cemetery] = State#state.arenas,
+    port:close(Port),
+    bar:close(Bar),
+    ring:close(Ring),
+    cemetery:close(Cemetery),
+    {stop,normal,ok,State}.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
@@ -64,10 +69,7 @@ handle_call(_Request,_From,State) ->
 
 handle_cast({go,ProblemSize},State) ->
     [spawn(agent,start,[ProblemSize,State#state.arenas]) || _ <- lists:seq(1,config:populationSize())],
-    {noreply,State};
-
-handle_cast(close,State) ->
-    {stop,normal,State}.
+    {noreply,State}.
 
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
@@ -78,12 +80,8 @@ handle_info(timeout,State) ->
 
 
 -spec terminate(term(),state()) -> no_return().
-terminate(_Reason,State) ->
-    [Ring,Bar,Port,Cemetery] = State#state.arenas,
-    port:close(Port),
-    bar:close(Bar),
-    ring:close(Ring),
-    cemetery:close(Cemetery).
+terminate(_Reason,_State) ->
+    ok.
 
 
 -spec code_change(term(),state(),term()) -> {ok, state()}.

@@ -34,7 +34,7 @@ immigrate(Pid,AgentInfo) ->
 %% @doc Funkcja wysylajaca zgloszenie agenta do portu.
 -spec emigrate(pid(),agent()) -> [pid()].
 emigrate(Pid,Agent) ->
-    gen_server:call(Pid,{emigrate,Agent}).
+    gen_server:call(Pid,{emigrate,Agent},infinity).
 
 -spec close(pid()) -> ok.
 close(Pid) ->

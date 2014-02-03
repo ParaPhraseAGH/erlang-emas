@@ -36,7 +36,8 @@ close() ->
 %%%===================================================================
 
 -record(state, {fds = undefined :: dict(),
-                counters = undefined :: dict()}).
+                counters = undefined :: dict(),
+                timeout = infinity :: non_neg_integer() | infinity}).
 -type state() :: #state{}.
 
 -spec init(term()) -> {ok,state()}.
@@ -62,7 +63,7 @@ handle_cast({report,migration,Supervisor,{Emigrants,Immigrants}},State) ->
     LocalDict = dict:fetch(Supervisor,State#state.counters),
     AddImmigrants = dict:update_counter(immigration,Immigrants,LocalDict),
     AddEmigrants = dict:update_counter(emigration,Emigrants,AddImmigrants),
-    {noreply,State#state{counters = dict:store(Supervisor,AddEmigrants,State#state.counters)}};
+    {noreply,State#state{counters = dict:store(Supervisor,AddEmigrants,State#state.counters)},State#state.timeout};
 
 handle_cast({report,reproduction,Supervisor,{BestFitness,Reproductions}},State) ->
     LocalDict = dict:fetch(Supervisor,State#state.counters),
@@ -74,12 +75,12 @@ handle_cast({report,reproduction,Supervisor,{BestFitness,Reproductions}},State) 
                         false ->
                             AddReproductions
                     end,
-    {noreply,State#state{counters = dict:store(Supervisor,UpdateFitness,State#state.counters)}};
+    {noreply,State#state{counters = dict:store(Supervisor,UpdateFitness,State#state.counters)},State#state.timeout};
 
 handle_cast({report,Arena,Supervisor,Value},State) ->
     LocalDict = dict:fetch(Supervisor,State#state.counters),
     AddValue = dict:update_counter(Arena,Value,LocalDict),
-    {noreply,State#state{counters = dict:store(Supervisor,AddValue,State#state.counters)}};
+    {noreply,State#state{counters = dict:store(Supervisor,AddValue,State#state.counters)},State#state.timeout};
 
 handle_cast({init,Pids,Path},State) ->
     NewPath = case Path of
@@ -89,10 +90,11 @@ handle_cast({init,Pids,Path},State) ->
     timer:send_interval(config:writeInterval(),timer),
     FDs = prepareParDictionary(Pids, dict:new(), NewPath),
     Counters = createCounter(Pids),
-    {noreply,State#state{counters = Counters, fds = FDs}};
+    {noreply,State#state{counters = Counters, fds = FDs},State#state.timeout};
 
 handle_cast(close, State) ->
-    {stop, normal, State}.
+    NewTimeout = trunc(config:writeInterval() * 0.9),
+    {noreply, State#state{timeout = NewTimeout},NewTimeout}.
 
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
@@ -121,7 +123,10 @@ handle_info(timer, State) ->
               Pid,
               population,
               dict:fetch(population,dict:fetch(Pid,NewBigDict))) || Pid <- dict:fetch_keys(NewBigDict)],
-    {noreply, State#state{counters = NewBigDict}}.
+    {noreply, State#state{counters = NewBigDict},State#state.timeout};
+
+handle_info(timeout, State) ->
+    {stop,normal,State}.
 
 -spec terminate(term(),state()) -> no_return().
 terminate(_Reason, State) ->

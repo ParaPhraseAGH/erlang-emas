@@ -36,7 +36,7 @@ close() ->
 %%  na podstawie przeslanego argumentu
 -spec getDestination(integer()) -> integer().
 getDestination(X) ->
-    gen_server:call(whereis(?MODULE),{destination,X}).
+    gen_server:call(whereis(?MODULE),{destination,X},infinity).
 
 %% ====================================================================
 %% Callbacks
