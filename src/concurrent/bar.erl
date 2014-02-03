@@ -72,7 +72,7 @@ handle_call(Agent1, From1, State) ->
             AgentList = [NewAgent1,NewAgent2],
             NewBest = lists:max([misc_util:result(AgentList),State#state.best]),
             Pids = [spawn(agent,start,[A,State#state.arenas]) || A <- AgentList],
-            NewNewborns = lists:append(State#state.newborns,lists:zip(Pids,AgentList)),
+            NewNewborns = State#state.newborns ++ lists:zip(Pids,AgentList),
             {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,reproduction,State#state.lastLog,{NewBest,NewNewborns}),
             case NewCounter of
                 0 ->

@@ -115,33 +115,17 @@ diversity(Agents) ->
 
 %% @doc Funkcja online wyliczajaca sume i minimum odchylen standardowych genotypow agentow
 -spec onlineDiversity(genetic:solution(), atom(), integer(), [float()],[float()]) -> {float(),float(),float(), [float()], [float()]}.
-onlineDiversity(_Solution, _Action, N, PrevMeans, PrevStds) when N < 1 ->
+onlineDiversity(_Solution, _Fun, N, PrevMeans, PrevStds) when N < 1 ->
     %%     io:format("Diversity incalculable~n"),
     {-1.0,-1.0,-1.0,PrevMeans,PrevStds};
 
-onlineDiversity(Solution, add, N, PrevMeans, PrevMs) ->
-    {NewMeans, Ms} = lists:unzip(lists:map(fun ({Xn, Mean, M}) ->
-                                                   NewMean = Mean + (Xn - Mean)/N,
-                                                   {NewMean, M + (Xn - Mean)*(Xn - NewMean)}
-                                           end, lists:zip3(Solution, PrevMeans, PrevMs))),
-    Stds = [X/N || X <- Ms],
-    Sum = lists:sum(Stds),
-    Min = lists:min(Stds),
-    Var = variance(Stds),
-    {Sum, Min, Var, NewMeans, Ms};
-
-onlineDiversity(Solution, delete, N, PrevMeans, PrevMs) ->
-    {NewMeans, Ms} = lists:unzip(lists:map(fun ({Xn, Mean, M}) ->
-                                                   NewMean = Mean - (Xn - Mean)/N,
-                                                   {NewMean, M - (Xn - Mean)*(Xn - NewMean)}
-                                           end, lists:zip3(Solution, PrevMeans, PrevMs))),
+onlineDiversity(Solution, F, N, PrevMeans, PrevMs) ->
+    {NewMeans, Ms} = lists:unzip([onlineCount(T, N, F) || T <- lists:zip3(Solution, PrevMeans, PrevMs)]),
     Stds = [X/N || X <- Ms],
     Sum = lists:sum(Stds),
     Min = lists:min(Stds),
     Var = variance(Stds),
     {Sum, Min, Var, NewMeans, Ms}.
-
-
 
 %% @doc Zwraca liczby agentow nalezacych do poszczegolnych kategorii w formie rekordu
 -spec countGroups([tuple()],counter()) -> counter().
@@ -208,6 +192,12 @@ seedRandom() ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+
+-spec onlineCount({float(),float(),float()},integer(),fun()) -> {float(),float()}.
+onlineCount({Xn, Mean, M}, N, F) ->
+    NewMean = F(Mean,(Xn - Mean) / N),
+    {NewMean, F(M,(Xn - Mean) * (Xn - NewMean))}.
+
 %% @doc Funkcja wyznaczajaca indeks pod jakim znajduje sie dany element na podanej liscie.
 -spec find(term(),[term()],integer()) -> integer().
 find(Elem,[Elem|_],Inc) ->
