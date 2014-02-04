@@ -30,7 +30,8 @@ close(Pid) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--record(state, {arenas :: [pid()]}).
+-record(state, {arenas :: [pid()],
+                diversity :: pid()}).
 -type state() :: #state{}.
 
 
@@ -38,15 +39,16 @@ close(Pid) ->
                       {ok,state(),non_neg_integer()}.
 init([]) ->
     misc_util:seedRandom(),
-    {ok,Cemetery} = cemetery:start_link(self()),
+    {ok,Diversity} = diversity:start_link(self()),
+    {ok,Cemetery} = cemetery:start_link(self(),Diversity),
     {ok,Ring} = ring:start_link(self()),
-    {ok,Bar} = bar:start_link(self()),
-    {ok,Port} = port:start_link(self()),
+    {ok,Bar} = bar:start_link(self(),Diversity),
+    {ok,Port} = port:start_link(self(),Diversity),
     Arenas = [Ring,Bar,Port,Cemetery],
     bar:giveArenas(Bar,Arenas),
     port:giveArenas(Port,Arenas),
     io_util:printArenas(Arenas),
-    {ok,#state{arenas = Arenas}}.
+    {ok,#state{arenas = Arenas, diversity = Diversity}}.
 
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -61,6 +63,7 @@ handle_call(close,_From,State) ->
     bar:close(Bar),
     ring:close(Ring),
     cemetery:close(Cemetery),
+    diversity:close(State#state.diversity),
     {stop,normal,ok,State}.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
@@ -68,7 +71,7 @@ handle_call(close,_From,State) ->
                                      {stop,term(),state()}.
 
 handle_cast({go,ProblemSize},State) ->
-    [spawn(agent,start,[ProblemSize,State#state.arenas]) || _ <- lists:seq(1,config:populationSize())],
+    [spawn(agent,start,[State#state.diversity,ProblemSize,State#state.arenas]) || _ <- lists:seq(1,config:populationSize())],
     {noreply,State}.
 
 

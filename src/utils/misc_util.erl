@@ -4,7 +4,7 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
-         seedRandom/0, countGroups/2, addCounters/2, arenaReport/4, diversity/1, onlineDiversity/5]).
+         seedRandom/0, countGroups/2, addCounters/2, logNow/1, diversity/1, onlineDiversity/5]).
 
 -record(counter,{fight = 0 :: non_neg_integer(),
                  reproduction = 0 :: non_neg_integer(),
@@ -72,34 +72,18 @@ averageNumber(Probability,List) ->
        N >=1 -> trunc(N)
     end.
 
--spec arenaReport(pid(),atom(),erlang:timestamp(),term()) -> term().
-arenaReport(Pid,Arena,LastLog,Value) ->
+-spec logNow(erlang:timestamp()) -> {yes,erlang:timestamp()} | notyet.
+logNow(LastLog) ->
     Now = os:timestamp(),
     Diff = timer:now_diff(Now,LastLog),
     IntervalInMicros = config:writeInterval()*1000,
     if
         Diff >= IntervalInMicros ->
-            case Arena of
-                reproduction ->
-                    {Best,Reproductions} = Value,
-                    %%             diversity:report(Pid,Arena,Value),
-                    conc_logger:log(Arena,Pid,{Best,length(Reproductions)});
-                death ->
-                    %%             diversity:report(Pid,Arena,Value),
-                    conc_logger:log(Arena,Pid,length(Value));
-                fight ->
-                    conc_logger:log(Arena,Pid,Value);
-                migration ->
-                    %%             diversity:report(Pid,Arena,Value),
-                    {Emigrants,Immigrants} = Value,
-                    conc_logger:log(Arena,Pid,{length(Emigrants),length(Immigrants)})
-            end,
             {Mega,Sec,Micro} = LastLog,
-            {0,{Mega,Sec+1,Micro}};
+            {yes,{Mega,Sec+1,Micro}};
         true ->
-            {Value,LastLog}
+            notyet
     end.
-
 
 %% @doc Funkcja wyliczajaca sume i minimum odchylen standardowych genotypow agentow
 -spec diversity([agent()]) -> {float(), float(), float()}.

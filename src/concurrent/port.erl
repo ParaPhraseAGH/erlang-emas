@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, start/2, giveArenas/2, immigrate/2, emigrate/2, close/1]).
+-export([start_link/2, start/2, giveArenas/2, immigrate/2, emigrate/2, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -15,9 +15,9 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start_link(pid()) -> {ok,pid()}.
-start_link(Supervisor) ->
-    gen_server:start_link(?MODULE, [Supervisor], []).
+-spec start_link(pid(),pid()) -> {ok,pid()}.
+start_link(Supervisor,Diversity) ->
+    gen_server:start_link(?MODULE, [Supervisor,Diversity], []).
 
 -spec start(pid(),[pid()]) -> {ok,pid()}.
 start(Supervisor,Arenas) ->
@@ -44,6 +44,7 @@ close(Pid) ->
 %% Callbacks
 %% ====================================================================
 -record(state, {mySupervisor :: pid(),
+                diversity :: pid(),
                 arenas = [] :: [pid()],
                 emigrants = [] :: [pid()],
                 immigrants = [] :: [{pid(),agent()}],
@@ -53,10 +54,10 @@ close(Pid) ->
 
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
-init([Supervisor]) ->
+init([Supervisor,Diversity]) ->
     misc_util:seedRandom(),
     timer:send_after(config:writeInterval(),timer),
-    {ok, #state{mySupervisor = Supervisor, lastLog = os:timestamp()}}.
+    {ok, #state{mySupervisor = Supervisor, lastLog = os:timestamp(), diversity = Diversity}}.
 
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -128,11 +129,12 @@ code_change(_OldVsn, State, _Extra) ->
 -spec check(state()) -> {[pid()],[{pid(),agent()}],erlang:timestamp()}.
 check(State) ->
     {Emigrants,Immigrants,LastLog} = {State#state.emigrants,State#state.immigrants,State#state.lastLog},
-    {NewCounter,NewLog} = misc_util:arenaReport(State#state.mySupervisor,migration,LastLog,{Emigrants,Immigrants}),
-    case NewCounter of
-        0 ->
+    case misc_util:logNow(LastLog) of
+        {yes,NewLog} ->
+            diversity:report(State#state.diversity,migration,{Emigrants,Immigrants}),
+            conc_logger:log(State#state.mySupervisor,migration,{length(Emigrants),length(Immigrants)}),
             timer:send_after(config:writeInterval(),timer),
             {[],[],NewLog};
-        _ ->
+        notyet ->
             {Emigrants,Immigrants,LastLog}
     end.

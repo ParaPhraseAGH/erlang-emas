@@ -2,13 +2,14 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, start/1, cast/1, close/1]).
+-export([start_link/2, start/1, cast/1, close/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
 -record(state, {supervisor :: pid(),
+                diversity :: pid(),
                 deaths = [] :: [pid()],
                 lastLog :: erlang:timestamp()}).
 
@@ -16,11 +17,11 @@
 %%% API
 %%%===================================================================
 
--spec start_link(pid()) -> {ok, Pid :: pid()} |
-                           {error, Reason :: term()} |
-                           ignore.
-start_link(Supervisor) ->
-    gen_server:start_link(?MODULE, [Supervisor], []).
+-spec start_link(pid(),pid()) -> {ok, Pid :: pid()} |
+                                 {error, Reason :: term()} |
+                                 ignore.
+start_link(Supervisor,Diversity) ->
+    gen_server:start_link(?MODULE, [Supervisor,Diversity], []).
 
 -spec start(pid()) -> {ok,pid()}.
 start(Supervisor) ->
@@ -43,9 +44,9 @@ close(Pid) ->
                   {ok, State :: #state{}, timeout() | hibernate} |
                   {stop, Reason :: term()} |
                   ignore.
-init([Supervisor]) ->
+init([Supervisor,Diversity]) ->
     misc_util:seedRandom(),
-    {ok, #state{supervisor = Supervisor, lastLog = os:timestamp()}}.
+    {ok, #state{supervisor = Supervisor, lastLog = os:timestamp(), diversity = Diversity}}.
 
 
 -spec handle_call(Request :: term(), From :: {pid(), Tag :: term()}, State :: #state{}) ->
@@ -67,12 +68,14 @@ handle_cast(close, State) ->
     {stop,normal,State};
 handle_cast({died,Pid}, State) ->
     Deaths = [Pid|State#state.deaths],
-    {NewDeaths,NewLog} = misc_util:arenaReport(State#state.supervisor,death,State#state.lastLog,Deaths),
-    case NewDeaths of
-        0 ->
-            {noreply,State#state{lastLog = NewLog, deaths = []},config:arenaTimeout()};
-        _ ->
-            {noreply,State#state{deaths = NewDeaths},config:arenaTimeout()}
+    case misc_util:logNow(State#state.lastLog) of
+        {yes,NewLog} ->
+            diversity:report(State#state.diversity,death,Deaths),
+            conc_logger:log(State#state.supervisor,death,length(Deaths)),
+            {noreply,State#state{lastLog = NewLog,
+                                 deaths = []},config:arenaTimeout()};
+        notyet ->
+            {noreply,State#state{deaths = Deaths},config:arenaTimeout()}
     end.
 
 

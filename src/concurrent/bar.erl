@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, start/1, giveArenas/2, call/2, close/1]).
+-export([start_link/2, start/1, giveArenas/2, call/2, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -15,9 +15,9 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start_link(pid()) -> {ok,pid()}.
-start_link(Supervisor) ->
-    gen_server:start_link(?MODULE, [Supervisor], []).
+-spec start_link(pid(),pid()) -> {ok,pid()}.
+start_link(Supervisor,Diversity) ->
+    gen_server:start_link(?MODULE, [Supervisor,Diversity], []).
 
 -spec start(pid()) -> {ok,pid()}.
 start(Supervisor) ->
@@ -40,6 +40,7 @@ close(Pid) ->
 %% Callbacks
 %% ====================================================================
 -record(state, {supervisor :: pid(),
+                diversity :: pid(),
                 waitlist = [] :: [tuple()],
                 newborns = [] :: [pid()],
                 arenas = [] :: [pid()],
@@ -49,9 +50,9 @@ close(Pid) ->
 
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
-init([Supervisor]) ->
+init([Supervisor,Diversity]) ->
     misc_util:seedRandom(),
-    {ok, #state{supervisor = Supervisor, lastLog = os:timestamp()},config:arenaTimeout()}.
+    {ok, #state{supervisor = Supervisor, lastLog = os:timestamp(), diversity = Diversity},config:arenaTimeout()}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
                                                     {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
@@ -73,14 +74,15 @@ handle_call(Agent1, From1, State) ->
             NewBest = lists:max([misc_util:result(AgentList),State#state.best]),
             Pids = [spawn(agent,start,[A,State#state.arenas]) || A <- AgentList],
             NewNewborns = State#state.newborns ++ lists:zip(Pids,AgentList),
-            {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,reproduction,State#state.lastLog,{NewBest,NewNewborns}),
-            case NewCounter of
-                0 ->
+            case misc_util:logNow(State#state.lastLog) of
+                {yes,NewLog} ->
+                    diversity:report(State#state.diversity,reproduction,{NewBest,NewNewborns}),
+                    conc_logger:log(State#state.supervisor,reproduction,{NewBest,length(NewNewborns)}),
                     {noreply,State#state{waitlist = [],
                                          lastLog = NewLog,
                                          newborns = [],
                                          best = NewBest},config:arenaTimeout()};
-                _ ->
+                notyet ->
                     {noreply,State#state{waitlist = [],
                                          newborns = NewNewborns,
                                          best = NewBest},config:arenaTimeout()}
@@ -114,14 +116,15 @@ handle_info(timeout,State) ->
             NewBest = lists:max([misc_util:result([NewAgent]),State#state.best]),
             Pid = spawn(agent,start,[NewAgent,State#state.arenas]),
             NewNewborns = [{Pid,NewAgent}|State#state.newborns],
-            {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,reproduction,State#state.lastLog,{NewBest,NewNewborns}),
-            case NewCounter of
-                0 ->
+            case misc_util:logNow(State#state.lastLog) of
+                {yes,NewLog} ->
+                    diversity:report(State#state.diversity,reproduction,{NewBest,NewNewborns}),
+                    conc_logger:log(State#state.supervisor,reproduction,{NewBest,length(NewNewborns)}),
                     {noreply,State#state{waitlist = [],
                                          lastLog = NewLog,
                                          newborns = [],
                                          best = NewBest},config:arenaTimeout()};
-                _ ->
+                notyet ->
                     {noreply,State#state{waitlist = [],
                                          newborns = NewNewborns,
                                          best = NewBest},config:arenaTimeout()}
