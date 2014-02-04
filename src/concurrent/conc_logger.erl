@@ -5,11 +5,11 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/2, initialise/2, log/3, close/0]).
+-export([start_link/2, log/3, close/0]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--define(LOCAL_STATS, [fitness, population]).
+-define(LOCAL_STATS, [fitness, population, stddevsum, stddevmin, stddevvar]).
 -define(GLOBAL_STATS, [death, fight, reproduction, migration]).
 
 %% ====================================================================
@@ -18,10 +18,6 @@
 -spec start_link([pid()],string()) -> {ok, pid()}.
 start_link(Supervisors,Path) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Supervisors,Path], []).
-
--spec initialise([pid()],string()) -> ok.
-initialise(Pids,Path) ->
-    gen_server:cast(whereis(?MODULE),{init,Pids,Path}).
 
 -spec log(pid(),atom(),term()) -> ok.
 log(Supervisor,Arena,Value) ->
@@ -37,7 +33,7 @@ close() ->
 
 -record(state, {fds = undefined :: dict(),
                 counters = undefined :: dict(),
-                timeout = infinity :: non_neg_integer() | infinity}).
+                timeout = infinity :: timeout()}).
 -type state() :: #state{}.
 
 -spec init(term()) -> {ok,state()}.
@@ -82,9 +78,13 @@ handle_cast({report,reproduction,Supervisor,{BestFitness,Reproductions}},State) 
                                 AddReproductions),
     {noreply,State#state{counters = dict:store(Supervisor,UpdateFitness,State#state.counters)},State#state.timeout};
 
-handle_cast({report,diversity,_Supervisor,_Value},State) ->
-    io:format("diversity~n"),
-    {noreply,State,State#state.timeout};
+handle_cast({report,diversity,Supervisor,{VarSum,VarMin,VarVar}},State) ->
+    io:format("diversity ~n"),
+    LocalDict = dict:fetch(Supervisor,State#state.counters),
+    AddSum = dict:store(stddevsum,VarSum,LocalDict),
+    AddMin = dict:store(stddevmin,VarMin,AddSum),
+    AddVar = dict:store(stddevvar,VarVar,AddMin),
+    {noreply,State#state{counters = dict:store(Supervisor,AddVar,State#state.counters)},State#state.timeout};
 
 handle_cast({report,Arena,Supervisor,Value},State) ->
     io:format("~p~n",[Arena]),
@@ -104,16 +104,10 @@ handle_info(tick, State) ->
     io:format(".~n"),
     {noreply,State,State#state.timeout};
 
-handle_info(timer, State) ->
+handle_info(timer, State = #state{fds = FDs, counters = BigDict}) ->
     io:format("Tick!~n"),
-    BigDict = State#state.counters,
     Acc = gatherStats(BigDict),
-    FDs = State#state.fds,
     [logGlobal(FDs,X,dict:fetch(X,Acc)) || X <- ?GLOBAL_STATS],
-    [logLocal(FDs,
-              Pid,
-              fitness,
-              dict:fetch(fitness,dict:fetch(Pid,BigDict))) || Pid <- dict:fetch_keys(BigDict)],
     NewBigDict = dict:fold(fun(Pid,LocalDict,NewDict) ->
                                    PopulationChange = dict:fetch(reproduction,LocalDict) + dict:fetch(immigration,LocalDict)
                                        - dict:fetch(death,LocalDict) - dict:fetch(emigration,LocalDict),
@@ -123,10 +117,7 @@ handle_info(timer, State) ->
                                                            end,UpdatePopulation,[reproduction,death,fight,emigration,immigration]),
                                    dict:store(Pid,WithZeros,NewDict)
                            end,dict:new(),BigDict),
-    [logLocal(FDs,
-              Pid,
-              population,
-              dict:fetch(population,dict:fetch(Pid,NewBigDict))) || Pid <- dict:fetch_keys(NewBigDict)],
+    [logLocalStats(FDs,Stat,NewBigDict) || Stat <- ?LOCAL_STATS],
     {noreply, State#state{counters = NewBigDict},State#state.timeout};
 
 
@@ -172,7 +163,10 @@ createCounter(Pids) ->
     BasicStat = lists:foldl(fun(Stat,Dict) ->
                                     dict:store(Stat,0,Dict)
                             end,dict:new(),[reproduction,fight,death,emigration,immigration]),
-    WithFitness = dict:store(fitness,-99999.9,BasicStat),
+    WithVariance = lists:foldl(fun(Stat,Dict) ->
+                                       dict:store(Stat,-1.0,Dict)
+                               end,BasicStat,[stddevmin,stddevsum,stddevvar]),
+    WithFitness = dict:store(fitness,-99999.9,WithVariance),
     IslandDict = dict:store(population,config:populationSize(),WithFitness),
     lists:foldl(fun(Pid,Dict) ->
                         dict:store(Pid,IslandDict,Dict)
@@ -208,6 +202,12 @@ createFDs(Path, InitDict, Files) ->
                         {ok, Descriptor} = file:open(filename:join([Path, Filename]), [append, delayed_write, raw]),
                         dict:store(Atom, Descriptor, Dict)
                 end, InitDict, Files).
+
+logLocalStats(FDs,Stat,Counters) ->
+    [logLocal(FDs,
+        Pid,
+        Stat,
+        dict:fetch(Stat,dict:fetch(Pid,Counters))) || Pid <- dict:fetch_keys(Counters)].
 
 %% @doc Dokonuje buforowanego zapisu do pliku lokalnej statystyki. W argumencie podany glowny slownik, klucz, nazwa statystyki i wartosc do wpisania.
 -spec logLocal(dict(), term(), atom(), term()) -> ok.

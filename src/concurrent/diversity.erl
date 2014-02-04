@@ -35,7 +35,7 @@ close(Pid) ->
 -record(state, {supervisor :: pid(),
                 agents = gb_trees:empty() :: gb_tree(),
                 reports = orddict:new() :: [{term(),term()}],
-                db4b = [] :: list()}).
+                toDelete = [] :: list()}).
 -type state() :: #state{}.
 
 -spec init(Args :: term()) -> {ok, State :: #state{}} |
@@ -61,14 +61,12 @@ handle_call(_Request, _From, State) ->
                                                            {stop, Reason :: term(), NewState :: #state{}}.
 handle_cast({report,Arena,Value},State) ->
     Dict = State#state.reports,
-    error = orddict:find(Arena,Dict), % debug - tu wyskakuje error!
+    error = orddict:find(Arena,Dict), % debug
     NewDict = orddict:store(Arena,Value,Dict),
     case orddict:size(NewDict) of
         3 ->
-            %%             {Agents,Db4b} = logStats(NewDict,State),
-            %%             {noreply,State#state{reports = orddict:new(), agents = Agents, db4b = Db4b}};
-            conc_logger:log(State#state.supervisor,diversity,Value), %todo Value jest przykladowe
-            {noreply,State#state{reports = orddict:new()}};
+            {Agents,ToDelete} = logStats(NewDict,State),
+            {noreply,State#state{reports = orddict:new(), agents = Agents, toDelete = ToDelete}};
         _ ->
             {noreply,State#state{reports = NewDict}}
     end;
@@ -104,42 +102,43 @@ code_change(_OldVsn, State, _Extra) ->
 
 -spec logStats([{term(),term()}],state()) -> {gb_tree(),list()}.
 logStats(Dict,State) ->
+    case State#state.toDelete of
+        [] ->
+            nothing;
+        _ ->
+            io:format("Czasem wyskakuje!~n")
+    end,
     Deaths = orddict:fetch(death,Dict),
     {Emigrations,Immigrations} = orddict:fetch(migration,Dict),
     {_Best,Reproductions} = orddict:fetch(reproduction,Dict),
-    Add1 = Reproductions ++ Immigrations,
-    Del1 = Deaths ++ Emigrations,
-    Db4b = State#state.db4b -- [Pid || {Pid,_} <- Add1],
-    Add2 = lists:foldl(fun(Pid,List) ->
-                               lists:keydelete(Pid,1,List)
-                       end,Add1,State#state.db4b),
-    Add3 = lists:foldl(fun(Pid,List) ->
-                               lists:keydelete(Pid,1,List)
-                       end,Add2,Del1),
-    Del3 = Del1 -- [X || {X,_} <- Add2],
-    %%     case lists:sort([P || {P,_} <- Add3]) == lists:usort([P || {P,_} <- Add3]) of
-    %%         true ->
-    %%             nothing;
-    %%         false ->
-    %%             error("DUPLICATE!")
-    %%     end,
-    %%     true = lists:all(fun({Pid,_}) ->
-    %%                              not gb_trees:is_defined(Pid,State#state.agents)
-    %%                      end,Add3),
-    Population1 = lists:foldl(fun({Key,Val},Tree) ->
-                                      gb_trees:insert(Key,Val,Tree)
-                              end, State#state.agents, Add3),
-    {NewAgents,NewDb4b} = lists:foldl(fun(Pid,{Tree,TMPdb4b}) ->
-                                              case gb_trees:is_defined(Pid,Tree) of
-                                                  false ->
-                                                      {Tree,[Pid|TMPdb4b]};
-                                                  true ->
-                                                      {gb_trees:delete(Pid,Tree),TMPdb4b}
-                                              end
-                                      end, {Population1,Db4b}, Del3),
-    {SumVar,MinVar,VarVar} = misc_util:diversity([Val || {_Key,Val} <- gb_trees:to_list(NewAgents)]),
-    io:format("diversity~n"),
-    %%     logger:logLocalStats(parallel,stddevsum,SumVar),
-    %%     logger:logLocalStats(parallel,stddevmin,MinVar),
-    %%     logger:logLocalStats(parallel,stddevvar,VarVar),
-    {gb_trees:balance(NewAgents),NewDb4b}.
+
+    FirstAdd = lists:foldl(fun({Pid,Agent},Tree) ->
+                                   gb_trees:insert(Pid,Agent,Tree)
+                           end,State#state.agents,Reproductions),
+
+    {ThenDelete,MoreToDelete} = tryToDeleteFromTree({FirstAdd,State#state.toDelete}, Deaths),
+
+    ClearedImmigrants = lists:foldl(fun(Pid,List) ->
+                                            lists:keydelete(Pid,1,List)
+                                    end,Immigrations,Emigrations),
+    ClearedEmigrants = Emigrations -- [Pid || {Pid,_} <- Immigrations],
+
+    AddImmigrants = lists:foldl(fun({Pid,Agent},Tree) ->
+                                        gb_trees:insert(Pid,Agent,Tree)
+                                end,ThenDelete,ClearedImmigrants),
+    {DeleteEmigrants, NewToDelete} = tryToDeleteFromTree({AddImmigrants,[]}, MoreToDelete ++ ClearedEmigrants),
+
+    Variances = misc_util:diversity([Val || {_Key,Val} <- gb_trees:to_list(DeleteEmigrants)]),
+    conc_logger:log(State#state.supervisor,diversity,Variances),
+    {DeleteEmigrants,NewToDelete}.
+
+-spec tryToDeleteFromTree({gb_tree(),[pid()]},[pid()]) -> {gb_tree(),[pid()]}.
+tryToDeleteFromTree(Acc0,List) ->
+    lists:foldl(fun(Pid,{Tree,TMPToDelete}) ->
+                        case catch gb_trees:delete(Pid,Tree) of
+                            {'EXIT',_} ->
+                                {Tree,[Pid|TMPToDelete]};
+                            NewTree ->
+                                {NewTree,TMPToDelete}
+                        end
+                end, Acc0, List).
