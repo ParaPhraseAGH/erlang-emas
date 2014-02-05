@@ -71,7 +71,9 @@ handle_call(close,_From,State) ->
                                      {stop,term(),state()}.
 
 handle_cast({go,ProblemSize},State) ->
-    [spawn(agent,start,[State#state.diversity,ProblemSize,State#state.arenas]) || _ <- lists:seq(1,config:populationSize())],
+    Agents = [genetic:generateAgent(ProblemSize) || _ <- lists:seq(1,config:populationSize())],
+    InitPopulation = [{spawn(agent,start,[A,State#state.arenas]),A} || A <- Agents],
+    diversity:initPopulation(State#state.diversity,InitPopulation),
     {noreply,State}.
 
 

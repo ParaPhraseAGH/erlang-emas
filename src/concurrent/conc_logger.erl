@@ -38,7 +38,7 @@ close() ->
 
 -spec init(term()) -> {ok,state()}.
 init([Supervisors,Path]) ->
-    self() ! delayTimerStart,
+    self() ! delayTimer,
     NewPath = case Path of
                   "standard_io" -> standard_io;
                   X -> X
@@ -93,16 +93,12 @@ handle_cast({report,Arena,Supervisor,Value},State) ->
     {noreply,State#state{counters = dict:store(Supervisor,AddValue,State#state.counters)},State#state.timeout};
 
 handle_cast(close, State) ->
-    %%     NewTimeout = trunc(config:writeInterval() * 0.9),
-    %%     {noreply, State#state{timeout = NewTimeout},NewTimeout}.
-    {stop,normal,State}.
+    NewTimeout = trunc(config:writeInterval() * 0.9),
+    {noreply, State#state{timeout = NewTimeout},NewTimeout}.
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_info(tick, State) ->
-    io:format(".~n"),
-    {noreply,State,State#state.timeout};
 
 handle_info(timer, State = #state{fds = FDs, counters = BigDict}) ->
     io:format("Tick!~n"),
@@ -121,9 +117,8 @@ handle_info(timer, State = #state{fds = FDs, counters = BigDict}) ->
     {noreply, State#state{counters = NewBigDict},State#state.timeout};
 
 
-handle_info(delayTimerStart, State) ->
+handle_info(delayTimer, State) ->
     timer:sleep(700),
-    timer:send_interval(50,tick),
     timer:send_interval(config:writeInterval(),timer),
     {noreply, State,State#state.timeout};
 
@@ -205,9 +200,9 @@ createFDs(Path, InitDict, Files) ->
 
 logLocalStats(FDs,Stat,Counters) ->
     [logLocal(FDs,
-        Pid,
-        Stat,
-        dict:fetch(Stat,dict:fetch(Pid,Counters))) || Pid <- dict:fetch_keys(Counters)].
+              Pid,
+              Stat,
+              dict:fetch(Stat,dict:fetch(Pid,Counters))) || Pid <- dict:fetch_keys(Counters)].
 
 %% @doc Dokonuje buforowanego zapisu do pliku lokalnej statystyki. W argumencie podany glowny slownik, klucz, nazwa statystyki i wartosc do wpisania.
 -spec logLocal(dict(), term(), atom(), term()) -> ok.

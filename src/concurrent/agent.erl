@@ -3,7 +3,7 @@
 %% @doc Modul odpowiedzialny za logike pojedynczego agenta.
 
 -module(agent).
--export([start/3, start/2]).
+-export([start/2]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 
@@ -11,18 +11,11 @@
 %% API functions
 %% ====================================================================
 
-%% @doc Funkcja generujaca dane i startujaca danego agenta. W argumencie
+%% @doc Funkcja startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac.
--spec start(pid(),pos_integer() | agent(), [pid()]) -> ok.
-start(Diversity,ProblemSize,Arenas) when is_integer(ProblemSize) ->
-    misc_util:seedRandom(),
-    Agent = genetic:generateAgent(ProblemSize),
-    diversity:newAgent(Diversity,{self(),Agent}),
-    loop(Agent,Arenas).
-
 -spec start(agent(),[pid()]) -> ok.
-start(Agent,Arenas) when is_tuple(Agent) ->
-    random:seed(erlang:now()),
+start(Agent,Arenas) ->
+    misc_util:seedRandom(),
     loop(Agent,Arenas).
 
 %% ====================================================================

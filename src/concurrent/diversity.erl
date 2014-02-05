@@ -4,7 +4,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, newAgent/2, report/3, close/1]).
+-export([start_link/1, initPopulation/2, report/3, close/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2,
@@ -16,9 +16,9 @@
 start_link(Supervisor) ->
     gen_server:start_link(?MODULE, [Supervisor], []).
 
--spec newAgent(pid(),{pid(),agent()}) -> ok.
-newAgent(Pid,AgentPkg) ->
-    gen_server:cast(Pid,{newAgent,AgentPkg}).
+-spec initPopulation(pid(),[{pid(),agent()}]) -> ok.
+initPopulation(Pid,Agents) ->
+    gen_server:cast(Pid,{initPopulation,Agents}).
 
 -spec report(pid(),atom(),term()) -> ok.
 report(Pid,Arena,Value) ->
@@ -59,8 +59,7 @@ handle_call(_Request, _From, State) ->
 -spec handle_cast(Request :: term(), State :: #state{}) -> {noreply, NewState :: #state{}} |
                                                            {noreply, NewState :: #state{}, timeout() | hibernate} |
                                                            {stop, Reason :: term(), NewState :: #state{}}.
-handle_cast({report,Arena,Value},State) ->
-    Dict = State#state.reports,
+handle_cast({report,Arena,Value},State = #state{reports = Dict}) ->
     error = orddict:find(Arena,Dict), % debug
     NewDict = orddict:store(Arena,Value,Dict),
     case orddict:size(NewDict) of
@@ -71,8 +70,10 @@ handle_cast({report,Arena,Value},State) ->
             {noreply,State#state{reports = NewDict}}
     end;
 
-handle_cast({newAgent,{Pid,Agent}},State) ->
-    NewAgents = gb_trees:insert(Pid,Agent,State#state.agents),
+handle_cast({initPopulation,Agents},State) ->
+    NewAgents = lists:foldl(fun({Pid,Agent},Tree) ->
+                                    gb_trees:insert(Pid,Agent,Tree)
+                            end,State#state.agents,Agents),
     {noreply,State#state{agents = NewAgents}};
 
 handle_cast(close,State) ->
@@ -102,12 +103,6 @@ code_change(_OldVsn, State, _Extra) ->
 
 -spec logStats([{term(),term()}],state()) -> {gb_tree(),list()}.
 logStats(Dict,State) ->
-    case State#state.toDelete of
-        [] ->
-            nothing;
-        _ ->
-            io:format("Czasem wyskakuje!~n")
-    end,
     Deaths = orddict:fetch(death,Dict),
     {Emigrations,Immigrations} = orddict:fetch(migration,Dict),
     {_Best,Reproductions} = orddict:fetch(reproduction,Dict),

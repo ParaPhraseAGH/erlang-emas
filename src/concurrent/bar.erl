@@ -46,10 +46,12 @@ close(Pid) ->
                 arenas = [] :: [pid()],
                 best = -999999.9 :: float(),
                 lastLog :: erlang:timestamp()}).
+
 -type state() :: #state{} | cleaning.
 
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
+
 init([Supervisor,Diversity]) ->
     misc_util:seedRandom(),
     {ok, #state{supervisor = Supervisor, lastLog = os:timestamp(), diversity = Diversity},config:arenaTimeout()}.
@@ -62,6 +64,7 @@ init([Supervisor,Diversity]) ->
                                                     {stop,term(),state()}.
 handle_call(_Agent,_From,cleaning) ->
     {reply,0,cleaning,config:arenaTimeout()};
+
 handle_call(Agent1, From1, State) ->
     case State#state.waitlist of
         [] ->
@@ -105,6 +108,7 @@ handle_cast(close, State) ->
                                      {stop,term(),state()}.
 handle_info(timeout,cleaning) ->
     {stop,normal,cleaning};
+
 handle_info(timeout,State) ->
     case State#state.waitlist of
         [] ->
