@@ -66,7 +66,7 @@ handle_call(_Request, _From, State) ->
                                                            {noreply, NewState :: #state{}, timeout() | hibernate} |
                                                            {stop, Reason :: term(), NewState :: #state{}}.
 handle_cast({report,Arena,Value},State = #state{reports = Dict}) ->
-    error = orddict:find(Arena,Dict), % debug
+    error = orddict:find(Arena,Dict), % debug. Przy wysokich parametrach mozna odkomentowac, tylko nie nalezy nadpisywac slownika tylko dac update
     NewDict = orddict:store(Arena,Value,Dict),
     case orddict:size(NewDict) of
         3 ->

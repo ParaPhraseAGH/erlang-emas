@@ -105,7 +105,7 @@ handle_cast(close, State) ->
 %%     {noreply,State,State#state.timeout};
 
 handle_info(timer, State = #state{fds = FDs, counters = BigDict}) ->
-    io:format("Tick!~n"),
+%%     io:format("Tick!~n"),
     Acc = gatherStats(BigDict),
     [logGlobal(FDs,X,dict:fetch(X,Acc)) || X <- ?GLOBAL_STATS],
     NewBigDict = dict:fold(fun(Pid,LocalDict,NewDict) ->
