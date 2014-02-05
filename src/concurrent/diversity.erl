@@ -18,11 +18,17 @@ start_link(Supervisor) ->
 
 -spec initPopulation(pid(),[{pid(),agent()}]) -> ok.
 initPopulation(Pid,Agents) ->
-    gen_server:cast(Pid,{initPopulation,Agents}).
+    case config:monitorDiversity() of
+        true -> gen_server:cast(Pid,{initPopulation,Agents});
+        false -> ok
+    end.
 
 -spec report(pid(),atom(),term()) -> ok.
 report(Pid,Arena,Value) ->
-    gen_server:cast(Pid,{report,Arena,Value}).
+    case config:monitorDiversity() of
+        true -> gen_server:cast(Pid,{report,Arena,Value});
+        false -> ok
+    end.
 
 -spec close(pid()) -> ok.
 close(Pid) ->

@@ -38,7 +38,7 @@ close() ->
 
 -spec init(term()) -> {ok,state()}.
 init([Supervisors,Path]) ->
-    self() ! delayTimer,
+    self() ! delayTimerStart,
     NewPath = case Path of
                   "standard_io" -> standard_io;
                   X -> X
@@ -63,14 +63,14 @@ handle_call(_Request, _From, State) ->
                                      {stop,term(),state()}.
 
 handle_cast({report,migration,Supervisor,{Emigrants,Immigrants}},State) ->
-    io:format("migration~n"),
+%%     io:format("migration~n"),
     LocalDict = dict:fetch(Supervisor,State#state.counters),
     AddImmigrants = dict:update_counter(immigration,Immigrants,LocalDict),
     AddEmigrants = dict:update_counter(emigration,Emigrants,AddImmigrants),
     {noreply,State#state{counters = dict:store(Supervisor,AddEmigrants,State#state.counters)},State#state.timeout};
 
 handle_cast({report,reproduction,Supervisor,{BestFitness,Reproductions}},State) ->
-    io:format("reproduction~n"),
+%%     io:format("reproduction~n"),
     LocalDict = dict:fetch(Supervisor,State#state.counters),
     AddReproductions = dict:update_counter(reproduction,Reproductions,LocalDict),
     UpdateFitness = dict:update(fitness,
@@ -79,7 +79,7 @@ handle_cast({report,reproduction,Supervisor,{BestFitness,Reproductions}},State) 
     {noreply,State#state{counters = dict:store(Supervisor,UpdateFitness,State#state.counters)},State#state.timeout};
 
 handle_cast({report,diversity,Supervisor,{VarSum,VarMin,VarVar}},State) ->
-    io:format("diversity ~n"),
+%%     io:format("diversity ~n"),
     LocalDict = dict:fetch(Supervisor,State#state.counters),
     AddSum = dict:store(stddevsum,VarSum,LocalDict),
     AddMin = dict:store(stddevmin,VarMin,AddSum),
@@ -87,7 +87,7 @@ handle_cast({report,diversity,Supervisor,{VarSum,VarMin,VarVar}},State) ->
     {noreply,State#state{counters = dict:store(Supervisor,AddVar,State#state.counters)},State#state.timeout};
 
 handle_cast({report,Arena,Supervisor,Value},State) ->
-    io:format("~p~n",[Arena]),
+%%     io:format("~p~n",[Arena]),
     LocalDict = dict:fetch(Supervisor,State#state.counters),
     AddValue = dict:update_counter(Arena,Value,LocalDict),
     {noreply,State#state{counters = dict:store(Supervisor,AddValue,State#state.counters)},State#state.timeout};
@@ -95,10 +95,14 @@ handle_cast({report,Arena,Supervisor,Value},State) ->
 handle_cast(close, State) ->
     NewTimeout = trunc(config:writeInterval() * 0.9),
     {noreply, State#state{timeout = NewTimeout},NewTimeout}.
+%%     {stop,normal,State}.
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
+%% handle_info(tick, State) ->
+%%     io:format(".~n"),
+%%     {noreply,State,State#state.timeout};
 
 handle_info(timer, State = #state{fds = FDs, counters = BigDict}) ->
     io:format("Tick!~n"),
@@ -117,8 +121,9 @@ handle_info(timer, State = #state{fds = FDs, counters = BigDict}) ->
     {noreply, State#state{counters = NewBigDict},State#state.timeout};
 
 
-handle_info(delayTimer, State) ->
+handle_info(delayTimerStart, State) ->
     timer:sleep(700),
+    %%     timer:send_interval(50,tick),
     timer:send_interval(config:writeInterval(),timer),
     {noreply, State,State#state.timeout};
 
@@ -161,7 +166,7 @@ createCounter(Pids) ->
     WithVariance = lists:foldl(fun(Stat,Dict) ->
                                        dict:store(Stat,-1.0,Dict)
                                end,BasicStat,[stddevmin,stddevsum,stddevvar]),
-    WithFitness = dict:store(fitness,-99999.9,WithVariance),
+    WithFitness = dict:store(fitness,-999999.9,WithVariance),
     IslandDict = dict:store(population,config:populationSize(),WithFitness),
     lists:foldl(fun(Pid,Dict) ->
                         dict:store(Pid,IslandDict,Dict)
