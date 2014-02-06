@@ -131,7 +131,8 @@ check(State) ->
     {Emigrants,Immigrants,LastLog} = {State#state.emigrants,State#state.immigrants,State#state.lastLog},
     case misc_util:logNow(LastLog) of
         {yes,NewLog} ->
-            diversity:report(State#state.diversity,migration,{Emigrants,Immigrants}),
+            diversity:report(State#state.diversity,emigration,Emigrants),
+            diversity:report(State#state.diversity,immigration,Immigrants),
             conc_logger:log(State#state.mySupervisor,migration,{length(Emigrants),length(Immigrants)}),
             timer:send_after(config:writeInterval(),timer),
             {[],[],NewLog};

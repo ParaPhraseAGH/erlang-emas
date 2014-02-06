@@ -66,10 +66,15 @@ handle_call(_Request, _From, State) ->
                                                            {noreply, NewState :: #state{}, timeout() | hibernate} |
                                                            {stop, Reason :: term(), NewState :: #state{}}.
 handle_cast({report,Arena,Value},State = #state{reports = Dict}) ->
-    error = orddict:find(Arena,Dict), % debug. Przy wysokich parametrach mozna odkomentowac, tylko nie nalezy nadpisywac slownika tylko dac update
-    NewDict = orddict:store(Arena,Value,Dict),
+    NewDict = case orddict:is_key(Arena,Dict) of
+                  true ->
+                      io:format("Report overwrite in diversity ~p~n",[self()]), % mozna zakomentowac dla wysokich parametrow programu
+                      orddict:update(Arena,fun(OldVal) -> Value ++ OldVal end,Dict);
+                  false ->
+                      orddict:store(Arena,Value,Dict)
+              end,
     case orddict:size(NewDict) of
-        3 ->
+        4 ->
             {Agents,ToDelete} = logStats(NewDict,State),
             {noreply,State#state{reports = orddict:new(), agents = Agents, toDelete = ToDelete}};
         _ ->
@@ -110,8 +115,9 @@ code_change(_OldVsn, State, _Extra) ->
 -spec logStats([{term(),term()}],state()) -> {gb_tree(),list()}.
 logStats(Dict,State) ->
     Deaths = orddict:fetch(death,Dict),
-    {Emigrations,Immigrations} = orddict:fetch(migration,Dict),
-    {_Best,Reproductions} = orddict:fetch(reproduction,Dict),
+    Emigrations = orddict:fetch(emigration,Dict),
+    Immigrations = orddict:fetch(immigration,Dict),
+    Reproductions = orddict:fetch(reproduction,Dict),
 
     FirstAdd = lists:foldl(fun({Pid,Agent},Tree) ->
                                    gb_trees:insert(Pid,Agent,Tree)

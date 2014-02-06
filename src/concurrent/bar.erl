@@ -79,7 +79,7 @@ handle_call(Agent1, From1, State) ->
             NewNewborns = State#state.newborns ++ lists:zip(Pids,AgentList),
             case misc_util:logNow(State#state.lastLog) of
                 {yes,NewLog} ->
-                    diversity:report(State#state.diversity,reproduction,{NewBest,NewNewborns}),
+                    diversity:report(State#state.diversity,reproduction,NewNewborns),
                     conc_logger:log(State#state.supervisor,reproduction,{NewBest,length(NewNewborns)}),
                     {noreply,State#state{waitlist = [],
                                          lastLog = NewLog,
@@ -122,7 +122,7 @@ handle_info(timeout,State) ->
             NewNewborns = [{Pid,NewAgent}|State#state.newborns],
             case misc_util:logNow(State#state.lastLog) of
                 {yes,NewLog} ->
-                    diversity:report(State#state.diversity,reproduction,{NewBest,NewNewborns}),
+                    diversity:report(State#state.diversity,reproduction,NewNewborns),
                     conc_logger:log(State#state.supervisor,reproduction,{NewBest,length(NewNewborns)}),
                     {noreply,State#state{waitlist = [],
                                          lastLog = NewLog,
