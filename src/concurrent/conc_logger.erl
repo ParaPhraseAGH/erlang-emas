@@ -63,14 +63,14 @@ handle_call(_Request, _From, State) ->
                                      {stop,term(),state()}.
 
 handle_cast({report,migration,Supervisor,{Emigrants,Immigrants}},State) ->
-%%     io:format("migration~n"),
+    %%     io:format("migration~n"),
     LocalDict = dict:fetch(Supervisor,State#state.counters),
     AddImmigrants = dict:update_counter(immigration,Immigrants,LocalDict),
     AddEmigrants = dict:update_counter(emigration,Emigrants,AddImmigrants),
     {noreply,State#state{counters = dict:store(Supervisor,AddEmigrants,State#state.counters)},State#state.timeout};
 
 handle_cast({report,reproduction,Supervisor,{BestFitness,Reproductions}},State) ->
-%%     io:format("reproduction~n"),
+    %%     io:format("reproduction~n"),
     LocalDict = dict:fetch(Supervisor,State#state.counters),
     AddReproductions = dict:update_counter(reproduction,Reproductions,LocalDict),
     UpdateFitness = dict:update(fitness,
@@ -79,7 +79,7 @@ handle_cast({report,reproduction,Supervisor,{BestFitness,Reproductions}},State) 
     {noreply,State#state{counters = dict:store(Supervisor,UpdateFitness,State#state.counters)},State#state.timeout};
 
 handle_cast({report,diversity,Supervisor,{VarSum,VarMin,VarVar}},State) ->
-%%     io:format("diversity ~n"),
+    %%     io:format("diversity ~n"),
     LocalDict = dict:fetch(Supervisor,State#state.counters),
     AddSum = dict:store(stddevsum,VarSum,LocalDict),
     AddMin = dict:store(stddevmin,VarMin,AddSum),
@@ -87,7 +87,7 @@ handle_cast({report,diversity,Supervisor,{VarSum,VarMin,VarVar}},State) ->
     {noreply,State#state{counters = dict:store(Supervisor,AddVar,State#state.counters)},State#state.timeout};
 
 handle_cast({report,Arena,Supervisor,Value},State) ->
-%%     io:format("~p~n",[Arena]),
+    %%     io:format("~p~n",[Arena]),
     LocalDict = dict:fetch(Supervisor,State#state.counters),
     AddValue = dict:update_counter(Arena,Value,LocalDict),
     {noreply,State#state{counters = dict:store(Supervisor,AddValue,State#state.counters)},State#state.timeout};
@@ -105,9 +105,9 @@ handle_cast(close, State) ->
 %%     {noreply,State,State#state.timeout};
 
 handle_info(timer, State = #state{fds = FDs, counters = BigDict}) ->
-%%     io:format("Tick!~n"),
+    %%     io:format("Tick!~n"),
     Acc = gatherStats(BigDict),
-    [logGlobal(FDs,X,dict:fetch(X,Acc)) || X <- ?GLOBAL_STATS],
+    [logToFile(FDs,X,dict:fetch(X,Acc)) || X <- ?GLOBAL_STATS],
     NewBigDict = dict:fold(fun(Pid,LocalDict,NewDict) ->
                                    PopulationChange = dict:fetch(reproduction,LocalDict) + dict:fetch(immigration,LocalDict)
                                        - dict:fetch(death,LocalDict) - dict:fetch(emigration,LocalDict),
@@ -117,7 +117,9 @@ handle_info(timer, State = #state{fds = FDs, counters = BigDict}) ->
                                                            end,UpdatePopulation,[reproduction,death,fight,emigration,immigration]),
                                    dict:store(Pid,WithZeros,NewDict)
                            end,dict:new(),BigDict),
-    [logLocalStats(FDs,Stat,NewBigDict) || Stat <- ?LOCAL_STATS],
+    dict:merge(fun(_Pid,LocalDict,FDDict) ->
+                       [logToFile(FDDict,X,dict:fetch(X,LocalDict)) || X <- ?LOCAL_STATS]
+               end,NewBigDict,FDs),
     {noreply, State#state{counters = NewBigDict},State#state.timeout};
 
 
@@ -144,9 +146,7 @@ code_change(_OldVsn, State, _Extra) ->
 
 -spec gatherStats(dict()) -> dict().
 gatherStats(BigDict) ->
-    Acc0 = lists:foldl(fun(Stat,Dict) ->
-                               dict:store(Stat,0,Dict)
-                       end,dict:new(),?GLOBAL_STATS),
+    Acc0 = dict:from_list([{X,0} || X <- ?GLOBAL_STATS]),
     dict:fold(fun(_Pid,LocalDict,Acc) ->
                       lists:foldl(fun(Stat,InnerAcc) ->
                                           case Stat of
@@ -160,17 +160,11 @@ gatherStats(BigDict) ->
 
 -spec createCounter([pid()]) -> dict().
 createCounter(Pids) ->
-    BasicStat = lists:foldl(fun(Stat,Dict) ->
-                                    dict:store(Stat,0,Dict)
-                            end,dict:new(),[reproduction,fight,death,emigration,immigration]),
-    WithVariance = lists:foldl(fun(Stat,Dict) ->
-                                       dict:store(Stat,-1.0,Dict)
-                               end,BasicStat,[stddevmin,stddevsum,stddevvar]),
-    WithFitness = dict:store(fitness,-999999.9,WithVariance),
-    IslandDict = dict:store(population,config:populationSize(),WithFitness),
-    lists:foldl(fun(Pid,Dict) ->
-                        dict:store(Pid,IslandDict,Dict)
-                end,dict:new(),Pids).
+    BasicStat = [{X,0} || X <-[reproduction,fight,death,emigration,immigration]],
+    Variance = [{X,-1} || X <-[stddevmin,stddevsum,stddevvar]],
+    FitnessPopulation = [{fitness,-999999.9},{population,config:populationSize()}],
+    IslandDict = dict:from_list(BasicStat ++ Variance ++ FitnessPopulation),
+    dict:from_list([{Pid,IslandDict} || Pid <- Pids]).
 
 %% @doc Tworzy duzy slownik z mniejszymi slownikami deskryptorow dla kazdej z wysp dla modelow niesekwencyjnych
 -spec prepareParDictionary([pid()], dict(), string()) -> dict().
@@ -203,23 +197,8 @@ createFDs(Path, InitDict, Files) ->
                         dict:store(Atom, Descriptor, Dict)
                 end, InitDict, Files).
 
-logLocalStats(FDs,Stat,Counters) ->
-    [logLocal(FDs,
-              Pid,
-              Stat,
-              dict:fetch(Stat,dict:fetch(Pid,Counters))) || Pid <- dict:fetch_keys(Counters)].
-
-%% @doc Dokonuje buforowanego zapisu do pliku lokalnej statystyki. W argumencie podany glowny slownik, klucz, nazwa statystyki i wartosc do wpisania.
--spec logLocal(dict(), term(), atom(), term()) -> ok.
-logLocal(Dictionary, Key, Statistic, Value) ->
-    FDs = dict:fetch(Key, Dictionary),
-    FD = dict:fetch(Statistic, FDs),
-    file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Statistic, Key, Value])).
-
-%% @doc Dokonuje buforowanego zapisu do pliku globalnej statystyki. W argumencie podany glowny slownik, nazwa statystyki i wartosc do wpisania.
--spec logGlobal(dict(), atom(), term()) -> ok.
-logGlobal(Dictionary, Stat, Value) ->
-    FD = dict:fetch(Stat, Dictionary),
+logToFile(FDDict,Stat,Value) ->
+    FD = dict:fetch(Stat, FDDict),
     file:write(FD, io_lib:fwrite("~p ~p\n", [Stat,Value])).
 
 %% @doc Zamyka pliki podane w argumencie
