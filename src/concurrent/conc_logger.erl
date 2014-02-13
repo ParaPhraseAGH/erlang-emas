@@ -107,7 +107,7 @@ handle_cast(close, State) ->
 handle_info(timer, State = #state{fds = FDs, counters = BigDict}) ->
     %%     io:format("Tick!~n"),
     Acc = gatherStats(BigDict),
-    [logToFile(FDs,X,dict:fetch(X,Acc)) || X <- ?GLOBAL_STATS],
+    [logGlobal(FDs,X,dict:fetch(X,Acc)) || X <- ?GLOBAL_STATS],
     NewBigDict = dict:fold(fun(Pid,LocalDict,NewDict) ->
                                    PopulationChange = dict:fetch(reproduction,LocalDict) + dict:fetch(immigration,LocalDict)
                                        - dict:fetch(death,LocalDict) - dict:fetch(emigration,LocalDict),
@@ -117,8 +117,8 @@ handle_info(timer, State = #state{fds = FDs, counters = BigDict}) ->
                                                            end,UpdatePopulation,[reproduction,death,fight,emigration,immigration]),
                                    dict:store(Pid,WithZeros,NewDict)
                            end,dict:new(),BigDict),
-    dict:merge(fun(_Pid,LocalDict,FDDict) ->
-                       [logToFile(FDDict,X,dict:fetch(X,LocalDict)) || X <- ?LOCAL_STATS]
+    dict:merge(fun(Pid,LocalDict,FDDict) ->
+                       [logLocal(FDDict,Pid,X,dict:fetch(X,LocalDict)) || X <- ?LOCAL_STATS]
                end,NewBigDict,FDs),
     {noreply, State#state{counters = NewBigDict},State#state.timeout};
 
@@ -197,9 +197,13 @@ createFDs(Path, InitDict, Files) ->
                         dict:store(Atom, Descriptor, Dict)
                 end, InitDict, Files).
 
-logToFile(FDDict,Stat,Value) ->
+logGlobal(FDDict,Stat,Value) ->
     FD = dict:fetch(Stat, FDDict),
     file:write(FD, io_lib:fwrite("~p ~p\n", [Stat,Value])).
+
+logLocal(FDDict,Supervisor,Stat,Value) ->
+    FD = dict:fetch(Stat, FDDict),
+    file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Stat,Supervisor,Value])).
 
 %% @doc Zamyka pliki podane w argumencie
 -spec closeFiles(dict()) -> any().
