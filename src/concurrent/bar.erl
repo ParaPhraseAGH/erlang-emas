@@ -71,7 +71,7 @@ handle_call(Agent1, From1, State) ->
                               State#state.best
                       end,
             conc_supervisor:sendAgents(State#state.supervisor,[NewAgent1,NewAgent2]),
-            {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,reproduction,State#state.lastLog,{NewBest,State#state.counter + 1}),
+            {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,reproduction,State#state.lastLog,{NewBest,State#state.counter + 2}),
             case NewCounter of
                 0 ->
                     {noreply,State#state{waitlist = [], counter = 0, lastLog = NewLog, best = NewBest},config:arenaTimeout()};
