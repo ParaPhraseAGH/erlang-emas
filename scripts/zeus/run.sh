@@ -4,26 +4,27 @@ EmasRoot="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ../.. && pwd )"
 OutputRoot=output
 
 # Computation settings
-N=1			# Number of runs for each computation
-Time=5000       	# Computation time [ms]
+N=10			# Number of runs for each computation
+Time=900000       	# Computation time [ms]
 Problem=100		# Problem size	
-Islands=4		# Islands amount
+Islands=12		# Islands amount
 Topology=mesh		# Islands topology
 
 # Common Zeus settings
-CommonSettings="-q l_bigmem"
-CommonSettings+=" ""-t 1-$N"				# Number of runs for each job
+CommonSettings="-t 1-$N"				# Number of runs for each job
 CommonSettings+=" ""-l mem=1gb"				# Available memory
 CommonSettings+=" ""-l file=500mb"			# Available disc
 CommonSettings+=" ""-l walltime=$(($Time / 800))"	# Available time [s] (~120% predicted computation time)
 CommonSettings+=" ""-j oe"				# Join stdout and stderr
 CommonSettings+=" ""-A paraphrase1"			# Grant ID
 CommonSettings+=" ""-N emas"				# Job name
-#CommonSettings+=" ""-q l_bigmem"
+CommonSettings+=" ""-q l_bigmem"
 
 # Independent variables
-Models=(hybrid) # sequential_lists hybrid)
-Cores=(18) # 1 2 12
+Models=(hybrid concurrent)
+Cores=(1 12 16)
+Procesor=opteron6276
+#Procesor=X5650
 
 for model in ${Models[*]}; do
     for cores in ${Cores[*]}; do
@@ -35,7 +36,7 @@ for model in ${Models[*]}; do
 	mkdir -p $outputPath
 
 	Settings=$CommonSettings		
-	Settings+=" ""-l nodes=1:X5650:ppn=$cores"	# Available cores
+	Settings+=" ""-l nodes=1:$Procesor:ppn=$cores"	# Available cores
 	Settings+=" ""-o $outputPath"			# Output directory
 	
 	echo -e "$Command" | qsub $Settings
