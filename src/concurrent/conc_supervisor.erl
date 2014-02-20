@@ -125,12 +125,11 @@ handle_info({'EXIT',_,dying},State) ->
 handle_info({'EXIT',Pid,Reason},State) ->
     case lists:member(Pid,State#state.arenas) of
         true ->
-            io:format("Error na arenie, zamykamy impreze na wyspie ~p~n",[self()]),
-            exit(Reason);
+            io:format("Error na arenie, zamykamy impreze na wyspie ~p~n Pid: ~p Powod: ~p~n",[self(),Pid,Reason]),
+            {stop,errorInArena,State};
         false ->
-            io:format("Error w agencie, karawana jedzie dalej~n"),
-            Population = State#state.population,
-            {noreply,State#state{population = Population - 1},config:supervisorTimeout()}
+            io:format("Error w agencie, karawana jedzie dalej~n Pid: ~p Powod: ~p~n",[Pid,Reason]),
+            {stop,errorInAgent,State}
     end;
 handle_info(write,State) ->
     logger:logLocalStats(parallel,population,State#state.population),
