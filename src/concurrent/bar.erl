@@ -26,7 +26,7 @@ start(Supervisor) ->
 %% @doc Funkcja wysylajaca zgloszenie agenta do baru
 -spec call(pid(),agent()) -> Energy :: integer().
 call(Pid,Agent) ->
-    gen_server:call(Pid,Agent).
+    gen_server:call(Pid,Agent,infinity).
 
 -spec close(pid()) -> ok.
 close(Pid) ->
@@ -36,7 +36,7 @@ close(Pid) ->
 %% Callbacks
 %% ====================================================================
 -record(state, {supervisor :: pid(),
-                best = -99999.9 :: integer(),
+                best = -999999.9 :: integer(),
                 waitlist = [] :: [tuple()],
                 counter = 0 :: non_neg_integer(),
                 lastLog :: erlang:timestamp()}).
@@ -95,7 +95,7 @@ handle_info(timeout,cleaning) ->
 handle_info(timeout,State) ->
     case State#state.waitlist of
         [] ->
-            {stop,timeout,State};
+            {noreply,State,config:arenaTimeout()};
         [{From,Agent}] ->
             io:format("Bar ~p reprodukuje pojedynczego osobnika!~n",[self()]),
             [{_,_,NewEnergy},NewAgent] = evolution:doReproduce({Agent}),

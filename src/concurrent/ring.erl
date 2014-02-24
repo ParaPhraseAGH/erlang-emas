@@ -26,7 +26,7 @@ start(Supervisor) ->
 %% @doc Funkcja wysylajaca zgloszenie agenta do ringu.
 -spec call(pid(),agent()) -> Energy :: integer().
 call(Pid,Agent) ->
-    gen_server:call(Pid,Agent).
+    gen_server:call(Pid,Agent,infinity).
 
 -spec close(pid()) -> ok.
 close(Pid) ->
@@ -85,7 +85,7 @@ handle_info(timeout,cleaning) ->
 handle_info(timeout,State) ->
     case State#state.waitlist of
         [] ->
-            {stop,timeout,State};
+            {noreply,State,config:arenaTimeout()};
         X ->
             io:format("Ring ~p daje do walki niepelna liczbe osobnikow!~n",[self()]),
             Agents = evolution:eachFightsAll(X),

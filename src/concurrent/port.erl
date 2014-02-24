@@ -24,7 +24,7 @@ start(Supervisor,King) ->
 %% @doc Funkcja wysylajaca zgloszenie agenta do portu.
 -spec call(pid()) -> [pid()].
 call(Pid) ->
-    gen_server:call(Pid,emigrate).
+    gen_server:call(Pid,emigrate,infinity).
 
 -spec close(pid()) -> ok.
 close(Pid) ->
