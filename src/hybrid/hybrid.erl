@@ -51,7 +51,7 @@ init([ProblemSize,Time,Islands,Topology,Path]) ->
     Pids = [spawn_link(hybrid_island,start,[ProblemSize]) || _ <- lists:seq(1,Islands)],
     topology:start_link(Islands,Topology),
     logger:start_link({parallel,Pids},Path),
-    {ok,Pids,config:supervisorTimeout()}.
+    {ok,Pids}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
                                                     {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
@@ -69,13 +69,11 @@ handle_cast({agent,From,Agent},Pids) ->
     IslandFrom = misc_util:find(From,Pids),
     IslandTo = topology:getDestination(IslandFrom),
     hybrid_island:sendAgent(lists:nth(IslandTo,Pids),Agent),
-    {noreply,Pids,config:supervisorTimeout()}.
+    {noreply,Pids}.
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_info(timeout,Pids) ->
-    {stop,timeout,Pids};
 handle_info(theEnd,Pids) ->
     {stop,normal,Pids}.
 
