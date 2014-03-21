@@ -11,6 +11,8 @@
 
 %% @doc Poczatkowa wielkosc populacji
 populationSize() -> 100.
+%% @doc Czy monitorowac roznorodnosc populacji
+monitorDiversity() -> false.
 %% @doc Energia poczatkowa osobnika.
 initialEnergy() -> 10.
 %% @doc Ilosc energii, powyzej ktorej osobnik sie reprodukuje

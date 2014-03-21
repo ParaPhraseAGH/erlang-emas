@@ -3,29 +3,19 @@
 %% @doc Modul odpowiedzialny za logike pojedynczego agenta.
 
 -module(agent).
--export([start/4]).
--record(arenas,{fight,reproduction,migration}).
+-export([start/2]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type arenas() :: #arenas{}.
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
-%% @doc Funkcja generujaca dane i startujaca danego agenta. W argumencie
-%% adresy aren do ktorych agent ma sie zglaszac.
--spec start(pos_integer() | agent(), Ring::pid(), Bar::pid(), Port::pid()) -> no_return().
-start(ProblemSize,Ring,Bar,Port) when is_integer(ProblemSize) ->
-    misc_util:seedRandom(),
-    Agent = genetic:generateAgent(ProblemSize),
-    Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
-    loop(Agent,Arenas);
 %% @doc Funkcja startujaca danego agenta. W argumencie
-%% adresy aren do ktorych agent ma sie zglaszac oraz dane agenta.
-start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
-    random:seed(erlang:now()),
-    Arenas = #arenas{fight = Ring, reproduction = Bar, migration = Port},
+%% adresy aren do ktorych agent ma sie zglaszac.
+-spec start(agent(),[pid()]) -> ok.
+start(Agent,Arenas) ->
+    misc_util:seedRandom(),
     loop(Agent,Arenas).
 
 %% ====================================================================
@@ -34,20 +24,20 @@ start(Agent,Ring,Bar,Port)  when is_tuple(Agent)  ->
 
 %% @doc Funkcja cyklu zycia agenta. Jego zachowanie jest zalezne od jego
 %% energii. Rekurencja kreci sie w nieskonczonosc, poki energia nie osiagnie 0.
--spec loop(agent(),arenas()) -> no_return().
+-spec loop(agent(),[pid()]) -> ok.
 loop(Agent,Arenas) ->
+    [Ring,Bar,Port,Cemetery] = Arenas,
     case misc_util:behavior(Agent) of
         death ->
-            exit(dying);
+            cemetery:cast(Cemetery);
         reproduction ->
             {Solution,Fitness,_} = Agent,
-            NewEnergy = bar:call(Arenas#arenas.reproduction,Agent),
+            NewEnergy = bar:call(Bar,Agent),
             loop({Solution,Fitness,NewEnergy},Arenas);
         fight ->
             {Solution,Fitness,_} = Agent,
-            NewEnergy = ring:call(Arenas#arenas.fight,Agent),
+            NewEnergy = ring:call(Ring,Agent),
             loop({Solution,Fitness,NewEnergy},Arenas);
         migration ->
-            [Ring,Bar,Port] = port:call(Arenas#arenas.migration),
-            loop(Agent,#arenas{fight = Ring, reproduction = Bar, migration = Port})
+            loop(Agent,port:emigrate(Port,Agent))
     end.

@@ -66,8 +66,16 @@ handle_call({_,Fitness,Energy}, From, State) ->
             NewAgents = evolution:eachFightsAll([Agent|Waitlist]),
             [gen_server:reply(NewFrom,NewEnergy) || {NewFrom,_,NewEnergy} <- NewAgents],
             Counter = State#state.counter + (config:fightNumber() * (config:fightNumber() - 1) div 2), % liczba spotkan dla wektora dlugosci n wynosi n(n-1)/2
-            {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,fight,State#state.lastLog,Counter),
-            {noreply,State#state{waitlist = [], counter = NewCounter, lastLog = NewLog},config:arenaTimeout()}
+            case misc_util:logNow(State#state.lastLog) of
+                {yes,NewLog} ->
+                    conc_logger:log(State#state.supervisor,fight,Counter),
+                    {noreply,State#state{lastLog = NewLog,
+                                         waitlist = [],
+                                         counter = 0},config:arenaTimeout()};
+                notyet ->
+                    {noreply,State#state{waitlist = [],
+                                         counter = Counter},config:arenaTimeout()}
+            end
     end.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
@@ -85,14 +93,22 @@ handle_info(timeout,cleaning) ->
 handle_info(timeout,State) ->
     case State#state.waitlist of
         [] ->
-            {noreply,State,config:arenaTimeout()};
+            {stop,timeout,State};
         X ->
             io:format("Ring ~p daje do walki niepelna liczbe osobnikow!~n",[self()]),
             Agents = evolution:eachFightsAll(X),
             [gen_server:reply(From,Energy) || {From,_,Energy} <- Agents],
             Counter = State#state.counter + (length(X) * (length(X) - 1) div 2), % liczba spotkan dla wektora dlugosci n wynosi n(n-1)/2
-            {NewCounter,NewLog} = misc_util:arenaReport(State#state.supervisor,fight,State#state.lastLog,Counter),
-            {noreply,State#state{waitlist = [], counter = NewCounter, lastLog = NewLog},config:arenaTimeout()}
+            case misc_util:logNow(State#state.lastLog) of
+                {yes,NewLog} ->
+                    conc_logger:log(State#state.supervisor,fight,Counter),
+                    {noreply,State#state{lastLog = NewLog,
+                                         waitlist = [],
+                                         counter = 0},config:arenaTimeout()};
+                notyet ->
+                    {noreply,State#state{waitlist = [],
+                                         counter = Counter},config:arenaTimeout()}
+            end
     end.
 
 -spec terminate(term(),state()) -> no_return().

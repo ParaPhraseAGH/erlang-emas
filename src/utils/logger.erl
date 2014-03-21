@@ -9,7 +9,7 @@
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--define(LOCAL_STATS, [fitness, population]).
+-define(LOCAL_STATS, [fitness, population, stddevsum, stddevmin, stddevvar]).
 -define(GLOBAL_STATS, [death, fight, reproduction, migration]).
 
 %% ====================================================================
@@ -150,6 +150,7 @@ createFDs(standard_io, InitDict, Files) ->
                         dict:store(Atom, standard_io, Dict)
                 end, InitDict,
                 Files);
+
 createFDs(Path, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         Filename = atom_to_list(Atom) ++ ".txt",

@@ -33,7 +33,7 @@ def write_stats_to_file(directory, attr, data):
 def parse(logfile, out_dir, old_format=False):
     lines = read_zeus_lines(logfile)
     old_format = is_format_old(lines)
-    attrs1 = ['fitness', 'population']
+    attrs1 = ['fitness', 'population', 'stddevsum', 'stddevmin']
     attrs2 = ['fight', 'reproduction', 'death', 'migration']
     if old_format:
         attrs = attrs1 + attrs2
@@ -53,6 +53,8 @@ def parse(logfile, out_dir, old_format=False):
                 data2 = [max(tup) for tup in vals]
             elif attr == 'population':
                 data2 = [sum(tup) for tup in vals]
+            else:
+                data2 = [sum(tup)/len(tup) for tup in vals]
             if data2:
                 write_stats_to_file(out_dir, attr, data2)
 

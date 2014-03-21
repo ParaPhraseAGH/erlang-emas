@@ -76,7 +76,7 @@ loop(Population,Counter) ->
                           end,                                                                                            % Reproducers = [{H1,[A1,A2]},{H2,[A3,A5]},...]
             AfterFights = [{Home,evolution:sendToWork({fight,AgentList})} || {Home,AgentList} <- Fighters], % AfterFights = [{H1,[A1',A2']},{H2,[A3',A5']},...]
             AfterReproductions = [{Home,evolution:sendToWork({reproduction,AgentList})} || {Home,AgentList} <- Reproducers],
-            AfterWork = lists:append(AfterFights,AfterReproductions),
+            AfterWork = AfterFights ++ AfterReproductions,
             Degrouped = [[{Home,A} || A <- List] || {Home,List} <- AfterWork],                              % Degrouped = [[{H1,A1'},{H1,A2'}],[{H2,A3'}...]
             NewAgents = lists:flatten([DeadAndMigrated|Degrouped]),
                                                 %io:format("Population: ~p~n",[NewAgents]),

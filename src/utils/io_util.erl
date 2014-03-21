@@ -38,8 +38,8 @@ printMoreStats(Groups) ->
     io:format("Population: ~p, Energy: ~p~n",[length(D ++ M ++ F ++ R),sumEnergy(M ++ F ++ R)]).
 
 -spec printArenas([pid()]) -> ok.
-printArenas([Ring,Bar,Port]) ->
-    io:format("Supervisor: ~p~nRing: ~p~nBar: ~p~nPort: ~p~n~n",[self(),Ring,Bar,Port]).
+printArenas([Ring,Bar,Port,Cemetery]) ->
+    io:format("Supervisor: ~p~nRing: ~p~nBar: ~p~nPort: ~p~nCemetery: ~p~n",[self(),Ring,Bar,Port,Cemetery]).
 
 %% @doc Funkcja generujaca sciezke dostepu wraz z nazwa folderu dla danego uruchomienia algorytmu. Wyznaczana jest sciezka
 %% dostepu w zaleznosci od parametrow algorytmu i tworzony jest kolejny folder dla kazdego uruchomienia (instance).

@@ -4,7 +4,7 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, behavior/1, behavior_noMig/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
-         seedRandom/0, countGroups/2, addCounters/2, arenaReport/4]).
+         seedRandom/0, countGroups/2, addCounters/2, logNow/1, diversity/1, onlineDiversity/5]).
 
 -record(counter,{fight = 0 :: non_neg_integer(),
                  reproduction = 0 :: non_neg_integer(),
@@ -72,18 +72,44 @@ averageNumber(Probability,List) ->
        N >=1 -> trunc(N)
     end.
 
--spec arenaReport(pid(),atom(),erlang:timestamp(),term()) -> term().
-arenaReport(Pid,Arena,LastLog,Value) ->
+-spec logNow(erlang:timestamp()) -> {yes,erlang:timestamp()} | notyet.
+logNow(LastLog) ->
     Now = os:timestamp(),
     Diff = timer:now_diff(Now,LastLog),
     IntervalInMicros = config:writeInterval()*1000,
     if
         Diff >= IntervalInMicros ->
-            conc_supervisor:reportFromArena(Pid,Arena,Value),
-            {0,Now};
+            {Mega,Sec,Micro} = LastLog,
+            {yes,{Mega,Sec+1,Micro}};
         true ->
-            {Value,LastLog}
+            notyet
     end.
+
+%% @doc Funkcja wyliczajaca sume i minimum odchylen standardowych genotypow agentow
+-spec diversity([agent()]) -> {float(), float(), float()}.
+diversity([]) ->
+    {-1.0, -1.0, 0.0};
+diversity(Agents) ->
+    Solutions = [Sol || {Sol, _, _} <- Agents],
+    Variances = [variance(Sol) || Sol <- transpose(Solutions)],
+    Sum = lists:sum(Variances),
+    Min = lists:min(Variances),
+    Var = variance(Variances),
+    {Sum, Min, Var}.
+
+%% @doc Funkcja online wyliczajaca sume i minimum odchylen standardowych genotypow agentow
+-spec onlineDiversity(genetic:solution(), atom(), integer(), [float()],[float()]) -> {float(),float(),float(), [float()], [float()]}.
+onlineDiversity(_Solution, _Fun, N, PrevMeans, PrevStds) when N < 1 ->
+    %%     io:format("Diversity incalculable~n"),
+    {-1.0,-1.0,-1.0,PrevMeans,PrevStds};
+
+onlineDiversity(Solution, F, N, PrevMeans, PrevMs) ->
+    {NewMeans, Ms} = lists:unzip([onlineCount(T, N, F) || T <- lists:zip3(Solution, PrevMeans, PrevMs)]),
+    Stds = [X/N || X <- Ms],
+    Sum = lists:sum(Stds),
+    Min = lists:min(Stds),
+    Var = variance(Stds),
+    {Sum, Min, Var, NewMeans, Ms}.
 
 %% @doc Zwraca liczby agentow nalezacych do poszczegolnych kategorii w formie rekordu
 -spec countGroups([tuple()],counter()) -> counter().
@@ -150,6 +176,12 @@ seedRandom() ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+
+-spec onlineCount({float(),float(),float()},integer(),fun()) -> {float(),float()}.
+onlineCount({Xn, Mean, M}, N, F) ->
+    NewMean = F(Mean,(Xn - Mean) / N),
+    {NewMean, F(M,(Xn - Mean) * (Xn - NewMean))}.
+
 %% @doc Funkcja wyznaczajaca indeks pod jakim znajduje sie dany element na podanej liscie.
 -spec find(term(),[term()],integer()) -> integer().
 find(Elem,[Elem|_],Inc) ->
@@ -168,3 +200,40 @@ mapIndex(Elem,1,[H|T],F,Acc) ->
     lists:reverse(Acc,[F(Elem,H)|T]);
 mapIndex(Elem,Index,[H|T],F,Acc) ->
     mapIndex(Elem,Index - 1,T,F,[H|Acc]).
+
+
+%% @doc Funkcja wyliczajaca odchylenie standardowe rozkladu zadanego przez liste liczb
+-spec variance([float()]) -> float().
+variance([_Sol]) ->
+    0.0;
+variance(L) ->
+    {Sum, Len} = lists:foldl(fun (X, {S,N}) ->
+                                     {S+X,N+1}
+                             end, {0,0}, L),
+    Mean = Sum/Len,
+    {Sum2} = lists:foldl(fun (X, {K}) ->
+                                 {K+(X-Mean)*(X-Mean)}
+                         end, {0}, L),
+    %%     Variance =
+    Sum2/(Len-1).
+%%     math:sqrt(Variance).
+%%     Variance = logBadValues(Sum2/(Len-1),Sum2, Len, Mean),
+%%     math:sqrt(SqSum/Len-Mean*Mean).
+
+%% logBadValues(Variance, Sum, Len, Mean) when Variance < 0 ->
+%%     io:format("VARIANCE: ~p sum: ~p  N: ~p Mean: ~p ~n",[Variance, Sum, Len, Mean]),
+%%     0;
+%%
+%% logBadValues(Variance, _Sum, _Len, _Mean) ->
+%%     Variance.
+
+%% @doc Funkcja wykonujaca operacje zip na dowolnej liczbie list wejsciowych
+%% http://erlang.org/pipermail/erlang-questions/2012-October/069856.html
+-spec transpose([[float()]]) -> [[float()]].
+transpose([[X | Xs] | Xss]) ->
+    [[X | [H || [H | _] <- Xss]] | transpose([Xs | [T || [_ | T] <- Xss]])];
+transpose([[] | Xss]) -> transpose(Xss);
+transpose([]) -> [];
+transpose(Tuple) when is_tuple(Tuple) ->  % wrapper to emulate zip
+    Xs = transpose(tuple_to_list(Tuple)),
+    [list_to_tuple(X) || X <- Xs].

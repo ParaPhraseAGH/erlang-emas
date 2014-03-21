@@ -5,26 +5,36 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/2, start/2, call/1, close/1]).
+-export([start_link/2, start/2, giveArenas/2, immigrate/2, emigrate/2, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
+
+-type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 -spec start_link(pid(),pid()) -> {ok,pid()}.
-start_link(Supervisor,King) ->
-    gen_server:start_link(?MODULE, [Supervisor,King], []).
+start_link(Supervisor,Diversity) ->
+    gen_server:start_link(?MODULE, [Supervisor,Diversity], []).
 
--spec start(pid(),pid()) -> {ok,pid()}.
-start(Supervisor,King) ->
-    gen_server:start(?MODULE, [Supervisor,King], []).
+-spec start(pid(),[pid()]) -> {ok,pid()}.
+start(Supervisor,Arenas) ->
+    gen_server:start(?MODULE, [Supervisor,Arenas], []).
+
+-spec giveArenas(pid(),[pid()]) -> ok.
+giveArenas(Pid,Arenas) ->
+    gen_server:cast(Pid,{arenas,Arenas}).
+
+-spec immigrate(pid(),tuple()) -> ok.
+immigrate(Pid,AgentInfo) ->
+    gen_server:cast(Pid,{immigrant,AgentInfo}).
 
 %% @doc Funkcja wysylajaca zgloszenie agenta do portu.
--spec call(pid()) -> [pid()].
-call(Pid) ->
-    gen_server:call(Pid,emigrate,infinity).
+-spec emigrate(pid(),agent()) -> [pid()].
+emigrate(Pid,Agent) ->
+    gen_server:call(Pid,{emigrate,Agent},infinity).
 
 -spec close(pid()) -> ok.
 close(Pid) ->
@@ -34,18 +44,21 @@ close(Pid) ->
 %% Callbacks
 %% ====================================================================
 -record(state, {mySupervisor :: pid(),
-                allSupervisors :: [pid()],
-                counter = 0 :: non_neg_integer(),
+                diversity :: pid(),
+                arenas = [] :: [pid()],
+                emigrants = [] :: [pid()],
+                immigrants = [] :: [{pid(),agent()}],
                 lastLog :: erlang:timestamp()}).
 -type state() :: #state{} | cleaning.
 
+
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
-init(Args) ->
+init([Supervisor,Diversity]) ->
     misc_util:seedRandom(),
-    self() ! {init,Args}, %trik, zeby nie bylo deadlocka. Musimy zakonczyc funkcje init, zeby odblokowac supervisora i kinga
-    timer:send_interval(config:writeInterval(),timer),
-    {ok, #state{mySupervisor = undefined, allSupervisors = undefined, lastLog = os:timestamp()}}.
+    timer:send_after(config:writeInterval(),timer),
+    {ok, #state{mySupervisor = Supervisor, lastLog = os:timestamp(), diversity = Diversity}}.
+
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
                                                     {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
@@ -53,50 +66,76 @@ init(Args) ->
                                                     {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
-handle_call(emigrate,{Pid,_},cleaning) ->
+handle_call({emigrate,_Agent},{Pid,_},cleaning) ->
     exit(Pid,finished),
     {noreply,cleaning,config:arenaTimeout()};
-handle_call(emigrate, From, State) ->
+
+handle_call({emigrate,Agent}, From, State) ->
     {HisPid, _} = From,
-    IslandFrom = misc_util:find(State#state.mySupervisor,State#state.allSupervisors),
-    case catch topology:getDestination(IslandFrom) of
-        IslandTo when is_integer(IslandTo) ->
-            NewSupervisor = lists:nth(IslandTo,State#state.allSupervisors),
-            case catch {conc_supervisor:unlinkAgent(State#state.mySupervisor,HisPid),conc_supervisor:linkAgent(NewSupervisor,From)} of
-                {ok,ok} -> migrationSuccessful;
-                _ -> exit(HisPid,finished)
-            end;
-        _ -> exit(HisPid,finished)
-    end,
-%%     {NewCounter,NewLog} = misc_util:arenaReport(State#state.mySupervisor,migration,State#state.lastLog,State#state.counter + 1),
-%%     {noreply,State#state{counter = NewCounter, lastLog = NewLog}}. todo Trzeba odkomentowac dla wysokiej migrationRate
-    Counter = State#state.counter,
-    {noreply,State#state{counter = Counter + 1}}.
+    {Emigrants,Immigrants,LastLog} = check(State),
+    conc_topology:emigrant({Agent,From}),
+    {noreply,State#state{emigrants = [HisPid|Emigrants], immigrants = Immigrants, lastLog = LastLog},config:arenaTimeout()}.
+
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
+
+handle_cast({immigrant,{_Agent,{Pid,_}}}, cleaning) ->
+    exit(Pid,finished),
+    {noreply,cleaning,config:arenaTimeout()};
+
+handle_cast({immigrant,{Agent,From}}, State) ->
+    gen_server:reply(From,State#state.arenas),
+    {Emigrants,Immigrants,LastLog} = check(State),
+    {HisPid, _} = From,
+    {noreply,State#state{immigrants = [{HisPid,Agent}|Immigrants], emigrants = Emigrants, lastLog = LastLog},config:arenaTimeout()};
+
+handle_cast({arenas,Arenas}, State) ->
+    conc_topology:helloPort(),
+    {noreply,State#state{arenas = Arenas},config:arenaTimeout()};
+
 handle_cast(close, _State) ->
     {noreply,cleaning,config:arenaTimeout()}.
+
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
 handle_info(timeout,cleaning) ->
     {stop,normal,cleaning};
+
 handle_info(timer,cleaning) ->
     {noreply,cleaning,config:writeInterval()/2};
+
 handle_info(timer,State) ->
-    conc_supervisor:reportFromArena(State#state.mySupervisor,migration,State#state.counter), % Dla wysokiej migrationRate trzeba sprawdzac kiedy byl ostatni log
-    {noreply,State#state{counter = 0},config:arenaTimeout()};
-handle_info({init,[Supervisor,King]}, State) ->
-    AllSupervisors = concurrent:getAddresses(King),
-    {noreply, State#state{mySupervisor = Supervisor, allSupervisors = AllSupervisors}}.
+    {Emigrants,Immigrants,LastLog} = check(State),
+    {noreply,State#state{emigrants = Emigrants, immigrants = Immigrants, lastLog = LastLog},config:arenaTimeout()}.
+
 
 -spec terminate(term(),state()) -> no_return().
 terminate(_Reason, _State) ->
     ok.
 
+
 -spec code_change(term(),state(),term()) -> {ok, state()}.
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+%% ====================================================================
+%% Internal functions
+%% ====================================================================
+
+-spec check(state()) -> {[pid()],[{pid(),agent()}],erlang:timestamp()}.
+check(State) ->
+    {Emigrants,Immigrants,LastLog} = {State#state.emigrants,State#state.immigrants,State#state.lastLog},
+    case misc_util:logNow(LastLog) of
+        {yes,NewLog} ->
+            diversity:report(State#state.diversity,emigration,Emigrants),
+            diversity:report(State#state.diversity,immigration,Immigrants),
+            conc_logger:log(State#state.mySupervisor,migration,{length(Emigrants),length(Immigrants)}),
+            timer:send_after(config:writeInterval(),timer),
+            {[],[],NewLog};
+        notyet ->
+            {Emigrants,Immigrants,LastLog}
+    end.
