@@ -42,6 +42,7 @@ sendAgent(Pid,Agent) ->
 %% @doc Glowna petla procesu. Kazda iteracja powoduje wytworzenie kolejnej generacji.
 -spec loop([agent()],counter()) -> ok.
 loop(Agents,Counters) ->
+    Environment = config:agent_env(),
     receive
         {write,Last} ->
             Fitness = case misc_util:result(Agents) of
@@ -66,8 +67,8 @@ loop(Agents,Counters) ->
         {finish,_Pid} ->
             ok
     after 0 ->
-            Groups = misc_util:groupBy([{misc_util:behavior(A),A} || A <- Agents ]),
-            NewGroups = [evolution:sendToWork(G) || G <- Groups],
+            Groups = misc_util:groupBy([{Environment:behaviour_function(A),A} || A <- Agents ]),
+            NewGroups = [Environment:meeting_function(G) || G <- Groups],
             NewAgents = misc_util:shuffle(lists:flatten(NewGroups)),
             NewCounters = misc_util:countGroups(Groups,#counter{}),
             loop(NewAgents,misc_util:addCounters(Counters,NewCounters))

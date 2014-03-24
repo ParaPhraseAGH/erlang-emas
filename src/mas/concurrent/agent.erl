@@ -27,7 +27,8 @@ start(Agent,Arenas) ->
 -spec loop(agent(),[pid()]) -> ok.
 loop(Agent,Arenas) ->
     [Ring,Bar,Port,Cemetery] = Arenas,
-    case misc_util:behavior(Agent) of
+    Environment = config:agent_env(),
+    case Environment:behaviour_function(Agent) of
         death ->
             cemetery:cast(Cemetery);
         reproduction ->

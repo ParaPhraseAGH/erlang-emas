@@ -39,6 +39,7 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
     Population = lists:append([[{X,Agent} || Agent <- Environment:initial_population()] || X <- lists:seq(1,Islands)]),
     timer:send_after(Time,theEnd),
     timer:send_after(config:writeInterval(),write),
+    io:format("Population:~p~n",[length(Population)]), 
     {_Time,_Result} = timer:tc(fun loop/2, [Population,#counter{}]),
     topology:close(),
     logger:close().
@@ -46,6 +47,7 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
 %% @doc Glowa petla programu. Kazda iteracja powoduje ewolucje nowej generacji osobnikow.
 -spec loop([agent()],counter()) -> float().
 loop(Population,Counter) ->
+    Environment = config:agent_env(),
     receive
         write ->
             Islands = lists:sort(misc_util:groupBy(Population)),
@@ -63,9 +65,9 @@ loop(Population,Counter) ->
         theEnd ->
             misc_util:result([A || {_,A} <- Population])
     after 0 ->
-            Groups = misc_util:groupBy([{misc_util:behavior(HomeAgent),HomeAgent} || HomeAgent <- Population]),         % Groups = [{death,[{Home1,Agent1},{H2,A2}]},{fight,[...]}]
+            Groups = misc_util:groupBy([{Environment:behaviour_function(HomeAgent),HomeAgent} || HomeAgent <- Population]),         % Groups = [{death,[{Home1,Agent1},{H2,A2}]},{fight,[...]}]
             {DeathMigration,FightReproduction} = lists:partition(fun({Atom,_}) -> lists:member(Atom,[death,migration]) end,Groups),
-            DeadAndMigrated = [evolution:sendToWork(G) || G <- DeathMigration],
+            DeadAndMigrated = [Environment:meeting_function(G) || G <- DeathMigration],
             FRRegrouped = [{Job,misc_util:groupBy(AgentList)} || {Job,AgentList} <- FightReproduction],     % FRRegrouped = [{fight,[{H1,[A1,A2]},{H2,[A3,A5]},...]},{reproduction,[...]}]
             Fighters = case lists:keyfind(fight,1,FRRegrouped) of                                           % w przyszlosci mozna zrobic fighterow i reproduktowcow w jednej liscie i operowac na list comprehensions
                            {fight,FAgents} -> FAgents;
@@ -75,8 +77,8 @@ loop(Population,Counter) ->
                               {reproduction,RAgents} -> RAgents;
                               false -> []
                           end,                                                                                            % Reproducers = [{H1,[A1,A2]},{H2,[A3,A5]},...]
-            AfterFights = [{Home,evolution:sendToWork({fight,AgentList})} || {Home,AgentList} <- Fighters], % AfterFights = [{H1,[A1',A2']},{H2,[A3',A5']},...]
-            AfterReproductions = [{Home,evolution:sendToWork({reproduction,AgentList})} || {Home,AgentList} <- Reproducers],
+            AfterFights = [{Home,Environment:meeting_function({fight,AgentList})} || {Home,AgentList} <- Fighters], % AfterFights = [{H1,[A1',A2']},{H2,[A3',A5']},...]
+            AfterReproductions = [{Home,Environment:meeting_function({reproduction,AgentList})} || {Home,AgentList} <- Reproducers],
             AfterWork = AfterFights ++ AfterReproductions,
             Degrouped = [[{Home,A} || A <- List] || {Home,List} <- AfterWork],                              % Degrouped = [[{H1,A1'},{H1,A2'}],[{H2,A3'}...]
             NewAgents = lists:flatten([DeadAndMigrated|Degrouped]),

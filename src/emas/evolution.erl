@@ -3,7 +3,7 @@
 %% @doc Modul z funkcjami dotyczacymi ewolucji czyli przechodzenia jednej generacji w kolejna.
 %% Sa tu rowniez funkcje implementujace migracje miedzy wyspami
 -module(evolution).
--export([sendToWork/1, doReproduce/1, doFight/1, doMigrate/1, eachFightsAll/1]).
+-export([sendToWork/1, doReproduce/1, doFight/1, doMigrate/1, eachFightsAll/1, optionalPairs/2]).
 
 -type task() :: death | fight | reproduction | migration.
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.

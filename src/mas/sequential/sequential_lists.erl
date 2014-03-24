@@ -51,6 +51,7 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
 %% @doc Glowa petla programu. Kazda iteracja powoduje ewolucje nowej generacji osobnikow.
 -spec loop([island()],counter()) -> float().
 loop(Islands,Counter) ->
+    Environment = config:agent_env(),
     receive
         write ->
             logger:logLocalStats(sequential,
@@ -69,10 +70,10 @@ loop(Islands,Counter) ->
         theEnd ->
             lists:max([misc_util:result(I) || I <- Islands])
     after 0 ->
+            %% TODO przeniesc doMigrate z evolution gdzies indziej
             {NrOfEmigrants,IslandsMigrated} = evolution:doMigrate(Islands),
-            Environment = config:agent_env(),
-            Groups = [misc_util:groupBy([{Environment:behaviour_function(Agent),Agent} || Agent <- I]) || I <- IslandsMigrated],
-            NewGroups = [lists:map(fun evolution:sendToWork/1,I) || I <- Groups],
+            Groups = [misc_util:groupBy([{Environment:behaviour_function({no_migration,Agent}),Agent} || Agent <- I]) || I <- IslandsMigrated],
+            NewGroups = [lists:map(fun Environment:meeting_function/1,I) || I <- Groups],
             NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- NewGroups],
             NewCounter = countAllIslands(Groups,Counter),
             loop(NewIslands,NewCounter#counter{migration = NrOfEmigrants + Counter#counter.migration})

@@ -25,4 +25,5 @@ topologyTimeout() -> 10000.
 %% @doc Ilosc milisekund, ktore czeka arena na jakas wiadomosc
 arenaTimeout() -> 3000.
 
+%% @doc Nazwa modulu implementujacego behaviour agent_env
 agent_env() -> emas.
