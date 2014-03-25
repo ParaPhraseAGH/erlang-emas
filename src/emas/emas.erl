@@ -16,10 +16,19 @@ initial_population() ->
 behaviour_function({_,_,0}) ->
     death;
 
+% behaviour_function({_, _, Energy}) ->
+%     case Energy > emas_config:reproductionThreshold() of
+%         true -> reproduction;
+%         false -> fight
+%     end.
+
 behaviour_function({_, _, Energy}) ->
-    case Energy > emas_config:reproductionThreshold() of
-        true -> reproduction;
-        false -> fight
+    case random:uniform() < config:migrationProbability() of
+        true -> migration;
+        false -> case Energy > emas_config:reproductionThreshold() of
+                     true -> reproduction;
+                     false -> fight
+                 end
     end.
 
 
