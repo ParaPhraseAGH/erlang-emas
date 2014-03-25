@@ -4,6 +4,8 @@
 -module(ring).
 -behaviour(gen_server).
 
+-define(TIMEOUT,5000).
+
 %% API
 -export([start_link/1, start/1, call/2, close/1]).
 %% gen_server
@@ -46,7 +48,7 @@ close(Pid) ->
                       {ok,state(),non_neg_integer()}.
 init([Supervisor]) ->
     misc_util:seedRandom(),
-    {ok, #state{supervisor = Supervisor, lastLog = os:timestamp()}, config:arenaTimeout()}.
+    {ok, #state{supervisor = Supervisor, lastLog = os:timestamp()}, ?TIMEOUT}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
                                                     {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
@@ -55,13 +57,13 @@ init([Supervisor]) ->
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
 handle_call(_Agent,_From,cleaning) ->
-    {reply,0,cleaning,config:arenaTimeout()};
+    {reply,0,cleaning,?TIMEOUT};
 handle_call({_,Fitness,Energy}, From, State) ->
     Agent = {From,Fitness,Energy},
     Waitlist = State#state.waitlist,
     case length(Waitlist) == emas_config:fightNumber() - 1 of
         false ->
-            {noreply,State#state{waitlist = [Agent|Waitlist]},config:arenaTimeout()};
+            {noreply,State#state{waitlist = [Agent|Waitlist]},?TIMEOUT};
         true ->
             NewAgents = evolution:eachFightsAll([Agent|Waitlist]),
             [gen_server:reply(NewFrom,NewEnergy) || {NewFrom,_,NewEnergy} <- NewAgents],
@@ -71,10 +73,10 @@ handle_call({_,Fitness,Energy}, From, State) ->
                     conc_logger:log(State#state.supervisor,fight,Counter),
                     {noreply,State#state{lastLog = NewLog,
                                          waitlist = [],
-                                         counter = 0},config:arenaTimeout()};
+                                         counter = 0},?TIMEOUT};
                 notyet ->
                     {noreply,State#state{waitlist = [],
-                                         counter = Counter},config:arenaTimeout()}
+                                         counter = Counter},?TIMEOUT}
             end
     end.
 
@@ -83,7 +85,7 @@ handle_call({_,Fitness,Energy}, From, State) ->
                                      {stop,term(),state()}.
 handle_cast(close, State) ->
     [gen_server:reply(From,0) || {From,_,_} <- State#state.waitlist],
-    {noreply,cleaning,config:arenaTimeout()}.
+    {noreply,cleaning,?TIMEOUT}.
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
@@ -104,10 +106,10 @@ handle_info(timeout,State) ->
                     conc_logger:log(State#state.supervisor,fight,Counter),
                     {noreply,State#state{lastLog = NewLog,
                                          waitlist = [],
-                                         counter = 0},config:arenaTimeout()};
+                                         counter = 0},?TIMEOUT};
                 notyet ->
                     {noreply,State#state{waitlist = [],
-                                         counter = Counter},config:arenaTimeout()}
+                                         counter = Counter},?TIMEOUT}
             end
     end.
 

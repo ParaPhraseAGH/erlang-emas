@@ -1,6 +1,8 @@
 -module(cemetery).
 -behaviour(gen_server).
 
+-define(TIMEOUT,5000).
+
 %% API
 -export([start_link/2, start/1, cast/1, close/1]).
 
@@ -46,7 +48,7 @@ close(Pid) ->
                   ignore.
 init([Supervisor,Diversity]) ->
     misc_util:seedRandom(),
-    {ok, #state{supervisor = Supervisor, lastLog = os:timestamp(), diversity = Diversity}}.
+    {ok, #state{supervisor = Supervisor, lastLog = os:timestamp(), diversity = Diversity}, ?TIMEOUT}.
 
 
 -spec handle_call(Request :: term(), From :: {pid(), Tag :: term()}, State :: #state{}) ->
@@ -73,9 +75,9 @@ handle_cast({died,Pid}, State) ->
             diversity:report(State#state.diversity,death,Deaths),
             conc_logger:log(State#state.supervisor,death,length(Deaths)),
             {noreply,State#state{lastLog = NewLog,
-                                 deaths = []},config:arenaTimeout()};
+                                 deaths = []},?TIMEOUT};
         notyet ->
-            {noreply,State#state{deaths = Deaths},config:arenaTimeout()}
+            {noreply,State#state{deaths = Deaths},?TIMEOUT}
     end.
 
 
