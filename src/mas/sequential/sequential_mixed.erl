@@ -3,7 +3,7 @@
 %% @doc Model sekwencyjny zawierajacy wszystkich agentow w jednej liscie.
 
 -module(sequential_mixed).
--export([start/5, start/0, start/1]).
+-export([start/4]).
 
 -record(counter,{fight = 0 :: non_neg_integer(),
                  reproduction = 0 :: non_neg_integer(),
@@ -16,21 +16,10 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start() -> ok.
-start() ->
-    file:make_dir("tmp"),
-    start(40,5000,2,mesh,"tmp").
 
--spec start(list()) -> ok.
-start([A,B,C,D,E]) ->
-    start(list_to_integer(A),
-          list_to_integer(B),
-          list_to_integer(C),
-          list_to_atom(D),E).
-
--spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
-start(ProblemSize,Time,Islands,Topology,Path) ->
-    io:format("{Model=sequential_mixed,ProblemSize=~p,Time=~p,Islands=~p,Topology=~p}~n",[ProblemSize,Time,Islands,Topology]),
+-spec start(Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
+start(Time,Islands,Topology,Path) ->
+%%     io:format("{Model=sequential_mixed,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
     misc_util:seedRandom(),
     misc_util:clearInbox(),
     topology:start_link(Islands,Topology),
@@ -43,6 +32,10 @@ start(ProblemSize,Time,Islands,Topology,Path) ->
     {_Time,_Result} = timer:tc(fun loop/2, [Population,#counter{}]),
     topology:close(),
     logger:close().
+
+%% ====================================================================
+%% Internal functions
+%% ====================================================================
 
 %% @doc Glowa petla programu. Kazda iteracja powoduje ewolucje nowej generacji osobnikow.
 -spec loop([agent()],counter()) -> float().
@@ -65,7 +58,7 @@ loop(Population,Counter) ->
         theEnd ->
             misc_util:result([A || {_,A} <- Population])
     after 0 ->
-            Groups = misc_util:groupBy([{Environment:behaviour_function(HomeAgent),HomeAgent} || HomeAgent <- Population]),         % Groups = [{death,[{Home1,Agent1},{H2,A2}]},{fight,[...]}]
+            Groups = misc_util:groupBy([{Environment:behaviour_function(Agent),{Home,Agent}} || {Home,Agent} <- Population]),         % Groups = [{death,[{Home1,Agent1},{H2,A2}]},{fight,[...]}]
             {DeathMigration,FightReproduction} = lists:partition(fun({Atom,_}) -> lists:member(Atom,[death,migration]) end,Groups),
             DeadAndMigrated = [Environment:meeting_function(G) || G <- DeathMigration],
             FRRegrouped = [{Job,misc_util:groupBy(AgentList)} || {Job,AgentList} <- FightReproduction],     % FRRegrouped = [{fight,[{H1,[A1,A2]},{H2,[A3,A5]},...]},{reproduction,[...]}]

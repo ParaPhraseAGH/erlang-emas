@@ -3,7 +3,7 @@
 %% @doc Model sekwencyjny, gdzie agenci sa na stale podzieleni w listach reprezentujacych wyspy.
 
 -module(sequential_lists).
--export([start/5, start/0, start/1]).
+-export([start/4]).
 
 -record(counter,{fight = 0 :: non_neg_integer(),
                  reproduction = 0 :: non_neg_integer(),
@@ -17,21 +17,10 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start() -> ok.
-start() ->
-    file:make_dir("tmp"),
-    start(40,5000,2,mesh,"tmp").
 
--spec start(list()) -> ok.
-start([A,B,C,D,E]) ->
-    start(list_to_integer(A),
-          list_to_integer(B),
-          list_to_integer(C),
-          list_to_atom(D),E).
-
--spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
-start(ProblemSize,Time,Islands,Topology,Path) ->
-    io:format("{Model=sequential_lists,ProblemSize=~p,Time=~p,Islands=~p,Topology=~p}~n",[ProblemSize,Time,Islands,Topology]),
+-spec start(Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
+start(Time,Islands,Topology,Path) ->
+%%     io:format("{Model=sequential_lists,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
     misc_util:seedRandom(),
     misc_util:clearInbox(),
     topology:start_link(Islands,Topology),

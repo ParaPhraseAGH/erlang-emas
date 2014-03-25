@@ -2,10 +2,12 @@
 
 -compile(export_all).
 
+%% ====================================================================
+%% EMAS PARAMETERS
+%% ====================================================================
+
 %% @doc Rozmiar problemu reprezentowanego przez agenta
 problemSize() ->  100.
-
-
 %% @doc Czy monitorowac roznorodnosc populacji
 monitorDiversity() -> false.
 %% @doc Energia poczatkowa osobnika.

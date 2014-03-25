@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/5, start/1, start/0,  sendAgent/1]).
+-export([start/4,  sendAgent/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -16,24 +16,11 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start(ProblemSize::pos_integer(), Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
-start(ProblemSize,Time,Islands,Topology,Path) ->
-    io:format("{Model=Hybrid,ProblemSize=~p,Time=~p,Islands=~p,Topology=~p}~n",[ProblemSize,Time,Islands,Topology]),
-    {ok, _} = gen_server:start({local,?MODULE}, ?MODULE, [ProblemSize,Time,Islands,Topology,Path], []),
+-spec start(Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
+start(Time,Islands,Topology,Path) ->
+%%     io:format("{Model=Hybrid,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
+    {ok, _} = gen_server:start({local,?MODULE}, ?MODULE, [Time,Islands,Topology,Path], []),
     timer:sleep(Time).
-
--spec start(list()) -> ok.
-start([A,B,C,D,E]) ->
-    start(list_to_integer(A),
-          list_to_integer(B),
-          list_to_integer(C),
-          list_to_atom(D),
-          E).
-
--spec start() -> ok.
-start() ->
-    file:make_dir("tmp"),
-    start(40,5000,2,mesh,"tmp").
 
 %% @doc Funkcja za pomoca ktorej wyspa moze wyslac agenta supervisorowi.
 %% Komunikacja asynchroniczna - agent jest wysylany i proces idzie dalej nie czekajac na odpowiedz.
@@ -46,7 +33,7 @@ sendAgent(Agent) ->
 %% ====================================================================
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
-init([_ProblemSize,Time,Islands,Topology,Path]) ->
+init([Time,Islands,Topology,Path]) ->
     timer:send_after(Time,theEnd),
     Pids = [spawn_link(hybrid_island,start,[]) || _ <- lists:seq(1,Islands)],
     topology:start_link(Islands,Topology),
