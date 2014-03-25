@@ -61,7 +61,7 @@ loop(Islands,Counter) ->
     after 0 ->
             %% TODO przeniesc doMigrate z evolution gdzies indziej
             {NrOfEmigrants,IslandsMigrated} = evolution:doMigrate(Islands),
-            Groups = [misc_util:groupBy([{Environment:behaviour_function({no_migration,Agent}),Agent} || Agent <- I]) || I <- IslandsMigrated],
+            Groups = [misc_util:groupBy([{Environment:behaviour_function(Agent),Agent} || Agent <- I]) || I <- IslandsMigrated],
             NewGroups = [lists:map(fun Environment:meeting_function/1,I) || I <- Groups],
             NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- NewGroups],
             NewCounter = countAllIslands(Groups,Counter),

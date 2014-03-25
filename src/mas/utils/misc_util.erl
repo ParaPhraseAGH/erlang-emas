@@ -3,7 +3,7 @@
 %% @doc Modul z funkcjami pomocniczymi dla roznych wersji algorytmu.
 
 -module(misc_util).
--export([groupBy/1, shuffle/1, behavior/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
+-export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
          seedRandom/0, countGroups/2, addCounters/2, logNow/1, diversity/1, onlineDiversity/5]).
 
 -record(counter,{fight = 0 :: non_neg_integer(),
@@ -34,20 +34,20 @@ shuffle(L) ->
     Rand = [{random:uniform(), N} || N <- L],
     [X||{_,X} <- lists:sort(Rand)].
 
-%% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie jego energii.
--spec behavior(agent() | {agent(),pos_integer()}) -> task().
-behavior({_,_,0}) ->
-    death;
-behavior({_, _, Energy}) ->
-    case random:uniform() < config:migrationProbability() of
-        true -> migration;
-        false -> case Energy > emas_config:reproductionThreshold() of
-                     true -> reproduction;
-                     false -> fight
-                 end
-    end;
-behavior({_Island,Agent}) when is_tuple(Agent) ->
-    behavior(Agent).
+% %% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie jego energii.
+% -spec behavior(agent() | {agent(),pos_integer()}) -> task().
+% behavior({_,_,0}) ->
+%     death;
+% behavior({_, _, Energy}) ->
+%     case random:uniform() < config:migrationProbability() of
+%         true -> migration;
+%         false -> case Energy > emas_config:reproductionThreshold() of
+%                      true -> reproduction;
+%                      false -> fight
+%                  end
+%     end;
+% behavior({_Island,Agent}) when is_tuple(Agent) ->
+%     behavior(Agent).
 
 
 %% @doc Funkcja wyznacza statystyczna liczbe elementow, ktore podlegaja jakiejs operacji z danym prawdopodobienstwem
