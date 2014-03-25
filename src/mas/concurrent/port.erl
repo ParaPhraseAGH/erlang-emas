@@ -4,6 +4,8 @@
 -module(port).
 -behaviour(gen_server).
 
+-define(TIMEOUT,10000).
+
 %% API
 -export([start_link/2, start/2, giveArenas/2, immigrate/2, emigrate/2, close/1]).
 %% gen_server
@@ -68,13 +70,13 @@ init([Supervisor,Diversity]) ->
                                                     {stop,term(),state()}.
 handle_call({emigrate,_Agent},{Pid,_},cleaning) ->
     exit(Pid,finished),
-    {noreply,cleaning,config:arenaTimeout()};
+    {noreply,cleaning,?TIMEOUT};
 
 handle_call({emigrate,Agent}, From, State) ->
     {HisPid, _} = From,
     {Emigrants,Immigrants,LastLog} = check(State),
     conc_topology:emigrant({Agent,From}),
-    {noreply,State#state{emigrants = [HisPid|Emigrants], immigrants = Immigrants, lastLog = LastLog},config:arenaTimeout()}.
+    {noreply,State#state{emigrants = [HisPid|Emigrants], immigrants = Immigrants, lastLog = LastLog}}.
 
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
@@ -83,20 +85,20 @@ handle_call({emigrate,Agent}, From, State) ->
 
 handle_cast({immigrant,{_Agent,{Pid,_}}}, cleaning) ->
     exit(Pid,finished),
-    {noreply,cleaning,config:arenaTimeout()};
+    {noreply,cleaning,?TIMEOUT};
 
 handle_cast({immigrant,{Agent,From}}, State) ->
     gen_server:reply(From,State#state.arenas),
     {Emigrants,Immigrants,LastLog} = check(State),
     {HisPid, _} = From,
-    {noreply,State#state{immigrants = [{HisPid,Agent}|Immigrants], emigrants = Emigrants, lastLog = LastLog},config:arenaTimeout()};
+    {noreply,State#state{immigrants = [{HisPid,Agent}|Immigrants], emigrants = Emigrants, lastLog = LastLog}};
 
 handle_cast({arenas,Arenas}, State) ->
     conc_topology:helloPort(),
-    {noreply,State#state{arenas = Arenas},config:arenaTimeout()};
+    {noreply,State#state{arenas = Arenas}};
 
 handle_cast(close, _State) ->
-    {noreply,cleaning,config:arenaTimeout()}.
+    {noreply,cleaning,?TIMEOUT}.
 
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
@@ -110,7 +112,7 @@ handle_info(timer,cleaning) ->
 
 handle_info(timer,State) ->
     {Emigrants,Immigrants,LastLog} = check(State),
-    {noreply,State#state{emigrants = Emigrants, immigrants = Immigrants, lastLog = LastLog},config:arenaTimeout()}.
+    {noreply,State#state{emigrants = Emigrants, immigrants = Immigrants, lastLog = LastLog}}.
 
 
 -spec terminate(term(),state()) -> no_return().

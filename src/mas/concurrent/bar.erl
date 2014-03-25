@@ -4,6 +4,8 @@
 -module(bar).
 -behaviour(gen_server).
 
+-define(TIMEOUT,2000).
+
 %% API
 -export([start_link/2, start/1, giveArenas/2, call/2, close/1]).
 %% gen_server
@@ -54,7 +56,7 @@ close(Pid) ->
 
 init([Supervisor,Diversity]) ->
     misc_util:seedRandom(),
-    {ok, #state{supervisor = Supervisor, lastLog = os:timestamp(), diversity = Diversity},config:arenaTimeout()}.
+    {ok, #state{supervisor = Supervisor, lastLog = os:timestamp(), diversity = Diversity},?TIMEOUT}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
                                                     {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
@@ -63,12 +65,12 @@ init([Supervisor,Diversity]) ->
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
 handle_call(_Agent,_From,cleaning) ->
-    {reply,0,cleaning,config:arenaTimeout()};
+    {reply,0,cleaning,?TIMEOUT};
 
 handle_call(Agent1, From1, State) ->
     case State#state.waitlist of
         [] ->
-            {noreply,State#state{waitlist = [{From1,Agent1}]},config:arenaTimeout()};
+            {noreply,State#state{waitlist = [{From1,Agent1}]},?TIMEOUT};
         [{From2,Agent2}] ->
             [{_,_,NewEnergy1},{_,_,NewEnergy2},NewAgent1,NewAgent2] = evolution:doReproduce({Agent1,Agent2}),
             gen_server:reply(From1,NewEnergy1),
@@ -84,11 +86,11 @@ handle_call(Agent1, From1, State) ->
                     {noreply,State#state{waitlist = [],
                                          lastLog = NewLog,
                                          newborns = [],
-                                         best = NewBest},config:arenaTimeout()};
+                                         best = NewBest},?TIMEOUT};
                 notyet ->
                     {noreply,State#state{waitlist = [],
                                          newborns = NewNewborns,
-                                         best = NewBest},config:arenaTimeout()}
+                                         best = NewBest},?TIMEOUT}
             end
     end.
 
@@ -97,11 +99,11 @@ handle_call(Agent1, From1, State) ->
                                      {stop,term(),state()}.
 
 handle_cast({arenas,Arenas}, State) ->
-    {noreply,State#state{arenas = Arenas},config:arenaTimeout()};
+    {noreply,State#state{arenas = Arenas},?TIMEOUT};
 
 handle_cast(close, State) ->
     [gen_server:reply(From,0) || {From,_} <- State#state.waitlist],
-    {noreply,cleaning,config:arenaTimeout()}.
+    {noreply,cleaning,?TIMEOUT}.
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
@@ -127,11 +129,11 @@ handle_info(timeout,State) ->
                     {noreply,State#state{waitlist = [],
                                          lastLog = NewLog,
                                          newborns = [],
-                                         best = NewBest},config:arenaTimeout()};
+                                         best = NewBest},?TIMEOUT};
                 notyet ->
                     {noreply,State#state{waitlist = [],
                                          newborns = NewNewborns,
-                                         best = NewBest},config:arenaTimeout()}
+                                         best = NewBest},?TIMEOUT}
             end
     end.
 
