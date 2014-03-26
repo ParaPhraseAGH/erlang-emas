@@ -20,7 +20,7 @@
 
 -spec start(Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
 start(Time,Islands,Topology,Path) ->
-%%     io:format("{Model=sequential_lists,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
+    %%     io:format("{Model=sequential_lists,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
     misc_util:seedRandom(),
     misc_util:clearInbox(),
     topology:start_link(Islands,Topology),
@@ -60,11 +60,17 @@ loop(Islands,Counter) ->
             lists:max([misc_util:result(I) || I <- Islands])
     after 0 ->
             %% TODO przeniesc doMigrate z evolution gdzies indziej
-            {NrOfEmigrants,IslandsMigrated} = evolution:doMigrate(Islands),
-            Groups = [misc_util:groupBy([{Environment:behaviour_function(Agent),Agent} || Agent <- I]) || I <- IslandsMigrated],
-            NewGroups = [lists:map(fun Environment:meeting_function/1,I) || I <- Groups],
-            NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- NewGroups],
+            %%             {NrOfEmigrants,IslandsMigrated} = evolution:doMigrate(Islands),
+            Groups = [misc_util:groupBy([{Environment:behaviour_function(Agent),Agent} || Agent <- I]) || I <- Islands],
+            Emigrants = [seq_migrate(lists:keyfind(migration,1,Island),Nr) || {Island,Nr} <- lists:zip(Groups,lists:seq(1,length(Groups)))],
+            FlatEmigrants = lists:flatten(Emigrants),
+            NewGroups = [[misc_util:meeting_proxy(Activity,sequential) || Activity <- I] || I <- Groups],
+            WithEmigrants = append(FlatEmigrants,NewGroups),
+            NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- WithEmigrants],
             NewCounter = countAllIslands(Groups,Counter),
+            NrOfEmigrants = lists:foldl(fun({_To,AgentList},Acc) ->
+                                                length(AgentList) + Acc
+                                        end, 0, FlatEmigrants),
             loop(NewIslands,NewCounter#counter{migration = NrOfEmigrants + Counter#counter.migration})
     end.
 
@@ -73,3 +79,14 @@ loop(Islands,Counter) ->
 countAllIslands(GroupedIslands,Counter) ->
     CountedIslands = [misc_util:countGroups(I,#counter{}) || I <- GroupedIslands],
     lists:foldl(fun misc_util:addCounters/2,Counter,CountedIslands).
+
+seq_migrate(false,_) ->
+    [];
+seq_migrate({migration,Agents},From) ->
+    Destinations = [{topology:getDestination(From),Agent} || Agent <- Agents],
+    misc_util:groupBy(Destinations).
+
+append([],Islands) -> Islands;
+append([{Destination,Immigrants}|T],Islands) ->
+    NewIslands = misc_util:mapIndex(Immigrants,Destination,Islands,fun lists:append/2),
+    append(T,NewIslands).

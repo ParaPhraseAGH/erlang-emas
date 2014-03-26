@@ -4,24 +4,22 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
-         seedRandom/0, countGroups/2, addCounters/2, logNow/1, diversity/1, onlineDiversity/5]).
+         seedRandom/0, countGroups/2, addCounters/2, logNow/1, diversity/1, onlineDiversity/5, meeting_proxy/2]).
 
 -record(counter,{fight = 0 :: non_neg_integer(),
                  reproduction = 0 :: non_neg_integer(),
                  migration = 0 :: non_neg_integer(),
                  death = 0 :: non_neg_integer()}).
 
--type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type task() :: death | fight | reproduction | migration.
--type groups() :: [{task(),[agent()]}].
 -type counter() :: #counter{}.
+-type model() :: sequential | hybrid | concurrent.
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 %% @doc Funkcja grupujaca krotki wg schematu:
 %% [{K1,V1},{K2,V2},...] -> [{K1,[V1,V3]},{K2,[V2,V4,V5]},...]
--spec groupBy([{term(),term()}]) -> groups().
+-spec groupBy([{term(),term()}]) -> [{term(),[term()]}].
 groupBy(List) ->
     dict:to_list(
       lists:foldl(fun({K,V}, D) ->
@@ -34,21 +32,20 @@ shuffle(L) ->
     Rand = [{random:uniform(), N} || N <- L],
     [X||{_,X} <- lists:sort(Rand)].
 
-% %% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie jego energii.
-% -spec behavior(agent() | {agent(),pos_integer()}) -> task().
-% behavior({_,_,0}) ->
-%     death;
-% behavior({_, _, Energy}) ->
-%     case random:uniform() < config:migrationProbability() of
-%         true -> migration;
-%         false -> case Energy > emas_config:reproductionThreshold() of
-%                      true -> reproduction;
-%                      false -> fight
-%                  end
-%     end;
-% behavior({_Island,Agent}) when is_tuple(Agent) ->
-%     behavior(Agent).
+-spec meeting_proxy({atom(),list()},model()) -> list().
+meeting_proxy({migration,_Agents},sequential) ->
+    [];
 
+meeting_proxy({migration,Agents},hybrid) ->
+    [hybrid:sendAgent(Agent) || Agent <- Agents],
+    [];
+
+meeting_proxy({migration,_Agents},concurrent) ->
+    [];
+
+meeting_proxy(Group,_) ->
+    Environment = config:agent_env(),
+    Environment:meeting_function(Group).
 
 %% @doc Funkcja wyznacza statystyczna liczbe elementow, ktore podlegaja jakiejs operacji z danym prawdopodobienstwem
 -spec averageNumber(float(),[term()]) -> integer().
@@ -77,7 +74,7 @@ logNow(LastLog) ->
     end.
 
 %% @doc Funkcja wyliczajaca sume i minimum odchylen standardowych genotypow agentow
--spec diversity([agent()]) -> {float(), float(), float()}.
+-spec diversity([term()]) -> {float(), float(), float()}.
 diversity([]) ->
     {-1.0, -1.0, 0.0};
 diversity(Agents) ->
@@ -144,7 +141,7 @@ find(Elem,List) ->
     find(Elem,List,1).
 
 %% @doc Funkcja okreslajaca najlepszy wynik na podstawie przeslanej listy agentow
--spec result([agent()]) -> float() | islandEmpty.
+-spec result([term()]) -> float() | islandEmpty.
 result([]) ->
     islandEmpty;
 
