@@ -1,10 +1,17 @@
 -module (emas).
 -behaviour(agent_env).
 
--export ([initial_population/0, behaviour_function/1, behaviours/0, meeting_function/1]).
+-export ([start/3, initial_population/0, behaviour_function/1, behaviours/0, meeting_function/1]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
 -type agent_behaviour() :: death | reproduction | fight | migration.
+
+-type model() :: sequential_lists | hybrid | concurrent.
+
+-spec start(model(),pos_integer(),[tuple()]) -> ok.
+start(Model, Time, Options) ->
+    mas:start(?MODULE,Model,Time,Options).
+
 
 -spec initial_population() -> [agent()].
 initial_population() -> 
@@ -12,15 +19,9 @@ initial_population() ->
 
 %% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie jego energii.
 -spec behaviour_function(agent()) -> agent_behaviour().
-% behaviour_function({no_migration, {_,_,0}}) -> death;
+
 behaviour_function({_,_,0}) ->
     death;
-
-% behaviour_function({_, _, Energy}) ->
-%     case Energy > emas_config:reproductionThreshold() of
-%         true -> reproduction;
-%         false -> fight
-%     end.
 
 behaviour_function({_, _, Energy}) ->
     case random:uniform() < config:migrationProbability() of
@@ -34,7 +35,7 @@ behaviour_function({_, _, Energy}) ->
 
 -spec behaviours() -> [agent_behaviour()].
 behaviours() -> 
-    [reproduction, death, fight].
+    [reproduction, death, fight, migration].
 
 -spec meeting_function({agent_behaviour(), [agent()]}) -> [agent()].
 meeting_function({death, _}) ->

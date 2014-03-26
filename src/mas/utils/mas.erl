@@ -1,7 +1,7 @@
 -module (mas).
 -export ([start/4]).
 
--type model() :: sequential_mixed | sequential_lists | hybrid | concurrent.
+-type model() :: sequential_lists | hybrid | concurrent.
 
 -spec start(atom(),model(),pos_integer(),[tuple()]) -> ok.
 start(_Module,Model,Time,_Options) ->
