@@ -25,6 +25,8 @@ mutationRate() -> 0.1.
 mutationRange() -> 0.05.
 %% @doc Prawdopodobienstwo wystapienia mutacji u osobnika
 mutationChance() -> 0.75.
+%% @doc Prawdopodobienstwo migracji dowolnego osobnika o niezerowej energii na inna wyspe
+migrationProbability() -> 0.0001.
 %% @doc Prawdopodobienstwo skrzyzowania osobnikow
 recombinationChance() -> 0.3.
 

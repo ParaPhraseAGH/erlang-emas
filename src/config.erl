@@ -20,8 +20,6 @@ logDir() -> standard_io.
 islands() -> 2.
 %% @doc Poczatkowa wielkosc populacji
 populationSize() -> 100.
-%% @doc Prawdopodobienstwo migracji dowolnego osobnika o niezerowej energii na inna wyspe
-migrationProbability() -> 0.0001.
 
 %% @doc Co ile milisekund wpisywany jest wynik do pliku
 writeInterval() -> 1000.
