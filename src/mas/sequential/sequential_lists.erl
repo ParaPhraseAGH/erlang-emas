@@ -59,8 +59,6 @@ loop(Islands,Counter) ->
         theEnd ->
             lists:max([misc_util:result(I) || I <- Islands])
     after 0 ->
-            %% TODO przeniesc doMigrate z evolution gdzies indziej
-            %%             {NrOfEmigrants,IslandsMigrated} = evolution:doMigrate(Islands),
             Groups = [misc_util:groupBy([{Environment:behaviour_function(Agent),Agent} || Agent <- I]) || I <- Islands],
             Emigrants = [seq_migrate(lists:keyfind(migration,1,Island),Nr) || {Island,Nr} <- lists:zip(Groups,lists:seq(1,length(Groups)))],
             FlatEmigrants = lists:flatten(Emigrants),
@@ -86,7 +84,8 @@ seq_migrate({migration,Agents},From) ->
     Destinations = [{topology:getDestination(From),Agent} || Agent <- Agents],
     misc_util:groupBy(Destinations).
 
-append([],Islands) -> Islands;
+append([],Islands) ->
+    Islands;
 append([{Destination,Immigrants}|T],Islands) ->
     NewIslands = misc_util:mapIndex(Immigrants,Destination,Islands,fun lists:append/2),
     append(T,NewIslands).

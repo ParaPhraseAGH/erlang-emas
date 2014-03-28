@@ -3,7 +3,7 @@
 %% @doc Modul z funkcjami pomocniczymi dla roznych wersji algorytmu.
 
 -module(misc_util).
--export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4,
+-export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2,
          seedRandom/0, countGroups/2, addCounters/2, logNow/1, diversity/1, onlineDiversity/5, meeting_proxy/2]).
 
 -record(counter,{fight = 0 :: non_neg_integer(),
@@ -135,6 +135,10 @@ clearInbox() ->
             ok
     end.
 
+-spec shortestZip(list(),list()) -> list().
+shortestZip(L1,L2) ->
+    shortestZip(L1,L2,[]).
+
 %% @doc Funkcja wyznaczajaca indeks pod jakim znajduje sie dany element na podanej liscie.
 -spec find(term(),[term()]) -> integer().
 find(Elem,List) ->
@@ -151,14 +155,7 @@ result(Agents) ->
 -spec seedRandom() -> {integer(),integer(),integer()}.
 seedRandom() ->
     {_,B,C} = erlang:now(),
-    List = atom_to_list(node()),
-    Hash = lists:foldl(fun(N,Acc) ->
-                               if N >= 1000 -> Acc * 10000 + N;
-                                  N >= 100 -> Acc * 1000 + N;
-                                  N >= 10 -> Acc * 100 + N;
-                                  N < 10 -> Acc * 10 + N
-                               end
-                       end,0,List),
+    Hash = erlang:phash2(node()),
     random:seed(Hash,B,C).
 
 %% ====================================================================
@@ -225,3 +222,12 @@ transpose([]) -> [];
 transpose(Tuple) when is_tuple(Tuple) ->  % wrapper to emulate zip
     Xs = transpose(tuple_to_list(Tuple)),
     [list_to_tuple(X) || X <- Xs].
+
+shortestZip([],_L2,Acc) ->
+    Acc;
+
+shortestZip(_L1,[],Acc) ->
+    Acc;
+
+shortestZip([H1|T1],[H2|T2],Acc) ->
+    shortestZip(T1,T2,[{H1,H2}|Acc]).

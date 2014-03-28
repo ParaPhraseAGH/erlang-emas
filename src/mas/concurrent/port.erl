@@ -7,7 +7,7 @@
 -define(TIMEOUT,10000).
 
 %% API
--export([start_link/2, start/2, giveArenas/2, immigrate/2, emigrate/2, close/1]).
+-export([start_link/1, giveArenas/2, immigrate/2, emigrate/2, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -17,17 +17,13 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start_link(pid(),pid()) -> {ok,pid()}.
-start_link(Supervisor,Diversity) ->
-    gen_server:start_link(?MODULE, [Supervisor,Diversity], []).
+-spec start_link(pid()) -> {ok,pid()}.
+start_link(Supervisor) ->
+    gen_server:start_link(?MODULE, [Supervisor], []).
 
--spec start(pid(),[pid()]) -> {ok,pid()}.
-start(Supervisor,Arenas) ->
-    gen_server:start(?MODULE, [Supervisor,Arenas], []).
-
--spec giveArenas(pid(),[pid()]) -> ok.
+-spec giveArenas(pid(),dict()) -> ok.
 giveArenas(Pid,Arenas) ->
-    gen_server:cast(Pid,{arenas,Arenas}).
+    gen_server:call(Pid,{arenas,Arenas}).
 
 -spec immigrate(pid(),tuple()) -> ok.
 immigrate(Pid,AgentInfo) ->
@@ -46,8 +42,8 @@ close(Pid) ->
 %% Callbacks
 %% ====================================================================
 -record(state, {mySupervisor :: pid(),
-                diversity :: pid(),
-                arenas = [] :: [pid()],
+%%                 diversity :: pid(),
+                arenas = [] :: dict(),
                 emigrants = [] :: [pid()],
                 immigrants = [] :: [{pid(),agent()}],
                 lastLog :: erlang:timestamp()}).
@@ -56,10 +52,10 @@ close(Pid) ->
 
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
-init([Supervisor,Diversity]) ->
+init([Supervisor]) ->
     misc_util:seedRandom(),
     timer:send_after(config:writeInterval(),timer),
-    {ok, #state{mySupervisor = Supervisor, lastLog = os:timestamp(), diversity = Diversity}}.
+    {ok, #state{mySupervisor = Supervisor, lastLog = os:timestamp()}}.
 
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -68,6 +64,10 @@ init([Supervisor,Diversity]) ->
                                                     {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
+handle_call({arenas,Arenas}, _From, State) ->
+    conc_topology:helloPort(),
+    {reply,ok,State#state{arenas = Arenas}};
+
 handle_call({emigrate,_Agent},{Pid,_},cleaning) ->
     exit(Pid,finished),
     {noreply,cleaning,?TIMEOUT};
@@ -92,10 +92,6 @@ handle_cast({immigrant,{Agent,From}}, State) ->
     {Emigrants,Immigrants,LastLog} = check(State),
     {HisPid, _} = From,
     {noreply,State#state{immigrants = [{HisPid,Agent}|Immigrants], emigrants = Emigrants, lastLog = LastLog}};
-
-handle_cast({arenas,Arenas}, State) ->
-    conc_topology:helloPort(),
-    {noreply,State#state{arenas = Arenas}};
 
 handle_cast(close, _State) ->
     {noreply,cleaning,?TIMEOUT}.
@@ -133,8 +129,8 @@ check(State) ->
     {Emigrants,Immigrants,LastLog} = {State#state.emigrants,State#state.immigrants,State#state.lastLog},
     case misc_util:logNow(LastLog) of
         {yes,NewLog} ->
-            diversity:report(State#state.diversity,emigration,Emigrants),
-            diversity:report(State#state.diversity,immigration,Immigrants),
+%%             diversity:report(State#state.diversity,emigration,Emigrants),
+%%             diversity:report(State#state.diversity,immigration,Immigrants),
             conc_logger:log(State#state.mySupervisor,migration,{length(Emigrants),length(Immigrants)}),
             timer:send_after(config:writeInterval(),timer),
             {[],[],NewLog};

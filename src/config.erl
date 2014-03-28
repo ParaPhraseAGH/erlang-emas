@@ -23,3 +23,5 @@ populationSize() -> 100.
 
 %% @doc Co ile milisekund wpisywany jest wynik do pliku
 writeInterval() -> 1000.
+%% @doc Liczba milisekund bezczynnosci po ktorych arena powinna wyrzucic blad | infinity
+arenaTimeout() -> 5000.

@@ -12,19 +12,17 @@
 start(Model, Time, Options) ->
     mas:start(?MODULE,Model,Time,Options).
 
-
 -spec initial_population() -> [agent()].
 initial_population() -> 
     genetic:generatePopulation(emas_config:problemSize()).
 
 %% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie jego energii.
 -spec behaviour_function(agent()) -> agent_behaviour().
-
 behaviour_function({_,_,0}) ->
     death;
 
 behaviour_function({_, _, Energy}) ->
-    case random:uniform() < config:migrationProbability() of
+    case random:uniform() < emas_config:migrationProbability() of
         true -> migration;
         false -> case Energy > emas_config:reproductionThreshold() of
                      true -> reproduction;
@@ -48,7 +46,6 @@ meeting_function({fight, Agents}) ->
     lists:flatmap(fun evolution:doFight/1, evolution:optionalPairs(Agents,[]));
 
 meeting_function({migration, Agents}) ->
-    %% TODO agenci w ogole nie migruja
     Agents;
 
 meeting_function({_, _}) -> 

@@ -3,11 +3,10 @@
 %% @doc Modul z funkcjami dotyczacymi ewolucji czyli przechodzenia jednej generacji w kolejna.
 %% Sa tu rowniez funkcje implementujace migracje miedzy wyspami
 -module(evolution).
--export([sendToWork/1, doReproduce/1, doFight/1, doMigrate/1, eachFightsAll/1, optionalPairs/2]).
+-export([sendToWork/1, doReproduce/1, doFight/1, eachFightsAll/1, optionalPairs/2]).
 
 -type task() :: death | fight | reproduction | migration.
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type island() :: [agent()].
 -type fighter() :: {term(), Fitness::float(), Energy::pos_integer()}. % agent niekoniecznie zawierajacy solution. Czasem jest zamiast tego podstawiany {Pid,Ref}, aby moc pozniej odeslac energie.
 
 %% ====================================================================
@@ -68,39 +67,9 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
     [AtoCTransfer, BtoDTransfer] = [ erlang:min(emas_config:reproductionTransfer(), E) || E <- [EnA, EnB] ],
     [{SolA, EvA, EnA - AtoCTransfer}, {SolB, EvB, EnB - BtoDTransfer}, {SolC, EvC, AtoCTransfer}, {SolD, EvD, BtoDTransfer}].
 
-%% @doc Funkcja dokonujaca migracji dla algorytmu sekwencyjnego. Najpierw z kazdej wyspy pobierana jest statystyczna
-%% liczba agentow, ktorzy powinni ulec migracji. Dla kazdej grupy emigrantow wyznaczana jest wyspa docelowa
-%% i sa oni do niej dopisywani. Zwracana jest lista wysp po dokonanej mirgacji.
--spec doMigrate([island()]) -> {non_neg_integer(),[island()]}.
-doMigrate(Islands)->
-    {Gathered,NewIslands} = gather(Islands,[],[]),
-    {length(Gathered),append(Gathered,lists:reverse(NewIslands))}.
-
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-%% @doc Funkcja dla kazdej grupy emigrantow z listy wyznacza wyspe docelowa oraz dokleja ich do tamtejszej populacji.
--spec append([{[agent()],integer()}],[island()]) -> [island()].
-append([],Islands) -> Islands;
-append([{Immigrants,From}|T],Islands) ->
-    Destination = topology:getDestination(From),
-    NewIslands = misc_util:mapIndex(Immigrants,Destination,Islands,fun lists:append/2),
-    append(T,NewIslands).
-
-%% @doc Funkcja wyznacza ile srednio agentow z danej populacji powinno emigrowac i przesuwa ich do specjalnej listy emigrantow.
-%% Zwracana jest wyznaczona lista emigrantow oraz uszczuplona lista wysp.
--spec gather([island()],[island()],[{[agent()],integer()}]) -> {[{[agent()],integer()}],[island()]}.
-gather([],Islands,Emigrants) ->
-    {Emigrants,Islands};
-gather([I|T],Acc,Emigrants) ->
-    N = misc_util:averageNumber(config:migrationProbability(),I),
-    case N of
-        0 ->
-            gather(T,[I|Acc],Emigrants);
-        _ ->
-            {NewEmigrants,NewIsland} = lists:split(N,I),
-            gather(T,[NewIsland|Acc],[{NewEmigrants,length(Acc)+1}|Emigrants])
-    end.
 
 %% @doc Funkcja uruchamiajaca funkcje doFight/1 dla agenta A oraz
 %% kazdego osobnika z listy ToFight. Agenci po walce przechowywani sa

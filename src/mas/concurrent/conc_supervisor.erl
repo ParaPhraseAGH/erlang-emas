@@ -30,7 +30,7 @@ close(Pid) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--record(state, {arenas :: [pid()],
+-record(state, {arenas  = dict:new() :: dict(),
                 diversity :: pid()}).
 -type state() :: #state{}.
 
@@ -39,16 +39,13 @@ close(Pid) ->
                       {ok,state(),non_neg_integer()}.
 init([]) ->
     misc_util:seedRandom(),
-    {ok,Diversity} = diversity:start_link(self()),
-    {ok,Cemetery} = cemetery:start_link(self(),Diversity),
-    {ok,Ring} = ring:start_link(self()),
-    {ok,Bar} = bar:start_link(self(),Diversity),
-    {ok,Port} = port:start_link(self(),Diversity),
-    Arenas = [Ring,Bar,Port,Cemetery],
-    bar:giveArenas(Bar,Arenas),
-    port:giveArenas(Port,Arenas),
-    io_util:printArenas(Arenas),
-    {ok,#state{arenas = Arenas, diversity = Diversity}}.
+    Environment = config:agent_env(),
+    Interactions = Environment:behaviours(),
+    ArenaList = [{Interaction,arena:start_link(self(),Interaction)} || Interaction <- Interactions],
+    Arenas = dict:from_list(ArenaList),
+    [ok = arena:giveArenas(Pid,Arenas) || {_Interaction,Pid} <- ArenaList],
+    io_util:printArenas(ArenaList),
+    {ok,#state{arenas = Arenas}}.
 
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -58,12 +55,7 @@ init([]) ->
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
 handle_call(close,_From,State) ->
-    [Ring,Bar,Port,Cemetery] = State#state.arenas,
-    port:close(Port),
-    bar:close(Bar),
-    ring:close(Ring),
-    cemetery:close(Cemetery),
-    diversity:close(State#state.diversity),
+    [arena:close(Pid) || {_Name,Pid} <- dict:to_list(State#state.arenas)],
     {stop,normal,ok,State}.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
@@ -73,8 +65,8 @@ handle_call(close,_From,State) ->
 handle_cast(go, State) ->
     Environment = config:agent_env(),
     Agents = Environment:initial_population(),
-    InitPopulation = [{spawn(agent,start,[A,State#state.arenas]),A} || A <- Agents],
-    diversity:initPopulation(State#state.diversity,InitPopulation),
+    _InitPopulation = [{spawn(agent,start,[A,State#state.arenas]),A} || A <- Agents],
+%%     diversity:initPopulation(State#state.diversity,InitPopulation),
     {noreply,State}.
 
 
