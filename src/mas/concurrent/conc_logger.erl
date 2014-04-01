@@ -209,9 +209,9 @@ logGlobal(FDDict,Stat,Value) ->
     FD = dict:fetch(Stat, FDDict),
     file:write(FD, io_lib:fwrite("~p ~p\n", [Stat,Value])).
 
-logLocal(FDDict,Supervisor,Stat,Value) ->
-    FD = dict:fetch(Stat, FDDict),
-    file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Stat,Supervisor,Value])).
+%% logLocal(FDDict,Supervisor,Stat,Value) ->
+%%     FD = dict:fetch(Stat, FDDict),
+%%     file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Stat,Supervisor,Value])).
 
 %% @doc Zamyka pliki podane w argumencie
 -spec closeFiles(dict()) -> any().
