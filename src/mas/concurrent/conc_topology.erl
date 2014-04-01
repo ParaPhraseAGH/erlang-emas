@@ -69,9 +69,11 @@ handle_cast({emigrant,Pid,AgentInfo}, State) ->
     NewPort = case State#state.n of
                   1 -> Pid;
                   _ ->
-                      Ports = lists:delete(Pid,State#state.ports),
-                      Index = random:uniform(length(Ports)),
-                      lists:nth(Index,Ports)
+                      OldPort = misc_util:find(Pid,State#state.ports),
+%%                       Ports = lists:delete(Pid,State#state.ports),
+%%                       Index = random:uniform(length(Ports)),
+%%                       lists:nth(Index,Ports)
+                      lists:nth(computeDestination(OldPort,State),State#state.ports)
               end,
     port:immigrate(NewPort,AgentInfo),
     {noreply, State};
