@@ -39,7 +39,7 @@ printMoreStats(Groups) ->
 
 -spec printArenas([{atom(),pid()}]) -> ok.
 printArenas([]) ->
-    io:format("Supervisor: ~p~n",[self()]);
+    io:format("supervisor: ~p~n~n",[self()]);
 printArenas([{Name,Pid}|Arenas]) ->
     io:format("~p: ~p~n",[Name,Pid]),
     printArenas(Arenas).

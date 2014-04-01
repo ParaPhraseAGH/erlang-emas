@@ -13,10 +13,11 @@
                 agentFroms = [] ::[pid()],
                 arenas :: dict(),
                 interaction :: atom(),
-                lastLog :: erlang:timestamp()}).
+                lastLog :: erlang:timestamp(),
+                counter = 0 :: non_neg_integer()}).
 
 -define(CLOSING_TIMEOUT,2000).
--define(AGENT_THRESHOLD,2). %% TODO zmienna powinna byc konfigurowana przez usera
+-define(AGENT_THRESHOLD,2). %% TODO zmienna powinna byc konfigurowana przez usera i na dodatek zalezna od interakcji
 
 -type agent() :: term(). %% TODO moglby go user definiowac
 %%%===================================================================
@@ -73,9 +74,21 @@ handle_call({interact,Agent}, From, State) ->
     Froms = [From|State#state.agentFroms],
     case length(Waitlist)  of
         ?AGENT_THRESHOLD ->
+            NewCounter = State#state.counter + length(Waitlist), % tu blad?!
             NewAgents = misc_util:meeting_proxy({State#state.interaction,Waitlist},concurrent),
             respond(NewAgents,Froms,State#state.arenas),
-            {noreply,State#state{agentFroms = [], waitlist = []},config:arenaTimeout()};
+            case misc_util:logNow(State#state.lastLog) of
+                {yes,NewLog} ->
+                    conc_logger:log(State#state.supervisor,State#state.interaction,NewCounter),
+                    {noreply,State#state{waitlist = [],
+                                         agentFroms = [],
+                                         lastLog = NewLog,
+                                         counter = 0},config:arenaTimeout()};
+                notyet ->
+                    {noreply,State#state{waitlist = [],
+                                         agentFroms = [],
+                                         counter = NewCounter},config:arenaTimeout()}
+            end;
         _ ->
             {noreply,State#state{agentFroms = Froms, waitlist = Waitlist},config:arenaTimeout()}
     end;
@@ -121,4 +134,14 @@ respond([],Froms,_Arenas) ->
 
 respond(Agents,Froms,Arenas) when length(Agents) >= length(Froms) ->
     [gen_server:reply(From,Agent) || {From,Agent} <- misc_util:shortestZip(Froms,Agents)],
+%%     case lists:nthtail(length(Froms),Agents) of
+%%         [] -> nothing;
+%%         L ->
+%%             case random:uniform() < 0.001 of
+%%                 true ->
+%%                     io:format("~p ~p~n",[self(),lists:max([Fit || {_,Fit,_} <- L ])]);
+%%                 false ->
+%%                     nothing
+%%             end
+%%     end,
     [spawn(agent,start,[Agent,Arenas]) || Agent <- lists:nthtail(length(Froms),Agents)].
