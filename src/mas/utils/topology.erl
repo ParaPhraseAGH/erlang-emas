@@ -9,7 +9,7 @@
 -export([start_link/3, helloPort/0, emigrant/1, getDestination/1, close/0]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
-    code_change/3]).
+         code_change/3]).
 
 -type topology() :: mesh | ring.
 
@@ -42,9 +42,9 @@ getDestination(X) ->
 %% Callbacks
 %% ====================================================================
 -record(state, {n = 0 :: integer(),
-    king :: pid(),
-    topology = undefined :: atom(),
-    ports = [] :: [pid()]}).
+                king :: pid(),
+                topology = undefined :: atom(),
+                ports = [] :: [pid()]}).
 
 -type state() :: #state{}.
 
@@ -54,24 +54,24 @@ init([King,IslandsNr,Topology]) ->
     {ok, #state{n = IslandsNr, topology = Topology, king = King}}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
-{reply,term(),state(),hibernate | infinity | non_neg_integer()} |
-{noreply,state()} |
-{noreply,state(),hibernate | infinity | non_neg_integer()} |
-{stop,term(),term(),state()} |
-{stop,term(),state()}.
+                                                    {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
+                                                    {noreply,state()} |
+                                                    {noreply,state(),hibernate | infinity | non_neg_integer()} |
+                                                    {stop,term(),term(),state()} |
+                                                    {stop,term(),state()}.
 handle_call({destination, X}, _From, State) ->
-    io:format("Emigration from ~p to ~p~n",[X,computeDestination(X,State)]),
+    %%     io:format("Emigration from ~p to ~p~n",[X,computeDestination(X,State)]),
     {reply, computeDestination(X,State), State}.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
-{noreply,state(),hibernate | infinity | non_neg_integer()} |
-{stop,term(),state()}.
+                                     {noreply,state(),hibernate | infinity | non_neg_integer()} |
+                                     {stop,term(),state()}.
 handle_cast({emigrant,Pid,AgentInfo}, State) ->
     NewPort = case State#state.n of
                   1 -> Pid;
                   _ ->
                       OldPort = misc_util:find(Pid,State#state.ports),
-                      io:format("Emigration from ~p to ~p~n",[OldPort,computeDestination(OldPort,State)]),
+                      %%                       io:format("Emigration from ~p to ~p~n",[OldPort,computeDestination(OldPort,State)]),
                       lists:nth(computeDestination(OldPort,State),State#state.ports)
               end,
     port:immigrate(NewPort,AgentInfo),
@@ -91,8 +91,8 @@ handle_cast(close, State) ->
     {stop, normal, State}.
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
-{noreply,state(),hibernate | infinity | non_neg_integer()} |
-{stop,term(),state()}.
+                                     {noreply,state(),hibernate | infinity | non_neg_integer()} |
+                                     {stop,term(),state()}.
 handle_info(_Request, State) ->
     {noreply, State}.
 
