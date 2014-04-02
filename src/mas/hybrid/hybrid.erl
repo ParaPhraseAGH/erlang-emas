@@ -36,7 +36,7 @@ sendAgent(Agent) ->
 init([Time,Islands,Topology,Path]) ->
     timer:send_after(Time,theEnd),
     Pids = [spawn_link(hybrid_island,start,[]) || _ <- lists:seq(1,Islands)],
-    topology:start_link(Islands,Topology),
+    topology:start_link(self(),Islands,Topology),
     logger:start_link({parallel,Pids},Path),
     {ok,Pids}.
 

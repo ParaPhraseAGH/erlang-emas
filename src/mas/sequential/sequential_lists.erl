@@ -23,7 +23,7 @@ start(Time,Islands,Topology,Path) ->
     %%     io:format("{Model=sequential_lists,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
     misc_util:seedRandom(),
     misc_util:clearInbox(),
-    topology:start_link(Islands,Topology),
+    topology:start_link(self(),Islands,Topology),
     logger:start_link({sequential,Islands},Path),
     Environment = config:agent_env(),
     InitIslands = [Environment:initial_population() || _ <- lists:seq(1,Islands)],

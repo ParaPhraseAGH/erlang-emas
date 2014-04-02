@@ -13,7 +13,7 @@
 start(Time,Islands,Topology,Path) ->
 %%     io:format("{Model=Concurrent,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
     misc_util:clearInbox(),
-    conc_topology:start_link(self(),Islands,Topology),
+    topology:start_link(self(),Islands,Topology),
     Supervisors = [conc_supervisor:start() || _ <- lists:seq(1,Islands)],
     conc_logger:start_link(Supervisors,Path),
     receive
@@ -23,7 +23,7 @@ start(Time,Islands,Topology,Path) ->
     timer:sleep(Time),
     [ok = conc_supervisor:close(Pid) || Pid <- Supervisors],
     conc_logger:close(),
-    conc_topology:close().
+    topology:close().
 
 %% ====================================================================
 %% Internal functions

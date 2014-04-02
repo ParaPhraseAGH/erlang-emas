@@ -65,7 +65,7 @@ init([Supervisor]) ->
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
 handle_call({arenas,Arenas}, _From, State) ->
-    conc_topology:helloPort(),
+    topology:helloPort(),
     {reply,ok,State#state{arenas = Arenas}};
 
 handle_call({emigrate,_Agent},{Pid,_},cleaning) ->
@@ -75,7 +75,7 @@ handle_call({emigrate,_Agent},{Pid,_},cleaning) ->
 handle_call({emigrate,Agent}, From, State) ->
     {HisPid, _} = From,
     {Emigrants,Immigrants,LastLog} = check(State),
-    conc_topology:emigrant({Agent,From}),
+    topology:emigrant({Agent,From}),
     {noreply,State#state{emigrants = [HisPid|Emigrants], immigrants = Immigrants, lastLog = LastLog}}.
 
 

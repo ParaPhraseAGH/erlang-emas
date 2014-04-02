@@ -17,7 +17,7 @@ topology() -> mesh.
 %% @doc Domyslna sciezka zapisu logow (folder musi istniec). Atom standard_io powoduje wypisanie na standardowe wyjscie
 logDir() -> standard_io.
 %% @doc Liczba wysp
-islands() -> 2.
+islands() -> 4.
 %% @doc Poczatkowa wielkosc populacji
 populationSize() -> 100.
 
