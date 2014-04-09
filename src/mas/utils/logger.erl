@@ -26,9 +26,10 @@ logLocalStats(Mode, Stat, Value) ->
     gen_server:cast(whereis(?MODULE), {Mode, Stat, self(), Value}).
 
 %% @doc Zapisuje globalne statystyki (deaths,fights etc.) do plikow.
--spec logGlobalStats(sequential | parallel, [tuple()]) -> ok.
+-spec logGlobalStats(sequential | parallel, dict()) -> ok.
 logGlobalStats(sequential, Counter) ->
     gen_server:cast(whereis(?MODULE), {counter, Counter});
+
 logGlobalStats(parallel, Counter) ->
     gen_server:cast(whereis(?MODULE), {agregate, self(), Counter}).
 
@@ -41,7 +42,7 @@ close() ->
 %%%===================================================================
 
 -record(state, {dict :: dict(),
-                counters = [] :: [tuple()],
+                counters = dict:new() :: dict(),
                 n = 0 :: non_neg_integer()}).
 -type state() :: #state{}.
 
@@ -74,18 +75,21 @@ handle_call(_Request, _From, State) ->
 handle_cast({parallel, Stat, Pid, Value}, State) ->
     logLocal(State#state.dict, Pid, Stat, Value),
     {noreply,State};
+
 handle_cast({sequential, Stat, _Pid, Values}, State) ->
     logList(Stat, 1, Values, State#state.dict),
     {noreply,State};
+
 handle_cast({counter, GlobalStats}, State) ->
-    [logGlobal(State#state.dict,StatName,StatVal) || {StatName,StatVal} <- GlobalStats],
+    [logGlobal(State#state.dict,StatName,StatVal) || {StatName,StatVal} <- dict:to_list(GlobalStats)],
     {noreply, State};
+
 handle_cast({agregate, _Pid, Counters}, State) ->  % todo przepisac, zeby odroznial wyspy
     N = dict:size(State#state.dict) - 4,
     case State#state.n + 1 of
         N ->
             logGlobalStats(sequential, addCounters(Counters, State#state.counters)),
-            {noreply, State#state{n = 0, counters = []}};
+            {noreply, State#state{n = 0, counters = misc_util:createNewCounter()}};
         X ->
             OldCounters = State#state.counters,
             {noreply, State#state{n = X, counters = addCounters(Counters, OldCounters)}}
@@ -187,17 +191,8 @@ closeFiles(Dict) ->
          {_Id, D} -> [file:close(FD) || {_Stat, FD} <- dict:to_list(D)]
      end || X <- dict:to_list(Dict)].
 
--spec addCounters([tuple()], [tuple()]) -> [tuple()].
-addCounters([],Other) ->
-    Other;
-addCounters(Other,[]) ->
-    Other;
-addCounters(L1,L2) ->
-    addCounters(L1,L2,[]).
-
--spec addCounters([tuple()], [tuple()], [tuple()]) -> [tuple()].
-addCounters([],_Other,Result) ->
-    Result;
-addCounters([{Name,Val1}|T],Other,Result) ->
-    {Name,Val2} = lists:keyfind(Name,1,Other),
-    addCounters(T,Other,[{Name,Val1 + Val2}|Result]).
+-spec addCounters(dict(), dict()) -> dict().
+addCounters(C1,C2) ->
+    dict:fold(fun(Key, Value, TmpDict) ->
+                      dict:update_counter(Key,Value,TmpDict)
+              end, C1, C2).

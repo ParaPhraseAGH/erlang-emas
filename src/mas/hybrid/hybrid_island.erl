@@ -5,13 +5,8 @@
 -module(hybrid_island).
 -export([start/0, close/1, sendAgent/2]).
 
--record(counter,{fight = 0 :: non_neg_integer(),
-                 reproduction = 0 :: non_neg_integer(),
-                 migration = 0 :: non_neg_integer(),
-                 death = 0 :: non_neg_integer()}).
-
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type counter() :: #counter{}.
+-type counter() :: dict().
 
 %% ====================================================================
 %% API functions
@@ -24,7 +19,7 @@ start() ->
     Environment = config:agent_env(),
     Agents = Environment:initial_population(),
     timer:send_after(config:writeInterval(),{write,-99999}),
-    loop(Agents,#counter{}).
+    loop(Agents,dict:new()).
 
 -spec close(pid()) -> {finish,pid()}.
 close(Pid) ->
@@ -41,7 +36,7 @@ sendAgent(Pid,Agent) ->
 %% ====================================================================
 %% @doc Glowna petla procesu. Kazda iteracja powoduje wytworzenie kolejnej generacji.
 -spec loop([agent()],counter()) -> ok.
-loop(Agents,Counters) ->
+loop(Agents,Counter) ->
     Environment = config:agent_env(),
     receive
         {write,Last} ->
@@ -51,24 +46,17 @@ loop(Agents,Counters) ->
                       end,
             logger:logLocalStats(parallel,fitness,Fitness),
             logger:logLocalStats(parallel,population,length(Agents)),
-%%             {VarianceSum, VarianceMin, VarianceVar} = misc_util:diversity(Agents),
-%%             logger:logLocalStats(parallel,stddevvar, VarianceVar),
-%%             logger:logLocalStats(parallel,stddevsum, VarianceSum),
-%%             logger:logLocalStats(parallel,stddevmin, VarianceMin),
-            logger:logGlobalStats(parallel,[{death,Counters#counter.death},
-                                            {fight,Counters#counter.fight},
-                                            {reproduction,Counters#counter.reproduction},
-                                            {migration,Counters#counter.migration}]),
+            logger:logGlobalStats(parallel,Counter),
             timer:send_after(config:writeInterval(),{write,Fitness}),
-            loop(Agents,#counter{});
+            loop(Agents,misc_util:createNewCounter());
         {agent,_Pid,A} ->
-            loop([A|Agents],Counters);
+            loop([A|Agents],Counter);
         {finish,_Pid} ->
             ok
     after 0 ->
             Groups = misc_util:groupBy([{Environment:behaviour_function(A),A} || A <- Agents ]),
             NewGroups = [misc_util:meeting_proxy(G, hybrid) || G <- Groups],
             NewAgents = misc_util:shuffle(lists:flatten(NewGroups)),
-            NewCounters = misc_util:countGroups(Groups,#counter{}),
-            loop(NewAgents,misc_util:addCounters(Counters,NewCounters))
+            NewCounter = misc_util:countInteractions([Groups],Counter),
+            loop(NewAgents,NewCounter)
     end.

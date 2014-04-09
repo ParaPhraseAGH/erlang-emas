@@ -5,14 +5,10 @@
 -module(sequential_lists).
 -export([start/4]).
 
--record(counter,{fight = 0 :: non_neg_integer(),
-                 reproduction = 0 :: non_neg_integer(),
-                 migration = 0 :: non_neg_integer(),
-                 death = 0 :: non_neg_integer()}).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+-type counter() :: dict().
 -type island() :: [agent()].
--type counter() :: #counter{}.
 
 %% ====================================================================
 %% API functions
@@ -29,7 +25,7 @@ start(Time,Islands,Topology,Path) ->
     InitIslands = [Environment:initial_population() || _ <- lists:seq(1,Islands)],
     timer:send_after(Time,theEnd),
     timer:send_after(config:writeInterval(),write),
-    {_Time,_Result} = timer:tc(fun loop/2, [InitIslands,#counter{}]),
+    {_Time,_Result} = timer:tc(fun loop/2, [InitIslands,misc_util:createNewCounter()]),
     topology:close(),
     logger:close().
 
@@ -49,41 +45,29 @@ loop(Islands,Counter) ->
             logger:logLocalStats(sequential,
                                  population,
                                  [length(I) || I <- Islands]),
-            logger:logGlobalStats(sequential,[{death,Counter#counter.death},
-                                              {fight,Counter#counter.fight},
-                                              {reproduction,Counter#counter.reproduction},
-                                              {migration,Counter#counter.migration}]),
-            %%             io_util:printSeq(Islands),
+            logger:logGlobalStats(sequential,Counter),
             timer:send_after(config:writeInterval(),write),
-            loop(Islands,#counter{});
+            loop(Islands,misc_util:createNewCounter());
         theEnd ->
             lists:max([misc_util:result(I) || I <- Islands])
     after 0 ->
             Groups = [misc_util:groupBy([{Environment:behaviour_function(Agent),Agent} || Agent <- I]) || I <- Islands],
+            NewCounter = misc_util:countInteractions(Groups,Counter),
             Emigrants = [seq_migrate(lists:keyfind(migration,1,Island),Nr) || {Island,Nr} <- lists:zip(Groups,lists:seq(1,length(Groups)))],
-            FlatEmigrants = lists:flatten(Emigrants),
             NewGroups = [[misc_util:meeting_proxy(Activity,sequential) || Activity <- I] || I <- Groups],
-            WithEmigrants = append(FlatEmigrants,NewGroups),
+            WithEmigrants = append(lists:flatten(Emigrants),NewGroups),
             NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- WithEmigrants],
-            NewCounter = countAllIslands(Groups,Counter),
-            NrOfEmigrants = lists:foldl(fun({_To,AgentList},Acc) ->
-                                                length(AgentList) + Acc
-                                        end, 0, FlatEmigrants),
-            loop(NewIslands,NewCounter#counter{migration = NrOfEmigrants + Counter#counter.migration})
+            loop(NewIslands,NewCounter)
     end.
 
-%% @doc Liczy kategorie (ile fights,deaths etc.) na wszystkich wyspach i dodaje do Counter.
--spec countAllIslands([list()],counter()) -> counter().
-countAllIslands(GroupedIslands,Counter) ->
-    CountedIslands = [misc_util:countGroups(I,#counter{}) || I <- GroupedIslands],
-    lists:foldl(fun misc_util:addCounters/2,Counter,CountedIslands).
-
+-spec seq_migrate(false | {migration,[agent()]}, pos_integer()) -> [{migration,[agent()]}].
 seq_migrate(false,_) ->
     [];
 seq_migrate({migration,Agents},From) ->
     Destinations = [{topology:getDestination(From),Agent} || Agent <- Agents],
     misc_util:groupBy(Destinations).
 
+-spec append({pos_integer(),[agent()]}, [list(agent())]) -> [list(agent())].
 append([],Islands) ->
     Islands;
 append([{Destination,Immigrants}|T],Islands) ->
