@@ -44,7 +44,7 @@ init([Supervisors,Path]) ->
                   "standard_io" -> standard_io;
                   X -> X
               end,
-    Stats = determineStats(),
+    Stats = misc_util:determineStats(),
     FDs = prepareParDictionary(Supervisors, dict:new(), NewPath,Stats),
     Counters = createCounter(Supervisors,Stats),
     {ok,#state{counters = Counters, fds = FDs, stats = Stats}}.
@@ -146,11 +146,6 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-
--spec determineStats() -> [atom()].
-determineStats() ->
-    Environment = config:agent_env(),
-    Environment:behaviours().
 
 -spec gatherStats(dict(),[atom()]) -> dict().
 gatherStats(BigDict,Stats) ->

@@ -51,7 +51,7 @@ meeting_function({migration, Agents}) ->
 meeting_function({_, _}) ->
     erlang:error(unexpected_behaviour).
 
--spec stats() -> [{atom(),fun()}].
+-spec stats() -> [{atom(),fun(),term()}].
 stats() ->
     Fitness = fun(Agent,YetBest) ->
                       {_,F,_} = Agent,
@@ -61,4 +61,4 @@ stats() ->
                      {_,_,E} = Agent,
                      E + Sum
              end,
-    [{fitness,Fitness},{energy,Energy}].
+    [{fitness,Fitness,-999999},{energy,Energy,0}].

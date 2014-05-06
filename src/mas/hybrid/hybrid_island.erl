@@ -18,8 +18,8 @@ start() ->
     misc_util:seedRandom(),
     Environment = config:agent_env(),
     Agents = Environment:initial_population(),
-    timer:send_after(config:writeInterval(),{write,-99999}),
-    loop(Agents,dict:new()).
+    timer:send_after(config:writeInterval(),write),
+    loop(Agents,dict:new(),Environment:stats()).
 
 -spec close(pid()) -> {finish,pid()}.
 close(Pid) ->
@@ -35,28 +35,37 @@ sendAgent(Pid,Agent) ->
 %% Internal functions
 %% ====================================================================
 %% @doc Glowna petla procesu. Kazda iteracja powoduje wytworzenie kolejnej generacji.
--spec loop([agent()],counter()) -> ok.
-loop(Agents,Counter) ->
+-spec loop([agent()],counter(),[tuple()]) -> ok.
+loop(Agents,Counter,Stats) ->
     Environment = config:agent_env(),
     receive
-        {write,Last} ->
-            Fitness = case misc_util:result(Agents) of
-                          islandEmpty -> Last;
-                          X -> X
-                      end,
+        write ->
+            {fitness,_,Fitness} = lists:keyfind(fitness,1,Stats),
+            {energy,_,Energy} = lists:keyfind(energy,1,Stats),
+            io:format("Energy: ~p~n",[Energy]),
             logger:logLocalStats(parallel,fitness,Fitness),
             logger:logLocalStats(parallel,population,length(Agents)),
             logger:logGlobalStats(parallel,Counter),
-            timer:send_after(config:writeInterval(),{write,Fitness}),
-            loop(Agents,misc_util:createNewCounter());
+            timer:send_after(config:writeInterval(),write),
+            Environment = config:agent_env(),
+            loop(Agents,misc_util:createNewCounter(),Environment:stats());
         {agent,_Pid,A} ->
-            loop([A|Agents],Counter);
+            loop([A|Agents],Counter,Stats);
         {finish,_Pid} ->
             ok
     after 0 ->
+            NewStats = countStats(Agents,Stats),
             Groups = misc_util:groupBy([{Environment:behaviour_function(A),A} || A <- Agents ]),
             NewGroups = [misc_util:meeting_proxy(G, hybrid) || G <- Groups],
             NewAgents = misc_util:shuffle(lists:flatten(NewGroups)),
             NewCounter = misc_util:countInteractions([Groups],Counter),
-            loop(NewAgents,NewCounter)
+            loop(NewAgents,NewCounter,NewStats)
     end.
+
+
+countStats(_,[]) ->
+    [];
+
+countStats(Agents,[{Stat,Fun,Acc0}|T]) ->
+    NewAcc = lists:foldl(Fun,Acc0,Agents),
+    [{Stat,Fun,NewAcc} | countStats(Agents,T)].

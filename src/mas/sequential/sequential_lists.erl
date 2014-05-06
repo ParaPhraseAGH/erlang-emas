@@ -20,7 +20,7 @@ start(Time,Islands,Topology,Path) ->
     misc_util:seedRandom(),
     misc_util:clearInbox(),
     topology:start_link(self(),Islands,Topology),
-    logger:start_link({sequential,Islands},Path),
+    logger:start_link(Islands,Path),
     Environment = config:agent_env(),
     InitIslands = [Environment:initial_population() || _ <- lists:seq(1,Islands)],
     timer:send_after(Time,theEnd),

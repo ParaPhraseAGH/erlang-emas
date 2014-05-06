@@ -30,7 +30,8 @@ loop(Agent,Arenas) ->
         migration ->
             loop(Agent,port:emigrate(dict:fetch(migration,Arenas),Agent));
         Activity ->
-            case arena:call(dict:fetch(Activity,Arenas),Agent) of
+            ArenaPid = dict:fetch(Activity,Arenas),
+            case arena:call(ArenaPid,Agent) of
                 close ->
                     ok;
                 NewAgent ->

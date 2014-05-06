@@ -4,7 +4,7 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2,
-         seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, countInteractions/2]).
+         seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, countInteractions/2, determineStats/0]).
 
 -type model() :: sequential | hybrid | concurrent.
 
@@ -40,6 +40,11 @@ meeting_proxy({migration,_Agents},concurrent) ->
 meeting_proxy(Group,_) ->
     Environment = config:agent_env(),
     Environment:meeting_function(Group).
+
+-spec determineStats() -> [atom()].
+determineStats() ->
+    Environment = config:agent_env(),
+    Environment:behaviours().
 
 %% @doc Funkcja wyznacza statystyczna liczbe elementow, ktore podlegaja jakiejs operacji z danym prawdopodobienstwem
 -spec averageNumber(float(),[term()]) -> integer().
