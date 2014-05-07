@@ -35,7 +35,7 @@ start_link(Supervisor,Interaction) ->
     Pid.
 
 %% @doc Funkcja wysylajaca zgloszenie agenta do areny.
--spec call(pid(),agent()) -> Energy :: integer().
+-spec call(pid(),agent()) -> agent() | close.
 call(Pid,Agent) ->
     gen_server:call(Pid,{interact,Agent},infinity).
 

@@ -43,14 +43,14 @@ close(Pid) ->
 %% ====================================================================
 -record(state, {mySupervisor :: pid(),
 %%                 diversity :: pid(),
-                arenas = [] :: dict:dict(),
+                arenas :: dict:dict(),
                 emigrants = [] :: [pid()],
                 immigrants = [] :: [{pid(),agent()}],
                 lastLog :: erlang:timestamp()}).
 -type state() :: #state{} | cleaning.
 
 
--spec init(term()) -> {ok,state()} |
+-spec init([pid()]) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
 init([Supervisor]) ->
     misc_util:seedRandom(),

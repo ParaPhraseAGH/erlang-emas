@@ -7,9 +7,7 @@
 
 -include ("mas.hrl").
 
-
--type task() :: death | fight | reproduction | migration.
--type groups() :: [{task(),[agent()]}].
+-type groups() :: [{agent_behaviour(),[agent()]}].
 
 %% ====================================================================
 %% API functions
