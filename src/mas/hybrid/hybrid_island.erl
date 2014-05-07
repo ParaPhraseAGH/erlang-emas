@@ -6,7 +6,7 @@
 -export([start/0, close/1, sendAgent/2]).
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type counter() :: dict().
+-type counter() :: dict:dict().
 
 %% ====================================================================
 %% API functions

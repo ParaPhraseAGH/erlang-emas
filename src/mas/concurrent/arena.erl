@@ -11,7 +11,7 @@
 -record(state, {supervisor :: pid(),
                 waitlist = [] :: list(),
                 agentFroms = [] ::[pid()],
-                arenas :: dict(),
+                arenas :: dict:dict(),
                 interaction :: atom(),
                 lastLog :: erlang:timestamp(),
                 counter = 0 :: non_neg_integer()}).
@@ -38,7 +38,7 @@ start_link(Supervisor,Interaction) ->
 call(Pid,Agent) ->
     gen_server:call(Pid,{interact,Agent},infinity).
 
--spec giveArenas(pid(),dict()) -> ok.
+-spec giveArenas(pid(),dict:dict()) -> ok.
 giveArenas(Pid,Arenas) ->
     gen_server:call(Pid,{arenas,Arenas},infinity).
 

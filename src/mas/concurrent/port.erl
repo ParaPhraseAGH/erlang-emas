@@ -21,7 +21,7 @@
 start_link(Supervisor) ->
     gen_server:start_link(?MODULE, [Supervisor], []).
 
--spec giveArenas(pid(),dict()) -> ok.
+-spec giveArenas(pid(),dict:dict()) -> ok.
 giveArenas(Pid,Arenas) ->
     gen_server:call(Pid,{arenas,Arenas}).
 
@@ -43,7 +43,7 @@ close(Pid) ->
 %% ====================================================================
 -record(state, {mySupervisor :: pid(),
 %%                 diversity :: pid(),
-                arenas = [] :: dict(),
+                arenas = [] :: dict:dict(),
                 emigrants = [] :: [pid()],
                 immigrants = [] :: [{pid(),agent()}],
                 lastLog :: erlang:timestamp()}).

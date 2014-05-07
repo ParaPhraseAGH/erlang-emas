@@ -67,13 +67,13 @@ logNow(LastLog) ->
             notyet
     end.
 
--spec createNewCounter() -> dict().
+-spec createNewCounter() -> dict:dict().
 createNewCounter() ->
     Environment = config:agent_env(),
     BehaviourList = [{Behaviour,0} || Behaviour <- Environment:behaviours()],
     dict:from_list(BehaviourList).
 
--spec countInteractions([tuple()],dict()) -> dict().
+-spec countInteractions([tuple()],dict:dict()) -> dict:dict().
 countInteractions([],Counter) ->
     Counter;
 

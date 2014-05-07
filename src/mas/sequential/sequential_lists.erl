@@ -7,7 +7,7 @@
 
 
 -type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type counter() :: dict().
+-type counter() :: dict:dict().
 -type island() :: [agent()].
 
 %% ====================================================================

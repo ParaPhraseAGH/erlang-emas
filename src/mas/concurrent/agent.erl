@@ -13,7 +13,7 @@
 
 %% @doc Funkcja startujaca danego agenta. W argumencie
 %% adresy aren do ktorych agent ma sie zglaszac.
--spec start(agent(),dict()) -> ok.
+-spec start(agent(),dict:dict()) -> ok.
 start(Agent,Arenas) ->
     misc_util:seedRandom(),
     loop(Agent,Arenas).
@@ -23,7 +23,7 @@ start(Agent,Arenas) ->
 %% ====================================================================
 
 %% @doc Funkcja cyklu zycia agenta.
--spec loop(agent(),dict()) -> ok.
+-spec loop(agent(),dict:dict()) -> ok.
 loop(Agent,Arenas) ->
     Environment = config:agent_env(),
     case Environment:behaviour_function(Agent) of
