@@ -5,9 +5,7 @@
 -module(genetic).
 -export([solution/1, evaluation/1, reproduction/1, reproduction/2, generatePopulation/1, generateAgent/1]).
 
--type solution() :: [float()].
--type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type island() :: [agent()].
+-include ("emas.hrl").
 
 %% ====================================================================
 %% API functions
@@ -29,7 +27,7 @@ generateAgent(ProblemSize) ->
     {S, evaluation(S), emas_config:initialEnergy()}.
 
 %% @doc Funkcja generujaca losowa populacje.
--spec generatePopulation(pos_integer()) -> island().
+-spec generatePopulation(pos_integer()) -> [agent()].
 generatePopulation(ProblemSize) ->
     [generateAgent(ProblemSize) || _ <- lists:seq(1, config:populationSize())].
 

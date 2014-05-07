@@ -8,6 +8,8 @@
 -export([init/1, handle_call/3, handle_cast/2,
          handle_info/2, terminate/2, code_change/3]).
 
+-include ("mas.hrl").
+
 -record(state, {supervisor :: pid(),
                 waitlist = [] :: list(),
                 agentFroms = [] ::[pid()],
@@ -19,7 +21,6 @@
 -define(CLOSING_TIMEOUT,2000).
 -define(AGENT_THRESHOLD,2). %% TODO zmienna powinna byc konfigurowana przez usera i na dodatek zalezna od interakcji
 
--type agent() :: term(). %% TODO moglby go user definiowac
 %%%===================================================================
 %%% API
 %%%===================================================================

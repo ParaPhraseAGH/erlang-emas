@@ -2,13 +2,10 @@
 %% @version 1.1
 %% @doc Model sekwencyjny, gdzie agenci sa na stale podzieleni w listach reprezentujacych wyspy.
 
--module(sequential_lists).
+-module(sequential).
 -export([start/4]).
 
-
--type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type counter() :: dict:dict().
--type island() :: [agent()].
+-include ("mas.hrl").
 
 %% ====================================================================
 %% API functions
@@ -16,7 +13,7 @@
 
 -spec start(Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
 start(Time,Islands,Topology,Path) ->
-    %%     io:format("{Model=sequential_lists,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
+    %%     io:format("{Model=sequential,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
     misc_util:seedRandom(),
     misc_util:clearInbox(),
     topology:start_link(self(),Islands,Topology),

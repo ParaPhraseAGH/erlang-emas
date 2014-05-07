@@ -5,8 +5,7 @@
 -module(hybrid_island).
 -export([start/0, close/1, sendAgent/2]).
 
--type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type counter() :: dict:dict().
+-include ("mas.hrl").
 
 %% ====================================================================
 %% API functions
