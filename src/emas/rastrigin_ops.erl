@@ -2,7 +2,7 @@
 
 -behaviour(genetic_ops).
 
--compile(export_all).
+-export ([evaluation/1, mutation/1, recombination/2, solution/1]).
 
 -include ("emas.hrl").
 
