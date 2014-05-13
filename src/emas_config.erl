@@ -7,7 +7,11 @@
 %% ====================================================================
 
 %% @doc Nazwa modulu dostarczajacego operatory genetyczne i implementujacego callback genetic
+-ifdef(NIF).
+genetic_ops() -> rastrigin_nif_ops.
+-else.
 genetic_ops() -> rastrigin_ops.
+-endif.
 
 %% @doc Rozmiar problemu reprezentowanego przez agenta
 problemSize() ->  100.
