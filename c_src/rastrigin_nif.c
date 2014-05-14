@@ -5,7 +5,7 @@
 #include "rastrigin.h"
 
 
-#define SEED 0
+// #define SEED 0
 // #define DEBUG
 
 #define CHECK(env, obj) if (!(obj)){return enif_make_badarg((env));}

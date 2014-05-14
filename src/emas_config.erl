@@ -7,14 +7,20 @@
 %% ====================================================================
 
 %% @doc Nazwa modulu dostarczajacego operatory genetyczne i implementujacego callback genetic
--ifdef(NIF).
+-ifdef(nif).
 genetic_ops() -> rastrigin_nif_ops.
 -else.
 genetic_ops() -> rastrigin_ops.
 -endif.
 
+-ifdef(probsize).
 %% @doc Rozmiar problemu reprezentowanego przez agenta
-problemSize() ->  100.
+problemSize() ->  ?probsize.
+-else.
+problemSize() ->  150.
+-endif.
+
+
 %% @doc Czy monitorowac roznorodnosc populacji
 monitorDiversity() -> false.
 %% @doc Energia poczatkowa osobnika.
