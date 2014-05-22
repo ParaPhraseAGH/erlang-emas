@@ -13,12 +13,8 @@ genetic_ops() -> rastrigin_nif_ops.
 genetic_ops() -> rastrigin_ops.
 -endif.
 
--ifdef(probsize).
 %% @doc Rozmiar problemu reprezentowanego przez agenta
-problemSize() ->  ?probsize.
--else.
-problemSize() ->  150.
--endif.
+problemSize() ->  30.
 
 
 %% @doc Czy monitorowac roznorodnosc populacji
