@@ -17,7 +17,7 @@ extern void     mutate(Solution* prev, Solution* out, double range, double rate)
 extern void     recombine(Solution** parents, Solution** children);
 extern double   randdouble(double lower, double upper);
 extern void     print_solution(Solution* sol, const char* desc);
-
+extern unsigned int get_seed();
 
 // ErlNifResourceType* SOL_TYPE;
 
@@ -40,13 +40,18 @@ static int nif_load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info){
     #ifdef SEED
     srand(SEED);
     #else 
-    srand(time(NULL));
+    srand(get_seed());
+    // srand(time(NULL));
     #endif
 
     return 0;
 }
 
 static ERL_NIF_TERM evaluate_solution(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
+
+    // long diff;
+    // struct timespec start, end;
+    // clock_gettime(CLOCK_MONOTONIC, &start);
 
     ErlNifResourceType* sol_type;
     Solution* sol;
@@ -65,6 +70,11 @@ static ERL_NIF_TERM evaluate_solution(ErlNifEnv* env, int argc, const ERL_NIF_TE
 
     fitness = fitness_rastrigin(sol);
 
+    // clock_gettime(CLOCK_MONOTONIC, &end);
+    // diff = CLOCKS_PER_SEC * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+    // printf("eval=%llu\n", (long long unsigned int) diff);
+
+
     return enif_make_double(env, fitness);
 
 }
@@ -72,6 +82,10 @@ static ERL_NIF_TERM evaluate_solution(ErlNifEnv* env, int argc, const ERL_NIF_TE
 
 
 static ERL_NIF_TERM recombine_solutions(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
+
+    // long diff;
+    // struct timespec start, end;
+    // clock_gettime(CLOCK_MONOTONIC, &start);
 
     ERL_NIF_TERM terms[2];
     ErlNifResourceType* sol_type;
@@ -116,11 +130,20 @@ static ERL_NIF_TERM recombine_solutions(ErlNifEnv* env, int argc, const ERL_NIF_
     print_solution(new_sols[1],"RecombinedGenotype2");
     #endif
     
+    // clock_gettime(CLOCK_MONOTONIC, &end);
+    // diff = CLOCKS_PER_SEC * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+    // printf("reco=%llu\n", (long long unsigned int) diff);
+
+
     return enif_make_tuple2(env, terms[0], terms[1]);
 }
 
 
 static ERL_NIF_TERM mutate_solution(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
+
+    // struct timespec start, end;
+    // long diff;
+    // clock_gettime(CLOCK_MONOTONIC, &start);
 
     ERL_NIF_TERM term;
     ErlNifResourceType* sol_type;
@@ -154,11 +177,19 @@ static ERL_NIF_TERM mutate_solution(ErlNifEnv* env, int argc, const ERL_NIF_TERM
     print_solution(mut_sol, "MutatedGenotype");
     #endif
 
+    // clock_gettime(CLOCK_MONOTONIC, &end);
+    // diff = CLOCKS_PER_SEC * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+    // printf("mut=%llu\n", (long long unsigned int) diff);
+
     return term;
 
 }
 
 static ERL_NIF_TERM create_solution(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
+
+    // struct timespec start, end;
+    // long diff;
+    // clock_gettime(CLOCK_MONOTONIC, &start);
 
     ERL_NIF_TERM term;
     ErlNifResourceType* sol_type;
@@ -184,6 +215,12 @@ static ERL_NIF_TERM create_solution(ErlNifEnv* env, int argc, const ERL_NIF_TERM
     for (i=0;i<len;i++){
         sol->genotype[i] = randdouble(-50.0, 50.0);
     }
+
+    // clock_gettime(CLOCK_MONOTONIC, &end);
+
+    // diff = CLOCKS_PER_SEC * (end.tv_sec - start.tv_sec) + end.tv_nsec - start.tv_nsec;
+    // printf("create=%llu\n", (long long unsigned int) diff);
+
 
     return term;
 }

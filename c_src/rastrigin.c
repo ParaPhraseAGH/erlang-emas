@@ -4,8 +4,22 @@
 
 /// utility functions
 
+unsigned int get_seed(){
+    FILE *urandom; 
+    unsigned int seed; 
+
+    urandom = fopen ("/dev/urandom", "r"); 
+    if (urandom == NULL) { 
+        fprintf (stderr, "Cannot open /dev/urandom!\n"); 
+        exit(1); 
+    } 
+    fread (&seed, sizeof(seed), 1, urandom); 
+    fclose(urandom);
+    return seed;
+}
+
 double randdouble(double lower, double upper){
-    return lower + (upper - lower) * ((double) rand()) / RAND_MAX;
+    return lower + (upper - lower) * (((double) rand()) / (double) RAND_MAX);
 }
 
 void print_solution(Solution* sol, const char* desc){
