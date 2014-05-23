@@ -121,7 +121,7 @@ handle_info(timer, State = #state{fds = FDs, counters = Counters, stats = Stats}
 %%                        [logLocal(FDDict,Pid,X,dict:fetch(X,LocalDict)) || X <- ?LOCAL_STATS]
 %%                end,NewBigDict,FDs),
     NewBigDict = createCounter(dict:fetch_keys(BigDict),Stats),
-    {noreply, State#state{counters = NewBigDict},State#state.timeout};
+    {noreply, State#state{counters = NewBigDict},State#state.timeout}.
 
 -spec terminate(term(),state()) -> no_return().
 terminate(_Reason, State) ->
@@ -153,8 +153,8 @@ createDir(Path, IslandsNr) ->
     file:make_dir(NewPath),
     NewPath.
 
-%% @doc Tworzy pliki tekstowe do zapisu i zwraca dict:dict() z deskryptorami.
--spec createFDs(string(), dict:dict(), [atom()]) -> FDs :: dict:dict().
+%% @doc Tworzy pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
+-spec createFDs(string(), dict:dict(), [atom()]) -> FDs :: dict().
 createFDs(standard_io, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         dict:store(Atom, standard_io, Dict)

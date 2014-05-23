@@ -209,7 +209,7 @@ logGlobal(FDDict,Stat,Value) ->
 %%     file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Stat,Supervisor,Value])).
 
 %% @doc Zamyka pliki podane w argumencie
--spec closeFiles(dict()) -> any().
+-spec closeFiles(dict:dict()) -> any().
 closeFiles(Dict) ->
     [case X of
          {Id, FD} when is_atom(Id) -> file:close(FD);
