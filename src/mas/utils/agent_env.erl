@@ -1,14 +1,11 @@
 -module (agent_env).
--export ([behaviour_info/1]).
 
--spec behaviour_info(callbacks) -> [{fun(),arity()}].
+-include ("mas.hrl").
 
-behaviour_info(callbacks) ->
-    [
-        {initial_population, 0}, 
-        {behaviour_function, 1}, 
-        {behaviours, 0},
-        {meeting_function, 1}
-    ];
-behaviour_info(_) ->
-    undefined.
+-callback initial_population() -> [agent()].
+
+-callback behaviour_function(agent()) -> agent_behaviour().
+
+-callback behaviours() -> [agent_behaviour()].
+
+-callback meeting_function({agent_behaviour(), [agent()]}) -> [agent()].

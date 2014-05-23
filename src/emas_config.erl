@@ -6,6 +6,9 @@
 %% EMAS PARAMETERS
 %% ====================================================================
 
+%% @doc Nazwa modulu dostarczajacego operatory genetyczne i implementujacego callback genetic
+genetic_ops() -> rastrigin_ops.
+
 %% @doc Rozmiar problemu reprezentowanego przez agenta
 problemSize() ->  100.
 %% @doc Czy monitorowac roznorodnosc populacji

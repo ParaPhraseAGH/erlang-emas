@@ -6,7 +6,7 @@
 -export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2,
          seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, countInteractions/2, determineStats/0]).
 
--type model() :: sequential | hybrid | concurrent.
+-include ("mas.hrl").
 
 %% ====================================================================
 %% API functions
@@ -72,13 +72,13 @@ logNow(LastLog) ->
             notyet
     end.
 
--spec createNewCounter() -> dict().
+-spec createNewCounter() -> dict:dict().
 createNewCounter() ->
     Environment = config:agent_env(),
     BehaviourList = [{Behaviour,0} || Behaviour <- Environment:behaviours()],
     dict:from_list(BehaviourList).
 
--spec countInteractions([tuple()],dict()) -> dict().
+-spec countInteractions([tuple()],dict:dict()) -> dict:dict().
 countInteractions([],Counter) ->
     Counter;
 

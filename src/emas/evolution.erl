@@ -5,9 +5,7 @@
 -module(evolution).
 -export([sendToWork/1, doReproduce/1, doFight/1, eachFightsAll/1, optionalPairs/2]).
 
--type task() :: death | fight | reproduction | migration.
--type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type fighter() :: {term(), Fitness::float(), Energy::pos_integer()}. % agent niekoniecznie zawierajacy solution. Czasem jest zamiast tego podstawiany {Pid,Ref}, aby moc pozniej odeslac energie.
+-include ("emas.hrl").
 
 %% ====================================================================
 %% API functions
@@ -15,7 +13,7 @@
 %% @doc Funkcja dostaje atom precyzujacy klase agentow i ich liste,
 %% a nastepnie wykonuje odpowiednie operacje dla kazdej z klas.
 %% Funkcja zwraca liste agentow po przetworzeniu.
--spec sendToWork({task(),[agent()]}) -> [agent()].
+-spec sendToWork({agent_behaviour(),[agent()]}) -> [agent()].
 sendToWork({death, _}) ->
     [];
 sendToWork({fight, Agents}) ->
@@ -32,7 +30,7 @@ sendToWork({migration,[{From,Agent}|T]}) ->
 
 %% @doc Funkcja implementujaca walke "kazdy z kazdym" dla listy agentow w argumencie.
 %% Zwracana jest lista agentow po walkach.
--spec eachFightsAll([fighter()]) -> [fighter()].
+-spec eachFightsAll([agent()]) -> [agent()].
 eachFightsAll([]) -> [];
 eachFightsAll([H|T]) ->
     {NewH,NewT} = oneFightsRest(H,T,[]),
@@ -40,7 +38,7 @@ eachFightsAll([H|T]) ->
 
 %% @doc Funkcja implementujaca logike "walki" pojedynczego agenta.
 %% Zwracany jest ten sam agent w liscie.
--spec doFight({fighter()} | {fighter(),fighter()}) -> [fighter()].
+-spec doFight({agent()} | {agent(),agent()}) -> [agent()].
 doFight({A}) -> [A];
 %% @doc Funkcja implementujaca logike walki dwoch agentow.
 %% Zwracana jest lista dwoch przetworzonych agentow.
@@ -74,7 +72,7 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
 %% @doc Funkcja uruchamiajaca funkcje doFight/1 dla agenta A oraz
 %% kazdego osobnika z listy ToFight. Agenci po walce przechowywani sa
 %% w akumulatorze Fought i na koncu zwracani w krotce z agentem A po walkach.
--spec oneFightsRest(Agent::fighter(), ToFight::[fighter()], Fought::[fighter()]) -> {fighter(),[fighter()]}.
+-spec oneFightsRest(Agent::agent(), ToFight::[agent()], Fought::[agent()]) -> {agent(),[agent()]}.
 oneFightsRest(Agent,[],Fought) -> {Agent,Fought};
 oneFightsRest(Agent,[H|ToFight],Fought) ->
     [NewAgent,NewH]  = doFight({Agent,H}),

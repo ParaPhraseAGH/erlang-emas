@@ -5,10 +5,9 @@
 -module(io_util).
 -export([printSeq/1, printMoreStats/1, genPath/4, sumEnergy/1, printArenas/1]).
 
--type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type island() :: [agent()].
--type task() :: death | fight | reproduction | migration.
--type groups() :: [{task(),[agent()]}].
+-include ("mas.hrl").
+
+-type groups() :: [{agent_behaviour(),[agent()]}].
 
 %% ====================================================================
 %% API functions

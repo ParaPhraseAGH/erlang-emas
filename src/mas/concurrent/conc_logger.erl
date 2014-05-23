@@ -31,8 +31,8 @@ close() ->
 %%% Callbacks
 %%%===================================================================
 
--record(state, {fds = undefined :: dict(),
-                counters = undefined :: dict(),
+-record(state, {fds = undefined :: dict:dict(),
+                counters = undefined :: dict:dict(),
                 stats = [] :: [atom()],
                 timeout = infinity :: timeout()}).
 -type state() :: #state{}.
@@ -147,7 +147,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
--spec gatherStats(dict(),[atom()]) -> dict().
+-spec gatherStats(dict:dict(),[atom()]) -> dict:dict().
 gatherStats(BigDict,Stats) ->
     Acc0 = dict:from_list([{X,0} || X <- Stats]),
     dict:fold(fun(_Pid,LocalDict,Acc) ->
@@ -161,7 +161,7 @@ gatherStats(BigDict,Stats) ->
                                   end,Acc,Stats)
               end,Acc0,BigDict).
 
--spec createCounter([pid()],[atom()]) -> dict().
+-spec createCounter([pid()],[atom()]) -> dict:dict().
 createCounter(Pids,Stats) ->
     BasicStat = [{X,0} || X <- lists:delete(migration,Stats) ++ [emigration,immigration]],
     %%     Variance = [{X,-1} || X <-[stddevmin,stddevsum,stddevvar]],
@@ -170,7 +170,7 @@ createCounter(Pids,Stats) ->
     dict:from_list([{Pid,IslandDict} || Pid <- Pids]).
 
 %% @doc Tworzy duzy slownik z mniejszymi slownikami deskryptorow dla kazdej z wysp dla modelow niesekwencyjnych
--spec prepareParDictionary([pid()], dict(), string(), [atom()]) -> dict().
+-spec prepareParDictionary([pid()], dict:dict(), string(), [atom()]) -> dict:dict().
 prepareParDictionary([], Dict, Path, Stats) ->
     createFDs(Path, Dict, Stats);
 
@@ -186,8 +186,8 @@ prepareParDictionary([H|T], Dict, Path, Stats) ->
     NewDict = dict:store(H, createFDs(IslandPath, dict:new(), ?LOCAL_STATS), Dict), % Key = pid(), Value = dictionary of file descriptors
     prepareParDictionary(T, NewDict, Path,Stats).
 
-%% @doc Tworzy pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
--spec createFDs(string(), dict(), [atom()]) -> FDs :: dict().
+%% @doc Tworzy pliki tekstowe do zapisu i zwraca dict:dict() z deskryptorami.
+-spec createFDs(string(), dict:dict(), [atom()]) -> FDs :: dict:dict().
 createFDs(standard_io, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         dict:store(Atom, standard_io, Dict)

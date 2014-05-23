@@ -12,7 +12,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
 
--type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
+-include("mas.hrl").
 
 %% ====================================================================
 %% API functions
@@ -21,7 +21,7 @@
 start_link(Supervisor) ->
     gen_server:start_link(?MODULE, [Supervisor], []).
 
--spec giveArenas(pid(),dict()) -> ok.
+-spec giveArenas(pid(),dict:dict()) -> ok.
 giveArenas(Pid,Arenas) ->
     gen_server:call(Pid,{arenas,Arenas}).
 
@@ -43,14 +43,14 @@ close(Pid) ->
 %% ====================================================================
 -record(state, {mySupervisor :: pid(),
 %%                 diversity :: pid(),
-                arenas = [] :: dict(),
+                arenas :: dict:dict(),
                 emigrants = [] :: [pid()],
                 immigrants = [] :: [{pid(),agent()}],
                 lastLog :: erlang:timestamp()}).
 -type state() :: #state{} | cleaning.
 
 
--spec init(term()) -> {ok,state()} |
+-spec init([pid()]) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
 init([Supervisor]) ->
     misc_util:seedRandom(),

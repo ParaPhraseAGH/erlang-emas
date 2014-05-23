@@ -8,10 +8,12 @@
 -export([init/1, handle_call/3, handle_cast/2,
          handle_info/2, terminate/2, code_change/3]).
 
+-include ("mas.hrl").
+
 -record(state, {supervisor :: pid(),
                 waitlist = [] :: list(),
                 agentFroms = [] ::[pid()],
-                arenas :: dict(),
+                arenas :: dict:dict(),
                 interaction :: atom(),
                 lastLog :: erlang:timestamp(),
                 counter = 0 :: non_neg_integer()}).
@@ -19,7 +21,6 @@
 -define(CLOSING_TIMEOUT,2000).
 -define(AGENT_THRESHOLD,2). %% TODO zmienna powinna byc konfigurowana przez usera i na dodatek zalezna od interakcji
 
--type agent() :: term(). %% TODO moglby go user definiowac
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -34,11 +35,11 @@ start_link(Supervisor,Interaction) ->
     Pid.
 
 %% @doc Funkcja wysylajaca zgloszenie agenta do areny.
--spec call(pid(),agent()) -> Energy :: integer().
+-spec call(pid(),agent()) -> agent() | close.
 call(Pid,Agent) ->
     gen_server:call(Pid,{interact,Agent},infinity).
 
--spec giveArenas(pid(),dict()) -> ok.
+-spec giveArenas(pid(),dict:dict()) -> ok.
 giveArenas(Pid,Arenas) ->
     gen_server:call(Pid,{arenas,Arenas},infinity).
 

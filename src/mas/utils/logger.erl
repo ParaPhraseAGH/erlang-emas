@@ -45,8 +45,8 @@ close() ->
 %%% Callbacks
 %%%===================================================================
 
--record(state, {fds :: dict(),
-                counters = dict:new() :: dict(),
+-record(state, {fds :: dict:dict(),
+                counters = dict:new() :: dict:dict(),
                 stats = [] :: [atom()]}).
 -type state() :: #state{}.
 
@@ -135,7 +135,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
--spec prepareDictionary([term()],dict(),string()) -> dict().
+-spec prepareDictionary([term()],dict:dict(),string()) -> dict().
 prepareDictionary([], Dict, _Path) ->
     Dict;
 
@@ -153,8 +153,8 @@ createDir(Path, IslandsNr) ->
     file:make_dir(NewPath),
     NewPath.
 
-%% @doc Tworzy pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
--spec createFDs(string(), dict(), [atom()]) -> FDs :: dict().
+%% @doc Tworzy pliki tekstowe do zapisu i zwraca dict:dict() z deskryptorami.
+-spec createFDs(string(), dict:dict(), [atom()]) -> FDs :: dict:dict().
 createFDs(standard_io, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         dict:store(Atom, standard_io, Dict)
@@ -167,7 +167,7 @@ createFDs(Path, InitDict, Files) ->
                         dict:store(Atom, Descriptor, Dict)
                 end, InitDict, Files).
 
--spec createCounter(list()) -> dict().
+-spec createCounter(list()) -> dict:dict().
 createCounter(Keys) ->
     Environment = config:agent_env(),
     Interactions = [{Interaction,0} || Interaction <- Environment:behaviours()],
@@ -178,7 +178,7 @@ createCounter(Keys) ->
                 end, dict:new(), Keys).
 
 
--spec logList(atom(), pos_integer(), [term()], dict()) -> ok.
+-spec logList(atom(), pos_integer(), [term()], dict:dict()) -> ok.
 logList(_, _, [], _) ->
     ok;
 logList(Stat, Index, [H|T], Dict) ->
@@ -186,27 +186,27 @@ logList(Stat, Index, [H|T], Dict) ->
     logList(Stat, Index + 1, T, Dict).
 
 %% @doc Dokonuje buforowanego zapisu do pliku lokalnej statystyki. W argumencie podany glowny slownik, klucz, nazwa statystyki i wartosc do wpisania.
--spec logLocal(dict(), term(), atom(), term()) -> ok.
+-spec logLocal(dict:dict(), term(), atom(), term()) -> ok.
 logLocal(Dictionary, Key, Statistic, Value) ->
     FDs = dict:fetch(Key, Dictionary),
     FD = dict:fetch(Statistic, FDs),
     file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Statistic, Key, Value])).
 
 %% @doc Dokonuje buforowanego zapisu do pliku globalnej statystyki. W argumencie podany glowny slownik, nazwa statystyki i wartosc do wpisania.
--spec logGlobal(dict(), atom(), term()) -> ok.
+-spec logGlobal(dict:dict(), atom(), term()) -> ok.
 logGlobal(Dictionary, Stat, Value) ->
     FD = dict:fetch(Stat, Dictionary),
     file:write(FD, io_lib:fwrite("~p ~p\n", [Stat,Value])).
 
 %% @doc Zamyka pliki podane w argumencie
--spec closeFiles(dict()) -> any().
+-spec closeFiles(dict:dict()) -> any().
 closeFiles(Dict) ->
     [case X of
          {Id, FD} when is_atom(Id) -> file:close(FD);
          {_Id, D} -> [file:close(FD) || {_Stat, FD} <- dict:to_list(D)]
      end || X <- dict:to_list(Dict)].
 
--spec addCounters(dict(), dict()) -> dict().
+-spec addCounters(dict:dict(), dict:dict()) -> dict:dict().
 addCounters(C1,C2) ->
     dict:fold(fun(Key, Value, TmpDict) ->
                       dict:update_counter(Key,Value,TmpDict)

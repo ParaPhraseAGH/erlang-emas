@@ -30,7 +30,7 @@ close(Pid) ->
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
--record(state, {arenas  = dict:new() :: dict(),
+-record(state, {arenas  = dict:new() :: dict:dict(),
                 diversity :: pid()}).
 -type state() :: #state{}.
 

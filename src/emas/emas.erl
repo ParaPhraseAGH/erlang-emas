@@ -3,10 +3,9 @@
 
 -export ([start/3, initial_population/0, behaviour_function/1, behaviours/0, meeting_function/1, stats/0]).
 
--type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type agent_behaviour() :: death | reproduction | fight | migration.
-
--type model() :: sequential_lists | hybrid | concurrent.
+% type model() is defined in mas.hrl
+% emas.hrl included by mas.hrl
+-include ("mas.hrl").
 
 -spec start(model(),pos_integer(),[tuple()]) -> ok.
 start(Model, Time, Options) ->
