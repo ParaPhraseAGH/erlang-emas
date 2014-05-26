@@ -106,8 +106,8 @@ handle_cast(close, State) ->
 handle_info(timer, State = #state{fds = FDs, counters = Counters, stats = Stats}) ->
     % TODO
     %%     io:format("Tick!~n"),
-    Acc = gatherStats(BigDict,Stats),
-    [logGlobal(FDs,X,dict:fetch(X,Acc)) || X <- Stats],
+%%     Acc = gatherStats(BigDict,Stats),
+%%     [logGlobal(FDs,X,dict:fetch(X,Acc)) || X <- Stats],
 %%     NewBigDict = dict:fold(fun(Pid,LocalDict,NewDict) ->
 %%                                    PopulationChange = dict:fetch(reproduction,LocalDict) + dict:fetch(immigration,LocalDict)
 %%                                        - dict:fetch(death,LocalDict) - dict:fetch(emigration,LocalDict),
@@ -120,9 +120,9 @@ handle_info(timer, State = #state{fds = FDs, counters = Counters, stats = Stats}
 %%     dict:merge(fun(Pid,LocalDict,FDDict) ->
 %%                        [logLocal(FDDict,Pid,X,dict:fetch(X,LocalDict)) || X <- ?LOCAL_STATS]
 %%                end,NewBigDict,FDs),
-    NewBigDict = createCounter(dict:fetch_keys(BigDict),Stats),
-    {noreply, State#state{counters = NewBigDict},State#state.timeout}.
-
+%%     NewBigDict = createCounter(dict:fetch_keys(BigDict),Stats),
+%%     {noreply, State#state{counters = NewBigDict},State#state.timeout}.
+    {}.
 -spec terminate(term(),state()) -> no_return().
 terminate(_Reason, State) ->
     closeFiles(State#state.fds).

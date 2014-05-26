@@ -17,44 +17,44 @@ start(Time,Islands,Topology,Path) ->
     misc_util:seedRandom(),
     misc_util:clearInbox(),
     topology:start_link(self(),Islands,Topology),
-    logger:start_link(Islands,Path),
+%%     logger:start_link(Islands,Path),
     Environment = config:agent_env(),
     InitIslands = [Environment:initial_population() || _ <- lists:seq(1,Islands)],
     timer:send_after(Time,theEnd),
-    timer:send_after(config:writeInterval(),write),
-    {_Time,_Result} = timer:tc(fun loop/2, [InitIslands,misc_util:createNewCounter()]),
-    topology:close(),
-    logger:close().
+    timer:send_interval(config:writeInterval(),write),
+    {_Time,_Result} = timer:tc(fun loop/2, [InitIslands,[misc_util:createNewCounter() || _ <- lists:seq(1,Islands)]]),
+    topology:close().
+%%     logger:close().
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
 %% @doc Glowa petla programu. Kazda iteracja powoduje ewolucje nowej generacji osobnikow.
--spec loop([island()],counter()) -> float().
-loop(Islands,Counter) ->
+-spec loop([island()],[counter()]) -> float().
+loop(Islands,Counters) ->
     Environment = config:agent_env(),
     receive
         write ->
-            logger:logLocalStats(sequential,
-                                 fitness,
-                                 [misc_util:result(I) || I <- Islands]),
-            logger:logLocalStats(sequential,
-                                 population,
-                                 [length(I) || I <- Islands]),
-            logger:logGlobalStats(sequential,Counter),
-            timer:send_after(config:writeInterval(),write),
-            loop(Islands,misc_util:createNewCounter());
+%%             logger:logLocalStats(sequential,
+%%                                  fitness,
+%%                                  [misc_util:result(I) || I <- Islands]),
+%%             logger:logLocalStats(sequential,
+%%                                  population,
+%%                                  [length(I) || I <- Islands]),
+%%             logger:logGlobalStats(sequential, Counter),
+%%             [[io:format("~p: ~p~n", [Stat, Val]) || {Stat, Val} <- dict:to_list(Counter)] || Counter <- Counters],
+            loop(Islands,[misc_util:createNewCounter() || _ <- lists:seq(1,length(Islands))]);
         theEnd ->
             lists:max([misc_util:result(I) || I <- Islands])
     after 0 ->
             Groups = [misc_util:groupBy([{Environment:behaviour_function(Agent),Agent} || Agent <- I]) || I <- Islands],
-            NewCounter = misc_util:countInteractions(Groups,Counter),
+            NewCounters = [misc_util:updateCounter(G,C) || {G, C} <- lists:zip(Groups, Counters)],
             Emigrants = [seq_migrate(lists:keyfind(migration,1,Island),Nr) || {Island,Nr} <- lists:zip(Groups,lists:seq(1,length(Groups)))],
             NewGroups = [[misc_util:meeting_proxy(Activity,sequential) || Activity <- I] || I <- Groups],
             WithEmigrants = append(lists:flatten(Emigrants),NewGroups),
             NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- WithEmigrants],
-            loop(NewIslands,NewCounter)
+            loop(NewIslands,NewCounters)
     end.
 
 -spec seq_migrate(false | {migration,[agent()]}, pos_integer()) -> [{migration,[agent()]}].

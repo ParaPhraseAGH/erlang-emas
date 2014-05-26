@@ -4,7 +4,7 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2,
-         seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, countInteractions/2, determineStats/0]).
+         seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, updateCounter/2, determineStats/0]).
 
 -include ("mas.hrl").
 
@@ -72,21 +72,17 @@ logNow(LastLog) ->
             notyet
     end.
 
--spec createNewCounter() -> dict:dict().
+-spec createNewCounter() -> counter().
 createNewCounter() ->
     Environment = config:agent_env(),
     BehaviourList = [{Behaviour,0} || Behaviour <- Environment:behaviours()],
     dict:from_list(BehaviourList).
 
--spec countInteractions([tuple()],dict:dict()) -> dict:dict().
-countInteractions([],Counter) ->
-    Counter;
-
-countInteractions([Groups|T],Counter) ->
-    UpdatedCounter = lists:foldl(fun({Activity,Value},TmpCounter) ->
-        dict:update_counter(Activity,length(Value),TmpCounter)
-    end,Counter,Groups),
-    countInteractions(T,UpdatedCounter).
+-spec updateCounter([tuple()], counter()) -> counter().
+updateCounter(Groups,Counter) ->
+    lists:foldl(fun({Activity,Value},TmpCounter) ->
+                        dict:update_counter(Activity,length(Value),TmpCounter)
+                end,Counter,Groups).
 
 %% %% @doc Zwraca liczby agentow nalezacych do poszczegolnych kategorii w formie rekordu
 %% -spec countGroups([tuple()],counter()) -> counter().

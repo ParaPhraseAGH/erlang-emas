@@ -1,11 +1,16 @@
 -module (emas).
 -behaviour(agent_env).
 
--export ([start/3, initial_population/0, behaviour_function/1, behaviours/0, meeting_function/1, stats/0]).
+-export ([start/3, starts/1, initial_population/0, behaviour_function/1, behaviours/0, meeting_function/1, stats/0]).
 
-% type model() is defined in mas.hrl
-% emas.hrl included by mas.hrl
+                                                % type model() is defined in mas.hrl
+                                                % emas.hrl included by mas.hrl
 -include ("mas.hrl").
+
+-spec starts([list()]) -> ok.
+starts(Args) ->
+    [Model, Time] = Args,
+    mas:start(?MODULE,erlang:list_to_atom(Model),erlang:list_to_integer(Time),[]).
 
 -spec start(model(),pos_integer(),[tuple()]) -> ok.
 start(Model, Time, Options) ->
@@ -50,14 +55,12 @@ meeting_function({migration, Agents}) ->
 meeting_function({_, _}) ->
     erlang:error(unexpected_behaviour).
 
--spec stats() -> [{atom(),fun(),term()}].
+-spec stats() -> [{Name::atom(), Extract::fun(), Reduce::fun(), InitVal::term()}].
 stats() ->
-    Fitness = fun(Agent,YetBest) ->
-                      {_,F,_} = Agent,
-                      lists:max([F,YetBest])
-              end,
-    Energy = fun(Agent,Sum) ->
-                     {_,_,E} = Agent,
-                     E + Sum
-             end,
-    [{fitness,Fitness,-999999},{energy,Energy,0}].
+    Fitness_extract = fun({_Solution,Fitness,_Energy}) ->
+                              Fitness
+                      end,
+    Fitness_reduce = fun(F1, F2) ->
+                             lists:max(F1,F2)
+                     end,
+    [{fitness, Fitness_extract, Fitness_reduce, -999999}].

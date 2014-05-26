@@ -57,7 +57,7 @@ loop(Agents,Counter,Stats) ->
             Groups = misc_util:groupBy([{Environment:behaviour_function(A),A} || A <- Agents ]),
             NewGroups = [misc_util:meeting_proxy(G, hybrid) || G <- Groups],
             NewAgents = misc_util:shuffle(lists:flatten(NewGroups)),
-            NewCounter = misc_util:countInteractions([Groups],Counter),
+            NewCounter = misc_util:updateCounter(Groups,Counter),
             loop(NewAgents,NewCounter,NewStats)
     end.
 
