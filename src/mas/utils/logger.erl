@@ -5,17 +5,16 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/2, logStat/3, close/0]).
+-export([start_link/2, log/3, close/0]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--define(STATS, [fitness, population, stddevsum, stddevmin, stddevvar]).
-%% -define(GLOBAL_STATS, [death, fight, reproduction, migration]).
+-define(STATS, [fitness, population, death, fight, reproduction, migration]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start_link({atom(), [pid()] | integer()}, string()) -> {ok, pid()}.
+-spec start_link(list(), string()) -> {ok, pid()}.
 start_link(Keys, Path) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Keys, Path], []).
 
@@ -33,8 +32,8 @@ start_link(Keys, Path) ->
 %% logGlobalStats(parallel, Counter) ->
 %%     gen_server:cast(whereis(?MODULE), {agregate, self(), Counter}).
 
--spec logStat(term(),atom(),term()) -> ok.
-logStat(Key,Stat,Value) ->
+-spec log(term(),atom(),term()) -> ok.
+log(Key,Stat,Value) ->
     gen_server:cast(whereis(?MODULE), {stat, Key, Stat, Value}).
 
 -spec close() -> ok.
@@ -46,16 +45,17 @@ close() ->
 %%%===================================================================
 
 -record(state, {fds :: dict:dict(),
-                counters = dict:new() :: dict:dict(),
-                stats = [] :: [atom()]}).
+                statfuns = [] :: [tuple()],
+                counters = dict:new() :: dict:dict()}).
 -type state() :: #state{}.
 
 -spec init(term()) -> {ok,state()}.
 init([Keys, Path]) ->
     Dict = prepareDictionary(Keys, dict:new(), Path),
-    Stats = misc_util:determineStats(),
+    Env = config:agent_env(),
+    Statfuns = Env:stats(),
     timer:send_interval(config:writeInterval(),timer),
-    {ok, #state{fds = Dict, stats = Stats, counters = createCounter(Keys)}}.
+    {ok, #state{fds = Dict, statfuns = Statfuns, counters = createCounter(Keys)}}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
                                                     {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
@@ -71,8 +71,10 @@ handle_call(_Request, _From, State) ->
                                      {stop,term(),state()}.
 handle_cast({stat, Key, Stat, Value}, State) ->
     IslandDict = dict:fetch(Key,State#state.counters),
-    NewCounter = dict:store(Stat,Value,IslandDict),
-    {noreply,State#state{counters = dict:store(Key,NewCounter,State#state.counters)}};
+    OldVal = dict:fetch(Stat,IslandDict),
+    {Stat, _Map, Reduce, _InitVal} = lists:keyfind(Stat, 1, State#state.statfuns),
+    NewVal = Reduce(OldVal, Value),
+    {noreply,State#state{counters = dict:store(Key,NewVal,State#state.counters)}};
 
 %% handle_cast({parallel, Stat, Pid, Value}, State) ->
 %%     logLocal(State#state.fds, Pid, Stat, Value),
@@ -103,7 +105,7 @@ handle_cast(close, State) ->
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_info(timer, State = #state{fds = FDs, counters = Counters, stats = Stats}) ->
+handle_info(timer, State = #state{fds = FDs, counters = Counters}) ->
     % TODO
     %%     io:format("Tick!~n"),
 %%     Acc = gatherStats(BigDict,Stats),

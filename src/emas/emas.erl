@@ -55,12 +55,12 @@ meeting_function({migration, Agents}) ->
 meeting_function({_, _}) ->
     erlang:error(unexpected_behaviour).
 
--spec stats() -> [{Name::atom(), Extract::fun(), Reduce::fun(), InitVal::term()}].
+-spec stats() -> [{Name::atom(), Map::fun(), Reduce::fun(), InitVal::term()}].
 stats() ->
-    Fitness_extract = fun({_Solution,Fitness,_Energy}) ->
+    Fitness_map = fun({_Solution,Fitness,_Energy}) ->
                               Fitness
                       end,
     Fitness_reduce = fun(F1, F2) ->
                              lists:max(F1,F2)
                      end,
-    [{fitness, Fitness_extract, Fitness_reduce, -999999}].
+    [{fitness, Fitness_map, Fitness_reduce, -999999}].
