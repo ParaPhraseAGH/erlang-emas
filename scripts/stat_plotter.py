@@ -142,11 +142,13 @@ def plot_data_objs(data_to_plot_list, figure_name, same=False):
                     ydata = map(lambda x: -x, obj.data)
                 else:
                     ydata = obj.data
-                ax[i][j].plot(range(len(obj.data)), ydata, label=topo)
+                ax[i][j].plot(range(len(obj.data)), ydata, label=topo, linewidth=2.0)
                 ax[i][j].set_yscale(obj.scale)
                 ax[i][j].set_title(obj.label)
                 if same:
                     ax[i][j].legend(loc='lower left', shadow=True)
+                    ax[i][j].legend().set_visible(False)
+                    # fig.legend(loc='lower left', shadow=True)
     if fig._suptitle is None:
         suptitle = ':'.join(figure_name.split(':')[1:])
         fig.suptitle(suptitle, fontsize=18)
@@ -249,8 +251,18 @@ def run():
             if len(plot_label) == 0:
                 plot_label = None
             main(instance_names, func, True, plot_label)
+        fig, axes = plt.subplots(2, 2, num=1)
+        ax = axes[1][1]
+        l = ax.legend()#.set_visible(False)
+        # position = 'lower right'
+        position = 'center left'
+        fig.legend(l.legendHandles, [x._text for x in l.texts], position)
+        l.set_visible(False)
+        # fig.tight_layout()
+        # i=1
 
 
 if __name__ == '__main__':
     run()
+    # plt.legend()
     plt.show()
