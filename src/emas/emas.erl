@@ -1,11 +1,15 @@
 -module (emas).
 -behaviour(agent_env).
 
--export ([start/3, starts/1, initial_population/0, behaviour_function/1, behaviours/0, meeting_function/1, stats/0]).
+-export ([starts/1, start/2, start/3, initial_population/0, behaviour_function/1, behaviours/0, meeting_function/1, stats/0]).
 
-                                                % type model() is defined in mas.hrl
-                                                % emas.hrl included by mas.hrl
+% type model() is defined in mas.hrl
+% emas.hrl included by mas.hrl
 -include ("mas.hrl").
+
+-spec start(model(),pos_integer()) -> ok.
+start(Model, Time) ->
+    mas:start(?MODULE,Model,Time,[]).
 
 -spec starts([list()]) -> ok.
 starts(Args) ->
