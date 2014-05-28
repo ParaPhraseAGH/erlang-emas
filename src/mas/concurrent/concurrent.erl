@@ -15,15 +15,15 @@ start(Time,Islands,Topology,Path) ->
     misc_util:clearInbox(),
     topology:start_link(self(),Islands,Topology),
     Supervisors = [conc_supervisor:start() || _ <- lists:seq(1,Islands)],
-    conc_logger:start_link(Supervisors,Path),
+    logger:start_link(Supervisors, Path),
     receive
         ready ->
             trigger(Supervisors)
     end,
     timer:sleep(Time),
     [ok = conc_supervisor:close(Pid) || Pid <- Supervisors],
-    conc_logger:close(),
-    topology:close().
+    topology:close(),
+    logger:close().
 
 %% ====================================================================
 %% Internal functions

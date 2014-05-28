@@ -13,13 +13,14 @@
 -record(state, {supervisor :: pid(),
                 waitlist = [] :: list(),
                 agentFroms = [] ::[pid()],
+                funstats :: [funstat()],
                 arenas :: dict:dict(),
                 interaction :: atom(),
                 lastLog :: erlang:timestamp(),
                 counter = 0 :: non_neg_integer()}).
 
--define(CLOSING_TIMEOUT,2000).
--define(AGENT_THRESHOLD,2). %% TODO zmienna powinna byc konfigurowana przez usera i na dodatek zalezna od interakcji
+-define(CLOSING_TIMEOUT, 2000).
+-define(AGENT_THRESHOLD, 2). %% TODO zmienna powinna byc konfigurowana przez usera i na dodatek zalezna od interakcji
 
 %%%===================================================================
 %%% API
@@ -56,7 +57,12 @@ close(Pid) ->
                               {stop, Reason :: term()} | ignore).
 init([Supervisor,Interaction]) ->
     misc_util:seedRandom(),
-    {ok, #state{supervisor = Supervisor, lastLog = os:timestamp(), interaction = Interaction},config:arenaTimeout()}.
+    Env = config:agent_env(),
+    Funstats = Env:stats(),
+    {ok, #state{supervisor = Supervisor,
+                lastLog = os:timestamp(),
+                interaction = Interaction,
+                funstats = Funstats},config:arenaTimeout()}.
 
 
 -spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()}, State :: #state{}) ->
@@ -75,19 +81,26 @@ handle_call({interact,Agent}, From, State) ->
     Froms = [From|State#state.agentFroms],
     case length(Waitlist)  of
         ?AGENT_THRESHOLD ->
-            NewCounter = State#state.counter + length(Waitlist), % tu blad?!
             NewAgents = misc_util:meeting_proxy({State#state.interaction,Waitlist},concurrent),
             respond(NewAgents,Froms,State#state.arenas),
+
+            NewCounter = State#state.counter + length(Waitlist), % tu blad?!
+            NewFunstats = misc_util:count_funstats(NewAgents, State#state.funstats),
+
             case misc_util:logNow(State#state.lastLog) of
                 {yes,NewLog} ->
-                    conc_logger:log(State#state.supervisor,State#state.interaction,NewCounter),
+                    %%                     conc_logger:log(State#state.supervisor,State#state.interaction,NewCounter),
+                    logger:log_countstat(State#state.supervisor, State#state.interaction, NewCounter),
+                    [logger:log_funstat(State#state.supervisor, StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- NewFunstats],
                     {noreply,State#state{waitlist = [],
                                          agentFroms = [],
                                          lastLog = NewLog,
+                                         funstats = NewFunstats,
                                          counter = 0},config:arenaTimeout()};
                 notyet ->
                     {noreply,State#state{waitlist = [],
                                          agentFroms = [],
+                                         funstats = NewFunstats,
                                          counter = NewCounter},config:arenaTimeout()}
             end;
         _ ->
@@ -97,18 +110,16 @@ handle_call({interact,Agent}, From, State) ->
 handle_call({arenas,Arenas}, _From, State) ->
     {reply,ok,State#state{arenas = Arenas},config:arenaTimeout()}.
 
--spec(handle_cast(Request :: term(), State :: #state{}) ->
-             {noreply, NewState :: #state{}} |
-             {noreply, NewState :: #state{}, timeout() | hibernate} |
-             {stop, Reason :: term(), NewState :: #state{}}).
+-spec(handle_cast(Request :: term(), State :: #state{}) -> {noreply, NewState :: #state{}} |
+                                                           {noreply, NewState :: #state{}, timeout() | hibernate} |
+                                                           {stop, Reason :: term(), NewState :: #state{}}).
 handle_cast(close, _State) ->
     {noreply, cleaning, ?CLOSING_TIMEOUT}.
 
 
--spec(handle_info(Info :: timeout() | term(), State :: #state{}) ->
-             {noreply, NewState :: #state{}} |
-             {noreply, NewState :: #state{}, timeout() | hibernate} |
-             {stop, Reason :: term(), NewState :: #state{}}).
+-spec(handle_info(Info :: timeout() | term(), State :: #state{}) -> {noreply, NewState :: #state{}} |
+                                                                    {noreply, NewState :: #state{}, timeout() | hibernate} |
+                                                                    {stop, Reason :: term(), NewState :: #state{}}).
 handle_info(timeout,cleaning) ->
     {stop,normal,cleaning};
 
@@ -130,6 +141,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
+-spec respond([agent()], {pid(), term()}, dict:dict()) -> list().
 respond(Agents, Froms, Arenas) when length(Agents) >= length(Froms) ->
     [gen_server:reply(From,Agent) || {From,Agent} <- misc_util:shortestZip(Froms,Agents)],
     [spawn(agent,start,[Agent,Arenas]) || Agent <- lists:nthtail(length(Froms),Agents)];

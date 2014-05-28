@@ -42,8 +42,8 @@ close(Pid) ->
 %% Callbacks
 %% ====================================================================
 -record(state, {mySupervisor :: pid(),
-%%                 diversity :: pid(),
                 arenas :: dict:dict(),
+                funstats :: [funstat()],
                 emigrants = [] :: [pid()],
                 immigrants = [] :: [{pid(),agent()}],
                 lastLog :: erlang:timestamp()}).
@@ -51,11 +51,15 @@ close(Pid) ->
 
 
 -spec init([pid()]) -> {ok,state()} |
-                      {ok,state(),non_neg_integer()}.
+                       {ok,state(),non_neg_integer()}.
 init([Supervisor]) ->
     misc_util:seedRandom(),
     timer:send_after(config:writeInterval(),timer),
-    {ok, #state{mySupervisor = Supervisor, lastLog = os:timestamp()}}.
+    Env = config:agent_env(),
+    Funstats = Env:stats(),
+    {ok, #state{mySupervisor = Supervisor,
+                lastLog = os:timestamp(),
+                funstats = Funstats}}.
 
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -107,8 +111,10 @@ handle_info(timer,cleaning) ->
     {noreply,cleaning,config:writeInterval()/2};
 
 handle_info(timer,State) ->
-    {Emigrants,Immigrants,LastLog} = check(State),
-    {noreply,State#state{emigrants = Emigrants, immigrants = Immigrants, lastLog = LastLog}}.
+    {Emigrants, Immigrants, LastLog} = check(State),
+    {noreply,State#state{emigrants = Emigrants,
+                         immigrants = Immigrants,
+                         lastLog = LastLog}}.
 
 
 -spec terminate(term(),state()) -> no_return().
@@ -125,13 +131,16 @@ code_change(_OldVsn, State, _Extra) ->
 %% ====================================================================
 
 -spec check(state()) -> {[pid()],[{pid(),agent()}],erlang:timestamp()}.
-check(State) ->
-    {Emigrants,Immigrants,LastLog} = {State#state.emigrants,State#state.immigrants,State#state.lastLog},
+check(#state{emigrants = Emigrants,
+             immigrants = Immigrants,
+             funstats = Funstats,
+             lastLog = LastLog,
+             mySupervisor = Supervisor}) ->
     case misc_util:logNow(LastLog) of
         {yes,NewLog} ->
-%%             diversity:report(State#state.diversity,emigration,Emigrants),
-%%             diversity:report(State#state.diversity,immigration,Immigrants),
-            conc_logger:log(State#state.mySupervisor,migration,{length(Emigrants),length(Immigrants)}),
+            logger:log_countstat(Supervisor, migration, length(Emigrants)),
+            [logger:log_funstat(Supervisor, StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- Funstats],
+            %%             conc_logger:log(State#state.mySupervisor,migration,{length(Emigrants),length(Immigrants)}),
             timer:send_after(config:writeInterval(),timer),
             {[],[],NewLog};
         notyet ->
