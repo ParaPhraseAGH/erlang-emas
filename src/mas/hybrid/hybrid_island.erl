@@ -42,26 +42,17 @@ loop(Agents, InteractionCounter, Funstats) ->
             [logger:log_countstat(self(), Interaction, Val) || {Interaction, Val} <- dict:to_list(InteractionCounter)],
             [logger:log_funstat(self(), StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- Funstats],
             loop(Agents, misc_util:createNewCounter(), Funstats);
-        {agent,_Pid,A} ->
+        {agent, _Pid, A} ->
             loop([A|Agents], InteractionCounter, Funstats);
-        {finish,_Pid} ->
+        {finish, _Pid} ->
             ok
     after 0 ->
             Groups = misc_util:groupBy([{Environment:behaviour_function(A), A} || A <- Agents ]),
             NewGroups = [misc_util:meeting_proxy(G, hybrid) || G <- Groups],
             NewAgents = misc_util:shuffle(lists:flatten(NewGroups)),
-            NewFunstats = count_funstats(NewAgents, Funstats),
+
+            NewFunstats = misc_util:count_funstats(NewAgents, Funstats),
             NewCounter = misc_util:add_interactions_to_counter(Groups, InteractionCounter),
+
             loop(NewAgents, NewCounter, NewFunstats)
     end.
-
-
--spec count_funstats([agent()], [funstat()]) -> [funstat()].
-count_funstats(_,[]) ->
-    [];
-
-count_funstats(Agents, [{Stat, MapFun, ReduceFun, OldAcc}|T]) ->
-    NewAcc = lists:foldl(ReduceFun,
-                         OldAcc,
-                         [MapFun(Agent) || Agent <- Agents]),
-    [{Stat, MapFun, ReduceFun, NewAcc} | count_funstats(Agents,T)].

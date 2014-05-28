@@ -3,7 +3,7 @@
 %% @doc Modul z funkcjami pomocniczymi dla roznych wersji algorytmu.
 
 -module(misc_util).
--export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2,
+-export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2, count_funstats/2,
          seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, add_interactions_to_counter/2, determineStats/0]).
 
 -include ("mas.hrl").
@@ -90,6 +90,16 @@ add_interactions_to_counter(Groups, Counter) ->
     lists:foldl(fun({Activity, Value}, TmpCounter) ->
                         dict:update_counter(Activity, length(Value), TmpCounter)
                 end,Counter, Groups).
+
+-spec count_funstats([agent()], [funstat()]) -> [funstat()].
+count_funstats(_,[]) ->
+    [];
+
+count_funstats(Agents, [{Stat, MapFun, ReduceFun, OldAcc}|T]) ->
+    NewAcc = lists:foldl(ReduceFun,
+        OldAcc,
+        [MapFun(Agent) || Agent <- Agents]),
+    [{Stat, MapFun, ReduceFun, NewAcc} | count_funstats(Agents,T)].
 
 %% %% @doc Zwraca liczby agentow nalezacych do poszczegolnych kategorii w formie rekordu
 %% -spec countGroups([tuple()],counter()) -> counter().

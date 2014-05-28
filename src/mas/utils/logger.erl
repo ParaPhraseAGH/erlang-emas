@@ -179,7 +179,7 @@ logIsland(_Key, [], Counter, _Funstats) ->
 
 logIsland(Key, [{Stat, FD}|FDs], Counter, Funstats) ->
     Value = dict:fetch(Stat, Counter),
-    file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Key, Stat, Value])),
+    file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Stat, Key, Value])),
     NewCounter = case lists:keyfind(Stat, 1, Funstats) of
                      false ->
                          dict:store(Stat, 0, Counter);

@@ -22,7 +22,10 @@ start(Time, Islands, Topology, Path) ->
     logger:start_link(lists:seq(1, Islands), Path),
     timer:send_after(Time, theEnd),
     {ok, TRef} = timer:send_interval(config:writeInterval(), write),
-    {_Time,_Result} = timer:tc(fun loop/2, [InitIslands,[misc_util:createNewCounter() || _ <- lists:seq(1, Islands)]]),
+    {_Time,_Result} = timer:tc(fun loop/3, [
+                                            InitIslands,
+                                            [misc_util:createNewCounter() || _ <- lists:seq(1, Islands)],
+                                            [Environment:stats() || _ <- lists:seq(1, Islands)]]),
     timer:cancel(TRef),
     topology:close(),
     logger:close().
@@ -32,39 +35,45 @@ start(Time, Islands, Topology, Path) ->
 %% ====================================================================
 
 %% @doc Glowa petla programu. Kazda iteracja powoduje ewolucje nowej generacji osobnikow.
--spec loop([island()], [counter()]) -> float().
-loop(Islands, Counters) ->
+-spec loop([island()], [counter()], [funstat()]) -> float().
+loop(Islands, Counters, Funstats) ->
     Environment = config:agent_env(),
     receive
         write ->
-            Environment = config:agent_env(),
-            Funstats = Environment:stats(),
-            %% TODO InitVal in funstats is never overwritten!
-            [log(Nr, I, C, Funstats) || {Nr, I, C} <- lists:zip3(lists:seq(1, length(Islands)), Islands, Counters)],
-            loop(Islands, [misc_util:createNewCounter() || _ <- lists:seq(1, length(Islands))]);
+            [log_island(Nr, C, F) || {Nr, C, F} <- lists:zip3(lists:seq(1, length(Islands)), Counters, Funstats)],
+            loop(Islands,
+                [misc_util:createNewCounter() || _ <- lists:seq(1, length(Islands))],
+                Funstats);
         theEnd ->
             lists:max([misc_util:result(I) || I <- Islands])
     after 0 ->
-        %% TODO update funstats on every iteration!
         Groups = [misc_util:groupBy([{Environment:behaviour_function(Agent),Agent} || Agent <- I]) || I <- Islands],
-        NewCounters = [misc_util:add_interactions_to_counter(G, C) || {G, C} <- lists:zip(Groups, Counters)],
         Emigrants = [seq_migrate(lists:keyfind(migration, 1, Island), Nr) || {Island, Nr} <- lists:zip(Groups, lists:seq(1, length(Groups)))],
         NewGroups = [[misc_util:meeting_proxy(Activity, sequential) || Activity <- I] || I <- Groups],
         WithEmigrants = append(lists:flatten(Emigrants), NewGroups),
         NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- WithEmigrants],
-        loop(NewIslands,NewCounters)
+
+        NewCounters = [misc_util:add_interactions_to_counter(G, C) || {G, C} <- lists:zip(Groups, Counters)],
+        NewFunstats = [misc_util:count_funstats(I, F) || {I, F} <- lists:zip(NewIslands, Funstats)],
+
+        loop(NewIslands, NewCounters, NewFunstats)
     end.
 
--spec log(pos_integer(), [agent()], counter(), [funstat()]) -> [ok].
-log(Nr, _Island, Counter, []) ->
-    [logger:log_countstat(Nr, Stat, Val) || {Stat, Val} <- dict:to_list(Counter)];
+%% -spec log(pos_integer(), [agent()], counter(), [funstat()]) -> [ok].
+%% log(Nr, _Island, Counter, []) ->
+%%     [logger:log_countstat(Nr, Stat, Val) || {Stat, Val} <- dict:to_list(Counter)];
+%%
+%% log(Nr, Island, Counter, [{StatName, MapFun, ReduceFun, InitVal}|Stats]) ->
+%%     StatVal = lists:foldl(ReduceFun,
+%%                           InitVal,
+%%                           [MapFun(Agent) || Agent <- Island]),
+%%     logger:log_funstat(Nr, StatName, StatVal),
+%%     log(Nr, Island, Counter, Stats).
 
-log(Nr, Island, Counter, [{StatName, MapFun, ReduceFun, InitVal}|Stats]) ->
-    StatVal = lists:foldl(ReduceFun,
-                          InitVal,
-                          [MapFun(Agent) || Agent <- Island]),
-    logger:log_funstat(Nr, StatName, StatVal),
-    log(Nr, Island, Counter, Stats).
+-spec log_island(pos_integer(), counter(), [funstat()]) -> [ok].
+log_island(Key, Counter, Funstats) ->
+    [logger:log_countstat(Key, Interaction, Val) || {Interaction, Val} <- dict:to_list(Counter)],
+    [logger:log_funstat(Key, StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- Funstats].
 
 
 -spec seq_migrate(false | {migration,[agent()]}, pos_integer()) -> [{migration,[agent()]}].
