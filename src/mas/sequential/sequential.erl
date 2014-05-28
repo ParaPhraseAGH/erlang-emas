@@ -38,22 +38,24 @@ loop(Islands, Counters) ->
     receive
         write ->
             Environment = config:agent_env(),
-            Stats = Environment:stats(),
-            [log(Nr, I, C, Stats) || {Nr, I, C} <- lists:zip3(lists:seq(1,length(Islands)),Islands, Counters)],
-            loop(Islands,[misc_util:createNewCounter() || _ <- lists:seq(1,length(Islands))]);
+            Funstats = Environment:stats(),
+            %% TODO InitVal in funstats is never overwritten!
+            [log(Nr, I, C, Funstats) || {Nr, I, C} <- lists:zip3(lists:seq(1, length(Islands)), Islands, Counters)],
+            loop(Islands, [misc_util:createNewCounter() || _ <- lists:seq(1, length(Islands))]);
         theEnd ->
             lists:max([misc_util:result(I) || I <- Islands])
     after 0 ->
+        %% TODO update funstats on every iteration!
         Groups = [misc_util:groupBy([{Environment:behaviour_function(Agent),Agent} || Agent <- I]) || I <- Islands],
-        NewCounters = [misc_util:updateCounter(G,C) || {G, C} <- lists:zip(Groups, Counters)],
-        Emigrants = [seq_migrate(lists:keyfind(migration,1,Island),Nr) || {Island,Nr} <- lists:zip(Groups,lists:seq(1,length(Groups)))],
-        NewGroups = [[misc_util:meeting_proxy(Activity,sequential) || Activity <- I] || I <- Groups],
-        WithEmigrants = append(lists:flatten(Emigrants),NewGroups),
+        NewCounters = [misc_util:add_interactions_to_counter(G, C) || {G, C} <- lists:zip(Groups, Counters)],
+        Emigrants = [seq_migrate(lists:keyfind(migration, 1, Island), Nr) || {Island, Nr} <- lists:zip(Groups, lists:seq(1, length(Groups)))],
+        NewGroups = [[misc_util:meeting_proxy(Activity, sequential) || Activity <- I] || I <- Groups],
+        WithEmigrants = append(lists:flatten(Emigrants), NewGroups),
         NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- WithEmigrants],
         loop(NewIslands,NewCounters)
     end.
 
--spec log(pos_integer(), [agent()], counter(), [tuple()]) -> [ok].
+-spec log(pos_integer(), [agent()], counter(), [funstat()]) -> [ok].
 log(Nr, _Island, Counter, []) ->
     [logger:log_countstat(Nr, Stat, Val) || {Stat, Val} <- dict:to_list(Counter)];
 

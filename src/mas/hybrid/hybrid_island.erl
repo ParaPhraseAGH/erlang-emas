@@ -17,54 +17,51 @@ start() ->
     misc_util:seedRandom(),
     Environment = config:agent_env(),
     Agents = Environment:initial_population(),
-    timer:send_after(config:writeInterval(),write),
-    loop(Agents,dict:new(),Environment:stats()).
+    timer:send_interval(config:writeInterval(), write),
+    loop(Agents, misc_util:createNewCounter(), Environment:stats()).
 
--spec close(pid()) -> {finish,pid()}.
+-spec close(pid()) -> {finish, pid()}.
 close(Pid) ->
-    Pid ! {finish,self()}.
+    Pid ! {finish, self()}.
 
 %% @doc Funkcja za pomoca ktorej mozna przesylac wyspie imigrantow.
 %% Komunikacja asynchroniczna.
--spec sendAgent(pid(),agent()) -> {agent,pid(),agent()}.
-sendAgent(Pid,Agent) ->
-    Pid ! {agent,self(),Agent}.
+-spec sendAgent(pid(), agent()) -> {agent, pid(), agent()}.
+sendAgent(Pid, Agent) ->
+    Pid ! {agent, self(), Agent}.
 
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 %% @doc Glowna petla procesu. Kazda iteracja powoduje wytworzenie kolejnej generacji.
--spec loop([agent()],counter(),[tuple()]) -> ok.
-loop(Agents,Counter,Stats) ->
+-spec loop([agent()], counter(), [tuple()]) -> ok.
+loop(Agents, InteractionCounter, Funstats) ->
     Environment = config:agent_env(),
     receive
         write ->
-            {fitness,_,Fitness} = lists:keyfind(fitness,1,Stats),
-            {energy,_,Energy} = lists:keyfind(energy,1,Stats),
-            io:format("Energy: ~p~n",[Energy]),
-            logger:logLocalStats(parallel,fitness,Fitness),
-            logger:logLocalStats(parallel,population,length(Agents)),
-            logger:logGlobalStats(parallel,Counter),
-            timer:send_after(config:writeInterval(),write),
-            Environment = config:agent_env(),
-            loop(Agents,misc_util:createNewCounter(),Environment:stats());
+            [logger:log_countstat(self(), Interaction, Val) || {Interaction, Val} <- dict:to_list(InteractionCounter)],
+            [logger:log_funstat(self(), StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- Funstats],
+            loop(Agents, misc_util:createNewCounter(), Funstats);
         {agent,_Pid,A} ->
-            loop([A|Agents],Counter,Stats);
+            loop([A|Agents], InteractionCounter, Funstats);
         {finish,_Pid} ->
             ok
     after 0 ->
-            NewStats = countStats(Agents,Stats),
-            Groups = misc_util:groupBy([{Environment:behaviour_function(A),A} || A <- Agents ]),
+            Groups = misc_util:groupBy([{Environment:behaviour_function(A), A} || A <- Agents ]),
             NewGroups = [misc_util:meeting_proxy(G, hybrid) || G <- Groups],
             NewAgents = misc_util:shuffle(lists:flatten(NewGroups)),
-            NewCounter = misc_util:updateCounter(Groups,Counter),
-            loop(NewAgents,NewCounter,NewStats)
+            NewFunstats = count_funstats(NewAgents, Funstats),
+            NewCounter = misc_util:add_interactions_to_counter(Groups, InteractionCounter),
+            loop(NewAgents, NewCounter, NewFunstats)
     end.
 
 
-countStats(_,[]) ->
+-spec count_funstats([agent()], [funstat()]) -> [funstat()].
+count_funstats(_,[]) ->
     [];
 
-countStats(Agents,[{Stat,Fun,Acc0}|T]) ->
-    NewAcc = lists:foldl(Fun,Acc0,Agents),
-    [{Stat,Fun,NewAcc} | countStats(Agents,T)].
+count_funstats(Agents, [{Stat, MapFun, ReduceFun, OldAcc}|T]) ->
+    NewAcc = lists:foldl(ReduceFun,
+                         OldAcc,
+                         [MapFun(Agent) || Agent <- Agents]),
+    [{Stat, MapFun, ReduceFun, NewAcc} | count_funstats(Agents,T)].

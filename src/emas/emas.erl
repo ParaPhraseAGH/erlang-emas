@@ -55,7 +55,7 @@ meeting_function({migration, Agents}) ->
 meeting_function({_, _}) ->
     erlang:error(unexpected_behaviour).
 
--spec stats() -> [{Name::atom(), Map::fun(), Reduce::fun(), InitVal::term()}].
+-spec stats() -> [funstat()].
 stats() ->
     Fitness_map = fun({_Solution,Fitness,_Energy}) ->
                               Fitness

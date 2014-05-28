@@ -52,7 +52,7 @@ close() ->
 
 -record(state, {fds :: dict:dict(),
                 allstats = [] :: [atom()],
-                statfuns = [] :: [tuple()],
+                funstats = [] :: [tuple()],
                 counters = dict:new() :: dict:dict(),
                 supervisor_from :: {pid(), term()},
                 timeout = infinity :: infinity | non_neg_integer()}).
@@ -62,10 +62,10 @@ close() ->
 init([Keys, Path]) ->
     self() ! delayTimerStart,
     Env = config:agent_env(),
-    Statfuns = Env:stats(),
-    Stats = Env:behaviours() ++ [Name || {Name, _MapFun, _ReduceFun, _InitVal} <- Statfuns],
+    Funstats = Env:stats(),
+    Stats = Env:behaviours() ++ [Name || {Name, _MapFun, _ReduceFun, _InitVal} <- Funstats],
     Dict = prepareDictionary(Keys, dict:new(), Path, Stats),
-    {ok, #state{fds = Dict, statfuns = Statfuns, counters = createCounter(Keys), allstats = Stats}, infinity}.
+    {ok, #state{fds = Dict, funstats = Funstats, counters = createCounter(Keys), allstats = Stats}, infinity}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
                                                     {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
@@ -83,7 +83,7 @@ handle_call(close, From, State) ->
 handle_cast({funstat, Key, Stat, Value}, State) ->
     IslandDict = dict:fetch(Key,State#state.counters),
     OldVal = dict:fetch(Stat,IslandDict),
-    {Stat, _Map, Reduce, _InitVal} = lists:keyfind(Stat, 1, State#state.statfuns),
+    {Stat, _Map, Reduce, _InitVal} = lists:keyfind(Stat, 1, State#state.funstats),
     NewVal = Reduce(OldVal, Value),
     NewIslandDict = dict:store(Stat, NewVal, IslandDict),
     {noreply, State#state{counters = dict:store(Key,NewIslandDict,State#state.counters)}, State#state.timeout};
@@ -96,12 +96,12 @@ handle_cast({countstat, Key, Stat, Value}, State) ->
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_info(timer, State = #state{fds = FDs, counters = Counters, statfuns = Statfuns}) ->
-    New_counters = dict:map(fun(Key, CounterDict) ->
+handle_info(timer, State = #state{fds = FDs, counters = Counters, funstats = Funstats}) ->
+    NewCounters = dict:map(fun(Key, CounterDict) ->
                                     FDDict = dict:fetch(Key, FDs),
-                                    logIsland(Key, dict:to_list(FDDict), CounterDict, Statfuns)
+                                    logIsland(Key, dict:to_list(FDDict), CounterDict, Funstats)
                             end, Counters),
-    {noreply, State#state{counters = New_counters}, State#state.timeout};
+    {noreply, State#state{counters = NewCounters}, State#state.timeout};
 
 handle_info(delayTimerStart, State) ->
     timer:sleep(700),
@@ -173,20 +173,20 @@ createCounter(Keys) ->
                 end, dict:new(), Keys).
 
 
--spec logIsland(pid() | pos_integer(), [tuple()], counter(), [atom()]) -> counter().
-logIsland(_Key, [], Counter, _Statfuns) ->
+-spec logIsland(pid() | pos_integer(), [tuple()], counter(), [funstat()]) -> counter().
+logIsland(_Key, [], Counter, _Funstats) ->
     Counter;
 
-logIsland(Key, [{Stat, FD}|FDs], Counter, Statfuns) ->
+logIsland(Key, [{Stat, FD}|FDs], Counter, Funstats) ->
     Value = dict:fetch(Stat, Counter),
     file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Key, Stat, Value])),
-    NewCounter = case lists:keyfind(Stat, 1, Statfuns) of
+    NewCounter = case lists:keyfind(Stat, 1, Funstats) of
                      false ->
                          dict:store(Stat, 0, Counter);
                      _Tuple ->
                          Counter
                  end,
-    logIsland(Key, FDs, NewCounter, Statfuns).
+    logIsland(Key, FDs, NewCounter, Funstats).
 
 
 %% @doc Zamyka pliki podane w argumencie
