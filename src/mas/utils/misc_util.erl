@@ -3,8 +3,8 @@
 %% @doc Modul z funkcjami pomocniczymi dla roznych wersji algorytmu.
 
 -module(misc_util).
--export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2,
-         seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, countInteractions/2]).
+-export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2, count_funstats/2,
+         seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, add_interactions_to_counter/2, determineStats/0]).
 
 -include ("mas.hrl").
 
@@ -20,11 +20,13 @@ groupBy(List) ->
                           dict:append(K, V, D)
                   end , dict:new(), List)).
 
+
 %% @doc Funkcja mieszajaca podana liste.
 -spec shuffle(list()) -> list().
 shuffle(L) ->
     Rand = [{random:uniform(), N} || N <- L],
     [X||{_,X} <- lists:sort(Rand)].
+
 
 -spec meeting_proxy({atom(),list()},model()) -> list().
 meeting_proxy({migration,_Agents},sequential) ->
@@ -41,6 +43,13 @@ meeting_proxy(Group,_) ->
     Environment = config:agent_env(),
     Environment:meeting_function(Group).
 
+
+-spec determineStats() -> [atom()].
+determineStats() ->
+    Environment = config:agent_env(),
+    Environment:behaviours().
+
+
 %% @doc Funkcja wyznacza statystyczna liczbe elementow, ktore podlegaja jakiejs operacji z danym prawdopodobienstwem
 -spec averageNumber(float(),[term()]) -> integer().
 averageNumber(Probability,List) ->
@@ -54,11 +63,12 @@ averageNumber(Probability,List) ->
        N >=1 -> trunc(N)
     end.
 
+
 -spec logNow(erlang:timestamp()) -> {yes,erlang:timestamp()} | notyet.
 logNow(LastLog) ->
     Now = os:timestamp(),
     Diff = timer:now_diff(Now,LastLog),
-    IntervalInMicros = config:writeInterval()*1000,
+    IntervalInMicros = config:writeInterval() * 1000,
     if
         Diff >= IntervalInMicros ->
             {Mega,Sec,Micro} = LastLog,
@@ -67,21 +77,29 @@ logNow(LastLog) ->
             notyet
     end.
 
--spec createNewCounter() -> dict:dict().
+
+-spec createNewCounter() -> counter().
 createNewCounter() ->
     Environment = config:agent_env(),
     BehaviourList = [{Behaviour,0} || Behaviour <- Environment:behaviours()],
     dict:from_list(BehaviourList).
 
--spec countInteractions([tuple()],dict:dict()) -> dict:dict().
-countInteractions([],Counter) ->
-    Counter;
 
-countInteractions([Groups|T],Counter) ->
-    UpdatedCounter = lists:foldl(fun({Activity,Value},TmpCounter) ->
-        dict:update_counter(Activity,length(Value),TmpCounter)
-    end,Counter,Groups),
-    countInteractions(T,UpdatedCounter).
+-spec add_interactions_to_counter([tuple()], counter()) -> counter().
+add_interactions_to_counter(Groups, Counter) ->
+    lists:foldl(fun({Activity, Value}, TmpCounter) ->
+                        dict:update_counter(Activity, length(Value), TmpCounter)
+                end,Counter, Groups).
+
+-spec count_funstats([agent()], [funstat()]) -> [funstat()].
+count_funstats(_,[]) ->
+    [];
+
+count_funstats(Agents, [{Stat, MapFun, ReduceFun, OldAcc}|T]) ->
+    NewAcc = lists:foldl(ReduceFun,
+        OldAcc,
+        [MapFun(Agent) || Agent <- Agents]),
+    [{Stat, MapFun, ReduceFun, NewAcc} | count_funstats(Agents,T)].
 
 %% %% @doc Zwraca liczby agentow nalezacych do poszczegolnych kategorii w formie rekordu
 %% -spec countGroups([tuple()],counter()) -> counter().

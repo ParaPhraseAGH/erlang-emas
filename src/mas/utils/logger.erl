@@ -4,61 +4,68 @@
 -module(logger).
 -behaviour(gen_server).
 
+-include ("mas.hrl").
+
 %% API
--export([start_link/2, logLocalStats/3, logGlobalStats/2, close/0]).
+-export([start_link/2, log_funstat/3, log_countstat/3, close/0]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--define(LOCAL_STATS, [fitness, population, stddevsum, stddevmin, stddevvar]).
--define(GLOBAL_STATS, [death, fight, reproduction, migration]).
+-define(STATS, [fitness, population, death, fight, reproduction, migration]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start_link({atom(), [pid()] | integer()}, string()) -> {ok, pid()}.
-start_link(Model, Path) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [Model, Path], []).
+-spec start_link(list(), string()) -> {ok, pid()}.
+start_link(Keys, Path) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [Keys, Path], []).
 
-%% @doc Loguje statystyki specyficzne dla danej wyspy (np. fitness, population).
-%% Pierwsza zmienna informuje o trybie zapisu: parallel dla modelu concurrent i hybrid, a sequential dla sekwencyjnych.
--spec logLocalStats(sequential | parallel, atom(), term()) -> ok.
-logLocalStats(Mode, Stat, Value) ->
-    gen_server:cast(whereis(?MODULE), {Mode, Stat, self(), Value}).
+%% %% @doc Loguje statystyki specyficzne dla danej wyspy (np. fitness, population).
+%% %% Pierwsza zmienna informuje o trybie zapisu: parallel dla modelu concurrent i hybrid, a sequential dla sekwencyjnych.
+%% -spec logLocalStats(sequential | parallel, atom(), term()) -> ok.
+%% logLocalStats(Mode, Stat, Value) ->
+%%     gen_server:cast(whereis(?MODULE), {Mode, Stat, self(), Value}).
+%%
+%% %% @doc Zapisuje globalne statystyki (deaths,fights etc.) do plikow.
+%% -spec logGlobalStats(sequential | parallel, dict()) -> ok.
+%% logGlobalStats(sequential, Counter) ->
+%%     gen_server:cast(whereis(?MODULE), {counter, Counter});
+%%
+%% logGlobalStats(parallel, Counter) ->
+%%     gen_server:cast(whereis(?MODULE), {agregate, self(), Counter}).
 
-%% @doc Zapisuje globalne statystyki (deaths,fights etc.) do plikow.
--spec logGlobalStats(sequential | parallel, dict:dict()) -> ok.
-logGlobalStats(sequential, Counter) ->
-    gen_server:cast(whereis(?MODULE), {counter, Counter});
+-spec log_funstat(term(),atom(),term()) -> ok.
+log_funstat(Key,Stat,Value) ->
+    gen_server:cast(whereis(?MODULE), {funstat, Key, Stat, Value}).
 
-logGlobalStats(parallel, Counter) ->
-    gen_server:cast(whereis(?MODULE), {agregate, self(), Counter}).
+-spec log_countstat(term(),atom(),term()) -> ok.
+log_countstat(Key,Stat,Value) ->
+    gen_server:cast(whereis(?MODULE), {countstat, Key, Stat, Value}).
 
 -spec close() -> ok.
 close() ->
-    gen_server:cast(whereis(?MODULE), close).
+    gen_server:call(whereis(?MODULE), close, infinity).
 
 %%%===================================================================
 %%% Callbacks
 %%%===================================================================
 
--record(state, {dict :: dict:dict(),
+-record(state, {fds :: dict:dict(),
+                allstats = [] :: [atom()],
+                funstats = [] :: [tuple()],
                 counters = dict:new() :: dict:dict(),
-                n = 0 :: non_neg_integer()}).
+                supervisor_from :: {pid(), term()},
+                timeout = infinity :: infinity | non_neg_integer()}).
 -type state() :: #state{}.
 
 -spec init(term()) -> {ok,state()}.
-init([Model, Path]) ->
-    NewPath = case Path of
-                  "standard_io" -> standard_io;
-                  X -> X
-              end,
-    Dict = case Model of
-               {sequential, IslandsNr} ->
-                   prepareSeqDictionary(IslandsNr, dict:new(), NewPath);
-               {parallel, Pids} when is_list(Pids) ->
-                   prepareParDictionary(Pids, dict:new(), NewPath)
-           end,
-    {ok, #state{dict = Dict}}.
+init([Keys, Path]) ->
+    self() ! delayTimerStart,
+    Env = config:agent_env(),
+    Funstats = Env:stats(),
+    Stats = Env:behaviours() ++ [Name || {Name, _MapFun, _ReduceFun, _InitVal} <- Funstats],
+    Dict = prepareDictionary(Keys, dict:new(), Path, Stats),
+    {ok, #state{fds = Dict, funstats = Funstats, counters = createCounter(Keys), allstats = Stats}, infinity}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
                                                     {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
@@ -66,46 +73,48 @@ init([Model, Path]) ->
                                                     {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
-handle_call(_Request, _From, State) ->
-    {reply, ok, State}.
+handle_call(close, From, State) ->
+    Timeout = trunc(config:writeInterval() * 0.8),
+    {noreply, State#state{timeout = Timeout, supervisor_from = From}, Timeout}.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_cast({parallel, Stat, Pid, Value}, State) ->
-    logLocal(State#state.dict, Pid, Stat, Value),
-    {noreply,State};
+handle_cast({funstat, Key, Stat, Value}, State) ->
+    IslandDict = dict:fetch(Key,State#state.counters),
+    OldVal = dict:fetch(Stat,IslandDict),
+    {Stat, _Map, Reduce, _InitVal} = lists:keyfind(Stat, 1, State#state.funstats),
+    NewVal = Reduce(OldVal, Value),
+    NewIslandDict = dict:store(Stat, NewVal, IslandDict),
+    {noreply, State#state{counters = dict:store(Key,NewIslandDict,State#state.counters)}, State#state.timeout};
 
-handle_cast({sequential, Stat, _Pid, Values}, State) ->
-    logList(Stat, 1, Values, State#state.dict),
-    {noreply,State};
-
-handle_cast({counter, GlobalStats}, State) ->
-    [logGlobal(State#state.dict,StatName,StatVal) || {StatName,StatVal} <- dict:to_list(GlobalStats)],
-    {noreply, State};
-
-handle_cast({agregate, _Pid, Counters}, State) ->  % todo przepisac, zeby odroznial wyspy
-    N = dict:size(State#state.dict) - 4,
-    case State#state.n + 1 of
-        N ->
-            logGlobalStats(sequential, addCounters(Counters, State#state.counters)),
-            {noreply, State#state{n = 0, counters = misc_util:createNewCounter()}};
-        X ->
-            OldCounters = State#state.counters,
-            {noreply, State#state{n = X, counters = addCounters(Counters, OldCounters)}}
-    end;
-handle_cast(close, State) ->
-    {stop, normal, State}.
+handle_cast({countstat, Key, Stat, Value}, State) ->
+    IslandDict = dict:fetch(Key, State#state.counters),
+    DictUpdated = dict:update_counter(Stat, Value, IslandDict),
+    {noreply,State#state{counters = dict:store(Key, DictUpdated, State#state.counters)}, State#state.timeout}.
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_info(_Info, State) ->
-    {noreply, State}.
+handle_info(timer, State = #state{fds = FDs, counters = Counters, funstats = Funstats}) ->
+    NewCounters = dict:map(fun(Key, CounterDict) ->
+                                    FDDict = dict:fetch(Key, FDs),
+                                    logIsland(Key, dict:to_list(FDDict), CounterDict, Funstats)
+                            end, Counters),
+    {noreply, State#state{counters = NewCounters}, State#state.timeout};
+
+handle_info(delayTimerStart, State) ->
+    timer:sleep(700),
+    timer:send_interval(config:writeInterval(),timer),
+    {noreply, State,State#state.timeout};
+
+handle_info(timeout, State) ->
+    gen_server:reply(State#state.supervisor_from,ok),
+    {stop, normal, State}.
 
 -spec terminate(term(),state()) -> no_return().
 terminate(_Reason, State) ->
-    closeFiles(State#state.dict).
+    closeFiles(State#state.fds).
 
 -spec code_change(term(),state(),term()) -> {ok, state()}.
 code_change(_OldVsn, State, _Extra) ->
@@ -115,73 +124,70 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-%% @doc Tworzy duzy slownik z mniejszymi slownikami deskryptorow dla kazdej z wysp dla modelow niesekwencyjnych
--spec prepareParDictionary([pid()], dict:dict(), string()) -> dict:dict().
-prepareParDictionary([], Dict, Path) ->
-    createFDs(Path, Dict, ?GLOBAL_STATS);
-prepareParDictionary([H|T], Dict, Path) ->
-    IslandPath = case Path of
-                     standard_io ->
-                         standard_io;
-                     _ ->
-                         NewPath = filename:join([Path, "island" ++ integer_to_list(length(T) + 1)]),
-                         file:make_dir(NewPath),
-                         NewPath
-                 end,
-    NewDict = dict:store(H, createFDs(IslandPath, dict:new(), ?LOCAL_STATS), Dict), % Key = pid(), Value = dictionary of file descriptors
-    prepareParDictionary(T, NewDict, Path).
+-spec prepareDictionary([term()], dict:dict(), string(), [atom()]) -> dict:dict().
+prepareDictionary([], Dict, _Path, _Stats) ->
+    Dict;
 
-%% @doc Tworzy duzy slownik z mniejszymi slownikami deskryptorow dla kazdej z wysp dla modelow sekwencyjnych
--spec prepareSeqDictionary(non_neg_integer(), dict:dict(), string()) -> dict:dict().
-prepareSeqDictionary(0, Dict, Path) ->
-    createFDs(Path, Dict, ?GLOBAL_STATS);
-prepareSeqDictionary(IslandNr, Dict, Path) ->
-    IslandPath = case Path of
-                     standard_io ->
-                         standard_io;
-                     _ ->
-                         NewPath = filename:join([Path, "island" ++ integer_to_list(IslandNr)]),
-                         file:make_dir(NewPath),
-                         NewPath
-                 end,
-    NewDict = dict:store(IslandNr, createFDs(IslandPath, dict:new(), ?LOCAL_STATS), Dict), % Key = IslandNumber, Value = dictionary of file descriptors
-    prepareSeqDictionary(IslandNr - 1, NewDict, Path).
+prepareDictionary([Key|Rest], Dict, Path, Stats) ->
+    IslandPath = createDir(Path,length(Rest) + 1),
+    NewDict = dict:store(Key, createFDs(IslandPath, dict:new(), Stats), Dict),
+    prepareDictionary(Rest, NewDict, Path, Stats).
 
-%% @doc Tworzy pliki tekstowe do zapisu i zwraca dict:dict() z deskryptorami.
--spec createFDs(string(), dict:dict(), [atom()]) -> FDs :: dict:dict().
+
+-spec createDir(standard_io | string(), pos_integer()) -> standard_io | string().
+createDir(standard_io, _IslandsNr) ->
+    standard_io;
+
+createDir("standard_io", _IslandsNr) ->
+    standard_io;
+
+createDir(Path, IslandsNr) ->
+    NewPath = filename:join([Path, "island" ++ integer_to_list(IslandsNr)]),
+    file:make_dir(NewPath),
+    NewPath.
+
+
+%% @doc Tworzy pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
+-spec createFDs(standard_io | string(), dict:dict(), [atom()]) -> FDs :: dict:dict().
 createFDs(standard_io, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         dict:store(Atom, standard_io, Dict)
-                end, InitDict,
-                Files);
+                end, InitDict, Files);
 
 createFDs(Path, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
                         Filename = atom_to_list(Atom) ++ ".txt",
                         {ok, Descriptor} = file:open(filename:join([Path, Filename]), [append, delayed_write, raw]),
                         dict:store(Atom, Descriptor, Dict)
-                end, InitDict,
-                Files).
+                end, InitDict, Files).
 
--spec logList(atom(), pos_integer(), [term()], dict:dict()) -> ok.
-logList(_, _, [], _) ->
-    ok;
-logList(Stat, Index, [H|T], Dict) ->
-    logLocal(Dict, Index, Stat, H),
-    logList(Stat, Index + 1, T, Dict).
 
-%% @doc Dokonuje buforowanego zapisu do pliku lokalnej statystyki. W argumencie podany glowny slownik, klucz, nazwa statystyki i wartosc do wpisania.
--spec logLocal(dict:dict(), term(), atom(), term()) -> ok.
-logLocal(Dictionary, Key, Statistic, Value) ->
-    FDs = dict:fetch(Key, Dictionary),
-    FD = dict:fetch(Statistic, FDs),
-    file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Statistic, Key, Value])).
+-spec createCounter(list()) -> dict:dict().
+createCounter(Keys) ->
+    Environment = config:agent_env(),
+    Interactions = [{Interaction, 0} || Interaction <- Environment:behaviours()],
+    Stats = [{Stat, InitValue} || {Stat, _MapFun, _ReduceFun, InitValue} <- Environment:stats()],
+    IslandDict = dict:from_list(Interactions ++ Stats),
+    lists:foldl(fun(Key,Dict) ->
+                        dict:store(Key,IslandDict,Dict)
+                end, dict:new(), Keys).
 
-%% @doc Dokonuje buforowanego zapisu do pliku globalnej statystyki. W argumencie podany glowny slownik, nazwa statystyki i wartosc do wpisania.
--spec logGlobal(dict:dict(), atom(), term()) -> ok.
-logGlobal(Dictionary, Stat, Value) ->
-    FD = dict:fetch(Stat, Dictionary),
-    file:write(FD, io_lib:fwrite("~p ~p\n", [Stat,Value])).
+
+-spec logIsland(pid() | pos_integer(), [tuple()], counter(), [funstat()]) -> counter().
+logIsland(_Key, [], Counter, _Funstats) ->
+    Counter;
+
+logIsland(Key, [{Stat, FD}|FDs], Counter, Funstats) ->
+    Value = dict:fetch(Stat, Counter),
+    file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Stat, Key, Value])),
+    NewCounter = case lists:keyfind(Stat, 1, Funstats) of
+                     false ->
+                         dict:store(Stat, 0, Counter);
+                     _Tuple ->
+                         Counter
+                 end,
+    logIsland(Key, FDs, NewCounter, Funstats).
+
 
 %% @doc Zamyka pliki podane w argumencie
 -spec closeFiles(dict:dict()) -> any().
@@ -191,8 +197,3 @@ closeFiles(Dict) ->
          {_Id, D} -> [file:close(FD) || {_Stat, FD} <- dict:to_list(D)]
      end || X <- dict:to_list(Dict)].
 
--spec addCounters(dict:dict(), dict:dict()) -> dict:dict().
-addCounters(C1,C2) ->
-    dict:fold(fun(Key, Value, TmpDict) ->
-                      dict:update_counter(Key,Value,TmpDict)
-              end, C1, C2).

@@ -59,14 +59,12 @@ meeting_function({migration, Agents}) ->
 meeting_function({_, _}) ->
     erlang:error(unexpected_behaviour).
 
--spec stats() -> [{atom(),fun()}].
+-spec stats() -> [funstat()].
 stats() ->
-    Fitness = fun(Agent,YetBest) ->
-                      {_,F,_} = Agent,
-                      lists:max([F,YetBest])
-              end,
-    Energy = fun(Agent,Sum) ->
-                     {_,_,E} = Agent,
-                     E + Sum
-             end,
-    [{fitness,Fitness},{energy,Energy}].
+    Fitness_map = fun({_Solution,Fitness,_Energy}) ->
+                              Fitness
+                      end,
+    Fitness_reduce = fun(F1, F2) ->
+                             lists:max([F1,F2])
+                     end,
+    [{fitness, Fitness_map, Fitness_reduce, -999999}].

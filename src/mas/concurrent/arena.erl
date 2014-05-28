@@ -130,19 +130,10 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-respond([],Froms,_Arenas) ->
-    [gen_server:reply(From,close) || From <- Froms];
-
-respond(Agents,Froms,Arenas) when length(Agents) >= length(Froms) ->
+respond(Agents, Froms, Arenas) when length(Agents) >= length(Froms) ->
     [gen_server:reply(From,Agent) || {From,Agent} <- misc_util:shortestZip(Froms,Agents)],
-%%     case lists:nthtail(length(Froms),Agents) of
-%%         [] -> nothing;
-%%         L ->
-%%             case random:uniform() < 0.001 of
-%%                 true ->
-%%                     io:format("~p ~p~n",[self(),lists:max([Fit || {_,Fit,_} <- L ])]);
-%%                 false ->
-%%                     nothing
-%%             end
-%%     end,
-    [spawn(agent,start,[Agent,Arenas]) || Agent <- lists:nthtail(length(Froms),Agents)].
+    [spawn(agent,start,[Agent,Arenas]) || Agent <- lists:nthtail(length(Froms),Agents)];
+
+respond(Agents, Froms, _Arenas) when length(Agents) =< length(Froms) ->
+    [gen_server:reply(From,Agent) || {From,Agent} <- misc_util:shortestZip(Froms,Agents)],
+    [gen_server:reply(From,close) || From <- lists:nthtail(length(Agents),Froms)].
