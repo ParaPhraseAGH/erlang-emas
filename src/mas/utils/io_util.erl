@@ -38,9 +38,9 @@ printMoreStats(Groups) ->
 
 -spec printArenas([{atom(),pid()}]) -> ok.
 printArenas([]) ->
-    io:format("supervisor: ~p~n~n",[self()]);
+    io:format("#supervisor: ~p~n~n",[self()]);
 printArenas([{Name,Pid}|Arenas]) ->
-    io:format("~p: ~p~n",[Name,Pid]),
+    io:format("#~p: ~p~n",[Name,Pid]),
     printArenas(Arenas).
 
 %% @doc Funkcja generujaca sciezke dostepu wraz z nazwa folderu dla danego uruchomienia algorytmu. Wyznaczana jest sciezka

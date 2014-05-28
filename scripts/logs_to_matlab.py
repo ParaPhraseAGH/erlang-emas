@@ -68,7 +68,6 @@ def parse_dir(directory, old_format=False):
 
 
 if __name__ == '__main__':
-    # sys.argv[1] = os.path.join("output","sequential_lists","1")
     proj = 'emas'
     if len(sys.argv) < 2:
         print 'Usage:'
