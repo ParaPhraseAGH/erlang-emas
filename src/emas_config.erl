@@ -14,7 +14,7 @@ genetic_ops() -> rastrigin_ops.
 -endif.
 
 %% @doc Rozmiar problemu reprezentowanego przez agenta
-problemSize() ->  30.
+problemSize() ->  100.
 
 
 %% @doc Czy monitorowac roznorodnosc populacji

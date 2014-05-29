@@ -20,20 +20,6 @@
 start_link(Keys, Path) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Keys, Path], []).
 
-%% %% @doc Loguje statystyki specyficzne dla danej wyspy (np. fitness, population).
-%% %% Pierwsza zmienna informuje o trybie zapisu: parallel dla modelu concurrent i hybrid, a sequential dla sekwencyjnych.
-%% -spec logLocalStats(sequential | parallel, atom(), term()) -> ok.
-%% logLocalStats(Mode, Stat, Value) ->
-%%     gen_server:cast(whereis(?MODULE), {Mode, Stat, self(), Value}).
-%%
-%% %% @doc Zapisuje globalne statystyki (deaths,fights etc.) do plikow.
-%% -spec logGlobalStats(sequential | parallel, dict()) -> ok.
-%% logGlobalStats(sequential, Counter) ->
-%%     gen_server:cast(whereis(?MODULE), {counter, Counter});
-%%
-%% logGlobalStats(parallel, Counter) ->
-%%     gen_server:cast(whereis(?MODULE), {agregate, self(), Counter}).
-
 -spec log_funstat(term(),atom(),term()) -> ok.
 log_funstat(Key,Stat,Value) ->
     gen_server:cast(whereis(?MODULE), {funstat, Key, Stat, Value}).
