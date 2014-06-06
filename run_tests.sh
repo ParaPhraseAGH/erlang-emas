@@ -7,7 +7,8 @@ output_root=`./scripts/get_params.erl`
 rtime=10000
 cores="1 2 4"
 run_repeat=3
-models="sequential hybrid"
+# models="sequential hybrid"
+models="concurrent"
 
 rebar clean
 rebar compile -D nif

@@ -16,7 +16,7 @@ def readlines(filepath):
 
 def read_run_stats(instance_name):
     statslist = ["death", "fight", "migration", "reproduction"]
-    island_statslist = ["fitness", "population"] #, "stddevsum", "stddevmin"]
+    island_statslist = ["fitness"] #, "population"] #, "stddevsum", "stddevmin"]
     common_data = {}
     island_data = []
     islands = [name for name in os.listdir(instance_name) if name.startswith('island')]
@@ -159,13 +159,13 @@ def fetch_instance(instance_name):
     common, islands = read_run_stats(instance_name)
 
     best_fitness = DataToPlot.from_list(islands, 'max', 'fitness', scale='log')
-    sum_population = DataToPlot.from_list(islands, 'sum', 'population')
+    # sum_population = DataToPlot.from_list(islands, 'sum', 'population')
     # spread_population = DataToPlot.from_list(islands, 'spread', 'population')
     # stddevmin = DataToPlot.from_list(islands, 'mean', 'stddevmin') #, scale='log')
     # stddevsum = DataToPlot.from_list(islands, 'mean', 'stddevsum') #, scale='log')
 
     # subplots_data = [best_fitness, sum_population, spread_population]
-    subplots_data = [best_fitness, sum_population] #, stddevmin, stddevsum]
+    subplots_data = [best_fitness] #, sum_population] #, stddevmin, stddevsum]
     common_data = [DataToPlot(data, attr) for attr, data in common.items()]
     instance_data = [subplots_data[0]] + common_data + subplots_data[1:]
 
@@ -255,9 +255,10 @@ def run():
         ax = axes[1][1]
         l = ax.legend()#.set_visible(False)
         # position = 'lower right'
-        position = 'center left'
-        fig.legend(l.legendHandles, [x._text for x in l.texts], position)
-        l.set_visible(False)
+        if l.legendHandles is not None:
+            position = 'center left'
+            fig.legend(l.legendHandles, [x._text for x in l.texts], position)
+            l.set_visible(False)
         # fig.tight_layout()
         # i=1
 
