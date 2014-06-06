@@ -5,10 +5,9 @@
 -module(io_util).
 -export([printSeq/1, printMoreStats/1, genPath/4, sumEnergy/1, printArenas/1]).
 
--type agent() :: {Solution::genetic:solution(), Fitness::float(), Energy::pos_integer()}.
--type island() :: [agent()].
--type task() :: death | fight | reproduction | migration.
--type groups() :: [{task(),[agent()]}].
+-include ("mas.hrl").
+
+-type groups() :: [{agent_behaviour(),[agent()]}].
 
 %% ====================================================================
 %% API functions
@@ -37,9 +36,12 @@ printMoreStats(Groups) ->
     io:format("Dying: ~p    Fighting: ~p    Reproducing: ~p    Leaving: ~p~n",[length(D),length(F),length(R),length(M)]),
     io:format("Population: ~p, Energy: ~p~n",[length(D ++ M ++ F ++ R),sumEnergy(M ++ F ++ R)]).
 
--spec printArenas([pid()]) -> ok.
-printArenas([Ring,Bar,Port]) ->
-    io:format("Supervisor: ~p~nRing: ~p~nBar: ~p~nPort: ~p~n~n",[self(),Ring,Bar,Port]).
+-spec printArenas([{atom(),pid()}]) -> ok.
+printArenas([]) ->
+    io:format("#supervisor: ~p~n~n",[self()]);
+printArenas([{Name,Pid}|Arenas]) ->
+    io:format("#~p: ~p~n",[Name,Pid]),
+    printArenas(Arenas).
 
 %% @doc Funkcja generujaca sciezke dostepu wraz z nazwa folderu dla danego uruchomienia algorytmu. Wyznaczana jest sciezka
 %% dostepu w zaleznosci od parametrow algorytmu i tworzony jest kolejny folder dla kazdego uruchomienia (instance).

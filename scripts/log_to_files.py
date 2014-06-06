@@ -33,8 +33,7 @@ def write_stats_to_file(directory, attr, data):
 def parse(logfile, out_dir, old_format=False):
     lines = read_zeus_lines(logfile)
     old_format = is_format_old(lines)
-    attrs1 = ['fitness', 'population']
-    attrs2 = ['fight', 'reproduction', 'death', 'migration']
+    attrs1 = ['fitness', 'population', 'stddevsum', 'stddevmin', 'fight', 'reproduction', 'death', 'migration']
     if old_format:
         attrs = attrs1 + attrs2
         for attr in attrs:
@@ -53,14 +52,19 @@ def parse(logfile, out_dir, old_format=False):
                 data2 = [max(tup) for tup in vals]
             elif attr == 'population':
                 data2 = [sum(tup) for tup in vals]
+            else:
+                data2 = [sum(tup)/len(tup) for tup in vals]
             if data2:
+                if not data2[-1]:
+                    # logger adds an additional 0.0 to the sequential model runs
+                    data2 = data2[:-1]
                 write_stats_to_file(out_dir, attr, data2)
 
-        for attr in attrs2:
-            data = [float(line.split(' ')[-1].strip()) for line in lines if line.startswith(attr)]
-            # print attr, data
-            if data:
-                write_stats_to_file(out_dir, attr, data)
+        # for attr in attrs2:
+        #     data = [float(line.split(' ')[-1].strip()) for line in lines if line.startswith(attr)]
+        #     # print attr, data
+        #     if data:
+        #         write_stats_to_file(out_dir, attr, data)
 
 
 if __name__ == '__main__':
