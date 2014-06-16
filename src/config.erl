@@ -16,7 +16,7 @@ agent_env() -> emas.
 topology() -> mesh.
 
 %% @doc Domyslna sciezka zapisu logow (folder musi istniec). Atom standard_io powoduje wypisanie na standardowe wyjscie
-logDir() -> standard_io.
+logDir() -> tmp.
 
 %% @doc Liczba wysp
 islands() -> 4.

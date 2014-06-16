@@ -4,9 +4,15 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2, count_funstats/2,
-         seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, add_interactions_to_counter/2, determineStats/0]).
+         seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, add_interactions_to_counter/2, determineStats/0, countGroups/2]).
 
 -include ("mas.hrl").
+
+%% DEPRECATED. Trzeba zmienic na dicta
+-record(counter, {fight = 0 :: non_neg_integer(),
+    reproduction = 0 :: non_neg_integer(),
+    migration = 0 :: non_neg_integer(),
+    death = 0 :: non_neg_integer()}).
 
 %% ====================================================================
 %% API functions
@@ -101,18 +107,19 @@ count_funstats(Agents, [{Stat, MapFun, ReduceFun, OldAcc}|T]) ->
         [MapFun(Agent) || Agent <- Agents]),
     [{Stat, MapFun, ReduceFun, NewAcc} | count_funstats(Agents,T)].
 
-%% %% @doc Zwraca liczby agentow nalezacych do poszczegolnych kategorii w formie rekordu
-%% -spec countGroups([tuple()],counter()) -> counter().
-%% countGroups([],Counter) ->
-%%     Counter;
-%% countGroups([{death,AgentList}|Groups],Counter) ->
-%%     countGroups(Groups,Counter#counter{death = length(AgentList)});
-%% countGroups([{migration,AgentList}|Groups],Counter) ->
-%%     countGroups(Groups,Counter#counter{migration = length(AgentList)});
-%% countGroups([{fight,AgentList}|Groups],Counter) ->
-%%     countGroups(Groups,Counter#counter{fight = length(AgentList)});
-%% countGroups([{reproduction,AgentList}|Groups],Counter) ->
-%%     countGroups(Groups,Counter#counter{reproduction = length(AgentList)}).
+%% !! Deprecated. Trzeba zmienic skela i przepisac to na dicty i wywalic
+%% @doc Zwraca liczby agentow nalezacych do poszczegolnych kategorii w formie rekordu
+-spec countGroups([tuple()],counter()) -> counter().
+countGroups([],Counter) ->
+    Counter;
+countGroups([{death,AgentList}|Groups],Counter) ->
+    countGroups(Groups,Counter#counter{death = length(AgentList)});
+countGroups([{migration,AgentList}|Groups],Counter) ->
+    countGroups(Groups,Counter#counter{migration = length(AgentList)});
+countGroups([{fight,AgentList}|Groups],Counter) ->
+    countGroups(Groups,Counter#counter{fight = length(AgentList)});
+countGroups([{reproduction,AgentList}|Groups],Counter) ->
+    countGroups(Groups,Counter#counter{reproduction = length(AgentList)}).
 %%
 %% %% @doc Funkcja dodaje dwa liczniki
 %% -spec addCounters(counter(),counter()) -> counter().
