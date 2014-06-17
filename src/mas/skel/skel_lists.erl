@@ -63,12 +63,9 @@ main(Islands, Time) ->
                                         Island)
                    end},
 
-    Work = {decomp,
-                  [{farm,
-                    [{seq,fun emas:meeting_function/1}], %% TODO substitute emas with agent_env!!!
-                    4}],
-                  fun identity/1,
-                  fun identity/1},
+    Work = {map,
+            [{seq,fun emas:meeting_function/1}], %% TODO substitute emas with agent_env!!!
+            4},
 
     Shuffle = {seq, fun(Island) ->
                             misc_util:shuffle(lists:flatten(Island))
@@ -80,17 +77,22 @@ main(Islands, Time) ->
                        Log,
                        Filter,
                        Work,
-                       Shuffle]}],
-        %% TODO dopisac migracje przy uzyciu funkcji z sequential
-%%               fun(Datachunk) ->
-%%                       {_NrOfEmigrants, IslandsMigrated} = evolution:doMigrate(Datachunk),
-%%                       IslandsMigrated
-%%               end,
-              fun identity/1,
-              fun identity/1},
+                       Shuffle]}]},
+
+    Migration = {seq, fun(AllIslands) ->
+                              AllIslands
+                      end},
+    %% TODO dopisac migracje przy uzyciu funkcji z sequential
+    %%               fun(Datachunk) ->
+    %%                       {_NrOfEmigrants, IslandsMigrated} = evolution:doMigrate(Datachunk),
+    %%                       IslandsMigrated
+    %%               end,
+    %%               fun identity/1,
+    %%               fun identity/1},
 
     [FinalIslands] = skel:do([{feedback,
-                               [OneRun],
+                               [OneRun,
+                                Migration],
                                _While = fun(List) ->
                                                 Fitness = lists:max([misc_util:result(Island) || Island <- List]),
                                                 Population = lists:sum([length(Island) || Island <- List]),
@@ -99,7 +101,7 @@ main(Islands, Time) ->
                                                 os:timestamp() < EndTime
                                         end}],
                              [Islands]),
-%%     io_util:printSeq(FinalIslands),
+    %%     io_util:printSeq(FinalIslands),
     misc_util:result(lists:flatten(FinalIslands)).
 
 %% sk_sendToWork({death, _}) ->
