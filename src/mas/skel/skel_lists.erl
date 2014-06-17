@@ -7,12 +7,6 @@
 
 -include ("mas.hrl").
 
-%% TODO przepisac counter na dicta
--record(counter, {fight = 0 :: non_neg_integer(),
-                  reproduction = 0 :: non_neg_integer(),
-                  migration = 0 :: non_neg_integer(),
-                  death = 0 :: non_neg_integer()}).
-
 %% ====================================================================
 %% API functions
 %% ====================================================================
@@ -34,9 +28,7 @@ start(Time,Islands,Topology,Path) ->
 %% Internal functions
 %% ====================================================================
 
-%% TODO dostosowac do nowego skela
-
-%% TODO dodac generyczne statystyki z pliku emas.erl
+%% TODO add generic statistics (funstats)
 %% @doc Glowa petla programu. Kazda iteracja powoduje ewolucje nowej generacji osobnikow.
 -spec main([island()], non_neg_integer()) -> float().
 main(Islands, Time) ->
@@ -48,23 +40,17 @@ main(Islands, Time) ->
     Group = {seq, fun misc_util:groupBy/1},
 
     Log = {seq, fun(Island) ->
-                        C = misc_util:countGroups(Island,#counter{}),
-                        skel_logger:reportResult(fight,C#counter.fight),
-                        skel_logger:reportResult(reproduce,C#counter.reproduction),
-                        skel_logger:reportResult(death,C#counter.death),
+                        Counter = misc_util:createNewCounter(),
+                        Counts = misc_util:add_interactions_to_counter(Island,Counter),
+                        skel_logger:reportResult(fight, dict:fetch(fight,Counts)),
+                        skel_logger:reportResult(reproduce, dict:fetch(reproduction,Counts)),
+                        skel_logger:reportResult(death, dict:fetch(death,Counts)),
+                        %% TODO migration is not counted
                         Island
                 end},
 
-    %% Might be deleted
-    Filter = {seq, fun(Island) ->  % Umieranie
-                           lists:filter(fun({Atom,_}) ->
-                                                Atom =/= death
-                                        end,
-                                        Island)
-                   end},
-
     Work = {map,
-            [{seq,fun emas:meeting_function/1}], %% TODO substitute emas with agent_env!!!
+            [{seq,fun Environment:meeting_function/1}],
             4},
 
     Shuffle = {seq, fun(Island) ->
@@ -75,20 +61,13 @@ main(Islands, Time) ->
               [{pipe, [Tag,
                        Group,
                        Log,
-                       Filter,
                        Work,
                        Shuffle]}]},
 
     Migration = {seq, fun(AllIslands) ->
-                              AllIslands
+                              {_NrOfEmigrants, IslandsMigrated} = doMigrate(AllIslands),
+                              IslandsMigrated
                       end},
-    %% TODO dopisac migracje przy uzyciu funkcji z sequential
-    %%               fun(Datachunk) ->
-    %%                       {_NrOfEmigrants, IslandsMigrated} = evolution:doMigrate(Datachunk),
-    %%                       IslandsMigrated
-    %%               end,
-    %%               fun identity/1,
-    %%               fun identity/1},
 
     [FinalIslands] = skel:do([{feedback,
                                [OneRun,
@@ -104,25 +83,47 @@ main(Islands, Time) ->
     %%     io_util:printSeq(FinalIslands),
     misc_util:result(lists:flatten(FinalIslands)).
 
-%% sk_sendToWork({death, _}) ->
-%%     erlang:error(neverShouldGetHere);
-%% sk_sendToWork({fight, Agents}) ->
-%%     evolution:doFight(Agents);
-%% sk_sendToWork({reproduction, Agents}) ->
-%%     evolution:doReproduce(Agents).
-
 -spec addMiliseconds({integer(),integer(),integer()},integer()) -> {integer(),integer(),integer()}.
 addMiliseconds({MegaSec, Sec, Milisec}, Time) ->
     {MegaSec,
      Sec + (Time div 1000),
      Milisec + (Time rem 1000)}.
 
--spec identity(Type) -> Type.
-identity(Same) ->
-    Same.
+%% -spec identity(Type) -> Type.
+%% identity(Same) ->
+%%     Same.
 
-%% @doc Liczy kategorie (ile fights,deaths etc.) na wszystkich wyspach i dodaje do Counter.
-%% -spec countAllIslands([list()], counter()) -> counter().
-%% countAllIslands(GroupedIslands, Counter) ->
-%%     CountedIslands = [misc_util:countGroups(I, #counter{}) || I <- GroupedIslands],
-%%     lists:foldl(fun misc_util:addCounters/2, Counter, CountedIslands).
+%% ====================================================================
+%% Internal functions
+%% ====================================================================
+
+%% @doc Funkcja dokonujaca migracji. Najpierw z kazdej wyspy pobierana jest statystyczna
+%% liczba agentow, ktorzy powinni ulec migracji. Dla kazdej grupy emigrantow wyznaczana jest wyspa docelowa
+%% i sa oni do niej dopisywani. Zwracana jest lista wysp po dokonanej migracji.
+-spec doMigrate([island()]) -> {non_neg_integer(), [island()]}.
+doMigrate(Islands) ->
+    {Gathered, NewIslands} = gather(Islands, [], []),
+    {length(Gathered), append(Gathered, lists:reverse(NewIslands))}.
+
+%% @doc Funkcja dla kazdej grupy emigrantow z listy wyznacza wyspe docelowa oraz dokleja ich do tamtejszej populacji.
+-spec append([{[agent()], integer()}], [island()]) -> [island()].
+append([], Islands) -> Islands;
+append([{Immigrants, From}|T], Islands) ->
+    Destination = topology:getDestination(From),
+    NewIslands = misc_util:mapIndex(Immigrants, Destination, Islands, fun lists:append/2),
+    append(T, NewIslands).
+
+%% @doc Funkcja wyznacza ile srednio agentow z danej populacji powinno emigrowac i przesuwa ich do specjalnej listy emigrantow.
+%% Zwracana jest wyznaczona lista emigrantow oraz uszczuplona lista wysp.
+-spec gather([island()], [island()], [{[agent()], integer()}]) -> {[{[agent()], integer()}], [island()]}.
+gather([], Islands, Emigrants) ->
+    {Emigrants, Islands};
+gather([I|T], Acc, Emigrants) ->
+    N = misc_util:averageNumber(emas_config:migrationProbability(), I),
+    case N of
+        0 ->
+            gather(T, [I|Acc], Emigrants);
+        _ ->
+            {NewEmigrants, NewIsland} = lists:split(N, I),
+            gather(T, [NewIsland|Acc], [{NewEmigrants, length(Acc) + 1}|Emigrants])
+    end.
