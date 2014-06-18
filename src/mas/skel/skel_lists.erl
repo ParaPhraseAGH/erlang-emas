@@ -88,15 +88,12 @@ addMiliseconds({MegaSec, Sec, Milisec}, Time) ->
     {MegaSec,
      Sec + (Time div 1000),
      Milisec + (Time rem 1000)}.
-
-%% -spec identity(Type) -> Type.
-%% identity(Same) ->
-%%     Same.
-
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
+
+%% TODO maybe enhance migration
 %% @doc Funkcja dokonujaca migracji. Najpierw z kazdej wyspy pobierana jest statystyczna
 %% liczba agentow, ktorzy powinni ulec migracji. Dla kazdej grupy emigrantow wyznaczana jest wyspa docelowa
 %% i sa oni do niej dopisywani. Zwracana jest lista wysp po dokonanej migracji.
