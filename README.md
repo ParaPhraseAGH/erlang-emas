@@ -52,7 +52,7 @@ which will start the Erlang VM. Flags -pa declare the classpath where the VM wil
 
 To run the application you can type:
 
-  1> emas:start(concurrent, 10000, []).
+    1> emas:start(concurrent, 10000, []).
   
 which will start the algorithm. The word _emas_ is the name of the main module of your usecase (we provide the implemenentation of the EMAS algorithm as an example).
 You can choose to implement a new one, which should be started in the same way as shown above.
