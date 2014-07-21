@@ -9,7 +9,7 @@ By using the massive and efficient parallelism enabled by ParaPhrase technologie
 
 To run the project on your machine you need:
 
-* [Erlang](http://www.erlang.org/)
+* [Erlang (R17 or later)](http://www.erlang.org/)
 * [Git](http://git-scm.com/)
 
 ## How to build the project
