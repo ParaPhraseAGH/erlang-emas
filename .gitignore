@@ -1,4 +1,5 @@
 /.project
+.rebar
 /.settings
 *.so
 *.o
