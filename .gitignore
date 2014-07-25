@@ -2,3 +2,6 @@
 /.settings
 *.so
 *.o
+
+.idea
+*.iml
