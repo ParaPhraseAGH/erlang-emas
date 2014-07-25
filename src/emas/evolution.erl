@@ -1,7 +1,6 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
-%% @doc Modul z funkcjami dotyczacymi ewolucji czyli przechodzenia jednej generacji w kolejna.
-%% Sa tu rowniez funkcje implementujace migracje miedzy wyspami
+%% @doc A module with evolutionary functions which transform one generation into another, including migrations.
 -module(evolution).
 -export([sendToWork/1, doReproduce/1, doFight/1, eachFightsAll/1, optionalPairs/2]).
 
@@ -10,9 +9,8 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
-%% @doc Funkcja dostaje atom precyzujacy klase agentow i ich liste,
-%% a nastepnie wykonuje odpowiednie operacje dla kazdej z klas.
-%% Funkcja zwraca liste agentow po przetworzeniu.
+%% @doc This function receives an atom representing the type of the agents and a list of agents. It executes
+%% the appropriate action on every agent according to its type and returns the agregated results.
 -spec sendToWork({agent_behaviour(),[agent()]}) -> [agent()].
 sendToWork({death, _}) ->
     [];
@@ -28,16 +26,14 @@ sendToWork({migration,[Agent|T]}) when tuple_size(Agent) == 3 ->
 sendToWork({migration,[{From,Agent}|T]}) ->
     [{topology:getDestination(From),Agent} | sendToWork({migration,T})].
 
-%% @doc Funkcja implementujaca walke "kazdy z kazdym" dla listy agentow w argumencie.
-%% Zwracana jest lista agentow po walkach.
+%% @doc This function implements an all-vs-all fight between agents. It returns the list of agents after the fight.
 -spec eachFightsAll([agent()]) -> [agent()].
 eachFightsAll([]) -> [];
 eachFightsAll([H|T]) ->
     {NewH,NewT} = oneFightsRest(H,T,[]),
     [NewH | eachFightsAll(NewT)].
 
-%% @doc Funkcja implementujaca logike "walki" pojedynczego agenta.
-%% Zwracany jest ten sam agent w liscie.
+%% @doc The fight logic for a pair of agents. It returns a list of both agents updated after the fight.
 -spec doFight({agent()} | {agent(),agent()}) -> [agent()].
 doFight({A}) -> [A];
 %% @doc Funkcja implementujaca logike walki dwoch agentow.
@@ -49,16 +45,14 @@ doFight({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
         end,
     [{SolA, EvA, EnA - AtoBtransfer}, {SolB, EvB, EnB + AtoBtransfer}].
 
-%% @doc Funkcja implementujaca logike reprodukcji pojedynczego agenta.
-%% Zwracanych jest dwoje agentow w liscie.
+%% @doc The reproduction logic for a single agent. It returns a list with the updated parent and new child.
 -spec doReproduce({agent()} | {agent(),agent()}) -> [agent()].
 doReproduce({{SolA, EvA, EnA}}) ->
     SolB = genetic:reproduction(SolA),
     EvB = genetic:evaluation(SolB),
     AtoBtransfer = erlang:min(emas_config:reproductionTransfer(), EnA),
     [{SolA, EvA, EnA - AtoBtransfer}, {SolB, EvB, AtoBtransfer}];
-%% @doc Funkcja implementujaca logike reprodukcji dwoch agentow.
-%% Zwracanych jest czterech agentow w liscie.
+%% @doc The reproduction logic for a pair of agents. It returns a list with the updated parents and new children.
 doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
     [SolC, SolD] = genetic:reproduction(SolA, SolB),
     [EvC, EvD] = [ genetic:evaluation(S) || S <- [SolC, SolD] ],
@@ -69,16 +63,14 @@ doReproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}) ->
 %% Internal functions
 %% ====================================================================
 
-%% @doc Funkcja uruchamiajaca funkcje doFight/1 dla agenta A oraz
-%% kazdego osobnika z listy ToFight. Agenci po walce przechowywani sa
-%% w akumulatorze Fought i na koncu zwracani w krotce z agentem A po walkach.
+%% @doc Executes the doFight/1 function between agent A and every other agent from the ToFight list.
 -spec oneFightsRest(Agent::agent(), ToFight::[agent()], Fought::[agent()]) -> {agent(),[agent()]}.
 oneFightsRest(Agent,[],Fought) -> {Agent,Fought};
 oneFightsRest(Agent,[H|ToFight],Fought) ->
     [NewAgent,NewH]  = doFight({Agent,H}),
     oneFightsRest(NewAgent,ToFight,[NewH|Fought]).
 
-%% @doc Funkcja dzielaca podana liste agentow na pary. Tail recursion.
+%% @doc Splits agents into pairs with an optional single remainder.
 -spec optionalPairs([agent()],[{agent(),agent()}]) -> [{agent(),agent()} | {agent()}].
 optionalPairs([],Acc) -> Acc;
 optionalPairs([A],Acc) -> [{A}|Acc];

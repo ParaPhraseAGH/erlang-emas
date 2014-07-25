@@ -3,8 +3,6 @@
 
 -export ([starts/1, start/2, start/3, initial_population/0, behaviour_function/1, behaviours/0, meeting_function/1, stats/0]).
 
-% type model() is defined in mas.hrl
-% emas.hrl included by mas.hrl
 -include ("mas.hrl").
 
 -spec start(model(),pos_integer()) -> ok.
@@ -24,7 +22,7 @@ start(Model, Time, Options) ->
 initial_population() ->
     genetic:generatePopulation(emas_config:problemSize()).
 
-%% @doc Funkcja przyporzadkowujaca agentowi dana klase, na podstawie jego energii.
+%% @doc This function chooses a behaviour for the agent based on its energy.
 -spec behaviour_function(agent()) -> agent_behaviour().
 behaviour_function({_,_,0}) ->
     death;

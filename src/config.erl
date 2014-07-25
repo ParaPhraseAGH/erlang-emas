@@ -1,6 +1,6 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.1
-%% @doc Modul zawierajacy parametry algorytmu.
+%% @doc The module containing the algorithm parameters
 
 -module(config).
 -compile(export_all).
@@ -9,21 +9,21 @@
 %% PARAMAS PARAMETERS
 %% ====================================================================
 
-%% @doc Nazwa modulu implementujacego behaviour agent_env
+%% @doc The name of the module implementing the agent_env behaviour
 agent_env() -> emas.
 
-%% @doc Topologia wysp
+%% @doc Island topologies (ring, mesh)
 topology() -> mesh.
 
-%% @doc Domyslna sciezka zapisu logow (folder musi istniec). Atom standard_io powoduje wypisanie na standardowe wyjscie
+%% @doc The default path to write the logs to (the folder must exist). The standard_io atom cause the logs to be sent to the standard output
 logDir() -> standard_io.
 
-%% @doc Liczba wysp
+%% @doc The number of islands
 islands() -> 4.
-%% @doc Poczatkowa wielkosc populacji
+%% @doc The initial size of an island's population
 populationSize() -> 100.
 
-%% @doc Co ile milisekund wpisywany jest wynik do pliku
+%% @doc How often the logs are writen to output (in milliseconds)
 writeInterval() -> 1000.
-%% @doc Liczba milisekund bezczynnosci po ktorych arena powinna wyrzucic blad | infinity
+%% @doc How long an arena should wait for agents to come before raising an error (in milliseconds or the atom infinity)
 arenaTimeout() -> 5000.

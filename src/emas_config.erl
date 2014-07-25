@@ -6,38 +6,38 @@
 %% EMAS PARAMETERS
 %% ====================================================================
 
-%% @doc Nazwa modulu dostarczajacego operatory genetyczne i implementujacego callback genetic
+%% @doc the name of the module with the genetic operators and the genetic callback implementation
 -ifdef(nif).
 genetic_ops() -> rastrigin_nif_ops.
 -else.
 genetic_ops() -> rastrigin_ops.
 -endif.
 
-%% @doc Rozmiar problemu reprezentowanego przez agenta
+%% @doc The size of the problem represented by an agent
 problemSize() ->  100.
 
 
-%% @doc Czy monitorowac roznorodnosc populacji
+%% @doc Should we monitor population diversity
 monitorDiversity() -> false.
-%% @doc Energia poczatkowa osobnika.
+%% @doc Agent initial energy
 initialEnergy() -> 10.
-%% @doc Ilosc energii, powyzej ktorej osobnik sie reprodukuje
+%% @doc Amount of energy above which agents reproduce
 reproductionThreshold() -> 11.
-%% @doc Maksymalna ilosc energi przekazywana potomkowi podczas reprodukcji
+%% @doc Maximal amount of energy given by a parent to its child during reproduction
 reproductionTransfer() -> 5.
-%% @doc Maksymalna ilosc energi przekazywana przeciwnikowi podczas walki
+%% @doc Maximal amount of energy given by the loser to a winner during the fight
 fightTransfer() -> 10.
 
-%% @doc Parametr okreslajacy jak duza czesc agenta powinna ulec mutacji
+%% @doc How much of a solution should mutate [0,1]
 mutationRate() -> 0.1.
-%% @doc Parametr okreslajacy glebokosc pojedynczej mutacji
+%% @doc How big is the mutation
 mutationRange() -> 0.05.
-%% @doc Prawdopodobienstwo wystapienia mutacji u osobnika
+%% @doc The probability to mutate a solution during reproduction
 mutationChance() -> 0.75.
-%% @doc Prawdopodobienstwo migracji dowolnego osobnika o niezerowej energii na inna wyspe
+%% @doc The probability of migration of an agent with positive energy
 migrationProbability() -> 0.0001.
-%% @doc Prawdopodobienstwo skrzyzowania osobnikow
+%% @doc The probability to recombine parent solutions during reproduction
 recombinationChance() -> 0.3.
 
-%% @doc Liczba agentow, na ktorych czeka ring aby rozpoczac walke (kazdy z kazdym)
+%% @doc The size of the fight arena
 fightNumber() -> 2.
