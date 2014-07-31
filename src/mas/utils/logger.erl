@@ -1,6 +1,7 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
-%% @doc Serwer logger odpowiada za pisanie statystyk do plikow
+%% @doc This module handles logging statistics of non-concurrent models
+
 -module(logger).
 -behaviour(gen_server).
 
@@ -133,7 +134,7 @@ createDir(Path, IslandsNr) ->
     NewPath.
 
 
-%% @doc Tworzy pliki tekstowe do zapisu i zwraca dict() z deskryptorami.
+%% @doc Creates a dictionary with stat names as keys and corresponding file descriptors
 -spec createFDs(standard_io | string(), dict:dict(), [atom()]) -> FDs :: dict:dict().
 createFDs(standard_io, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
@@ -175,7 +176,6 @@ logIsland(Key, [{Stat, FD}|FDs], Counter, Funstats) ->
     logIsland(Key, FDs, NewCounter, Funstats).
 
 
-%% @doc Zamyka pliki podane w argumencie
 -spec closeFiles(dict:dict()) -> any().
 closeFiles(Dict) ->
     [case X of

@@ -1,6 +1,7 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
-%% @doc Modul areny migracji (portu).
+%% @doc The module of a migration arena
+
 -module(port).
 -behaviour(gen_server).
 

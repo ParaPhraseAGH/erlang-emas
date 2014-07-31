@@ -1,6 +1,6 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
-%% @doc Modul odpowiedzialny za logike pojedynczej wyspy w modelu hybrydowym.
+%% @doc This module handles the logic of a single island in hybrid model
 
 -module(hybrid_island).
 -export([start/0, close/1, sendAgent/2]).
@@ -10,8 +10,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
-%% @doc Funkcja generujaca dane poczatkowe, ktora pod koniec uruchamia glowna
-%% petle procesu.
+%% @doc Generates initial data and starts the computation
 -spec start() -> ok.
 start() ->
     misc_util:seedRandom(),
@@ -24,8 +23,8 @@ start() ->
 close(Pid) ->
     Pid ! {finish, self()}.
 
-%% @doc Funkcja za pomoca ktorej mozna przesylac wyspie imigrantow.
-%% Komunikacja asynchroniczna.
+
+%% @doc Asynchronusly sends an agent immigrating to this island
 -spec sendAgent(pid(), agent()) -> {agent, pid(), agent()}.
 sendAgent(Pid, Agent) ->
     Pid ! {agent, self(), Agent}.
@@ -33,7 +32,7 @@ sendAgent(Pid, Agent) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-%% @doc Glowna petla procesu. Kazda iteracja powoduje wytworzenie kolejnej generacji.
+%% @doc The main island process loop. A new generation of the population is created in every iteration.
 -spec loop([agent()], counter(), [tuple()]) -> ok.
 loop(Agents, InteractionCounter, Funstats) ->
     Environment = config:agent_env(),

@@ -1,6 +1,6 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
-%% @doc Serwer logger odpowiada za pisanie statystyk do plikow
+%% @doc This module handles logging statistics of the concurrent model
 -module(conc_logger).
 -behaviour(gen_server).
 
@@ -169,7 +169,7 @@ createCounter(Pids,Stats) ->
     IslandDict = dict:from_list(BasicStat), % ++ Variance ++ FitnessPopulation),
     dict:from_list([{Pid,IslandDict} || Pid <- Pids]).
 
-%% @doc Tworzy duzy slownik z mniejszymi slownikami deskryptorow dla kazdej z wysp dla modelow niesekwencyjnych
+%% @doc Creates a dictionary containing smaller dictionaries with file descriptors for every logged stat in non-sequential models
 -spec prepareParDictionary([pid()], dict:dict(), string(), [atom()]) -> dict:dict().
 prepareParDictionary([], Dict, Path, Stats) ->
     createFDs(Path, Dict, Stats);
@@ -186,7 +186,7 @@ prepareParDictionary([H|T], Dict, Path, Stats) ->
     NewDict = dict:store(H, createFDs(IslandPath, dict:new(), ?LOCAL_STATS), Dict), % Key = pid(), Value = dictionary of file descriptors
     prepareParDictionary(T, NewDict, Path,Stats).
 
-%% @doc Tworzy pliki tekstowe do zapisu i zwraca dict:dict() z deskryptorami.
+%% @doc Creates a dictionary with stat names as keys and corresponding file descriptors
 -spec createFDs(string(), dict:dict(), [atom()]) -> FDs :: dict:dict().
 createFDs(standard_io, InitDict, Files) ->
     lists:foldl(fun(Atom, Dict) ->
@@ -208,7 +208,6 @@ logGlobal(FDDict,Stat,Value) ->
 %%     FD = dict:fetch(Stat, FDDict),
 %%     file:write(FD, io_lib:fwrite("~p ~p ~p\n", [Stat,Supervisor,Value])).
 
-%% @doc Zamyka pliki podane w argumencie
 -spec closeFiles(dict:dict()) -> any().
 closeFiles(Dict) ->
     [case X of

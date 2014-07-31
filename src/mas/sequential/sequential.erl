@@ -1,6 +1,6 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.1
-%% @doc Model sekwencyjny, gdzie agenci sa na stale podzieleni w listach reprezentujacych wyspy.
+%% @doc This is the main module of sequential model. It handles starting the system and cleaning after work
 
 -module(sequential).
 -export([start/4]).
@@ -34,7 +34,7 @@ start(Time, Islands, Topology, Path) ->
 %% Internal functions
 %% ====================================================================
 
-%% @doc Glowa petla programu. Kazda iteracja powoduje ewolucje nowej generacji osobnikow.
+%% @doc The main island process loop. A new generation of the population is created in every iteration.
 -spec loop([island()], [counter()], [funstat()]) -> float().
 loop(Islands, Counters, Funstats) ->
     Environment = config:agent_env(),

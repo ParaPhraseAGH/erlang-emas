@@ -1,6 +1,5 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
-%% @doc Modul supervisora wyspy w modelu wspolbieznym.
 
 -module(conc_supervisor).
 -behaviour(gen_server).
@@ -85,7 +84,3 @@ terminate(_Reason,_State) ->
 -spec code_change(term(),state(),term()) -> {ok, state()}.
 code_change(_OldVsn,State,_Extra) ->
     {ok, State}.
-
-%% ====================================================================
-%% Internal functions
-%% ====================================================================

@@ -1,6 +1,7 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.1
-%% @doc Glowny modul modelu hybrydowego. Uruchamia algorytm, zarzadza migracja i sprzata po wszystkim.
+%% @doc This is the main module of hybrid model. It handles starting the system, migrating agents and cleaning after work
+
 -module(hybrid).
 -behaviour(gen_server).
 
@@ -24,8 +25,8 @@ start(Time,Islands,Topology,Path) ->
     {ok, _} = gen_server:start({local,?MODULE}, ?MODULE, [Time,Islands,Topology,Path], []),
     timer:sleep(Time).
 
-%% @doc Funkcja za pomoca ktorej wyspa moze wyslac agenta supervisorowi.
-%% Komunikacja asynchroniczna - agent jest wysylany i proces idzie dalej nie czekajac na odpowiedz.
+
+%% @doc Asynchronously sends an agent from an arena to the supervisor
 -spec sendAgent(agent()) -> ok.
 sendAgent(Agent) ->
     gen_server:cast(whereis(?MODULE), {agent,self(),Agent}).

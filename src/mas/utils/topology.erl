@@ -1,7 +1,7 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
-%% @doc Serwer topology odpowiada za przechowywanie informacji o topologii wysp w systemie.
-%% Wyznacza rowniez miejsca docelowe migracji dla procesow.
+%% @doc This module handles current islands topology info and also computes destination for migrating agents
+
 -module(topology).
 -behaviour(gen_server).
 
@@ -34,8 +34,8 @@ emigrant(AgentInfo) ->
 close() ->
     gen_server:cast(whereis(?MODULE),close).
 
-%% @doc Funkcja komunikujaca sie synchronicznie z procesem topology i zwracajaca docelowa wyspe
-%%  na podstawie przeslanego argumentu
+
+%% @doc Synchronously computes a new destination based on a given parameter
 -spec getDestination(integer()) -> integer().
 getDestination(X) ->
     gen_server:call(whereis(?MODULE),{destination,X},infinity).

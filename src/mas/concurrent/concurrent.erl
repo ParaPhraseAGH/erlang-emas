@@ -1,6 +1,6 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
-%% @doc Glowny modul modelu wspolbieznego algorytmu. Odpowiada za uruchomienie calego systemu oraz posprzatanie po wszystkim.
+%% @doc This is the main module of concurrent model. It handles starting the system and cleaning after work
 
 -module(concurrent).
 -export([start/4]).

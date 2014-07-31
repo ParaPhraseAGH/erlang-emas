@@ -1,6 +1,6 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
-%% @doc Modul odpowiedzialny za logike pojedynczego agenta.
+%% @doc This module handles logic of a single agent
 
 -module(agent).
 -export([start/2]).
@@ -11,9 +11,8 @@
 %% API functions
 %% ====================================================================
 
-%% @doc Funkcja startujaca danego agenta. W argumencie
-%% adresy aren do ktorych agent ma sie zglaszac.
--spec start(agent(),dict:dict()) -> ok.
+%% @doc Initializes given agent on arenas given as parameter
+-spec start(agent(),dict:dict(string(), pid())) -> ok.
 start(Agent,Arenas) ->
     misc_util:seedRandom(),
     loop(Agent,Arenas).
@@ -22,7 +21,7 @@ start(Agent,Arenas) ->
 %% Internal functions
 %% ====================================================================
 
-%% @doc Funkcja cyklu zycia agenta.
+%% @doc Defines a life cycle of a single agent
 -spec loop(agent(),dict:dict()) -> ok.
 loop(Agent,Arenas) ->
     Environment = config:agent_env(),

@@ -20,7 +20,7 @@
                 counter = 0 :: non_neg_integer()}).
 
 -define(CLOSING_TIMEOUT, 2000).
--define(AGENT_THRESHOLD, 2). %% TODO zmienna powinna byc konfigurowana przez usera i na dodatek zalezna od interakcji
+-define(AGENT_THRESHOLD, 2). %% TODO this should be user-configurable and use case dependent
 
 %%%===================================================================
 %%% API
@@ -35,7 +35,7 @@ start_link(Supervisor,Interaction) ->
     {ok,Pid} = gen_server:start_link(?MODULE, [Supervisor,Interaction], []),
     Pid.
 
-%% @doc Funkcja wysylajaca zgloszenie agenta do areny.
+%% @doc Sends a request with given agent to this arena
 -spec call(pid(),agent()) -> agent() | close.
 call(Pid,Agent) ->
     gen_server:call(Pid,{interact,Agent},infinity).
