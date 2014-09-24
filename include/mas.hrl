@@ -4,6 +4,6 @@
 
 -type counter() :: dict:dict().
 
--type model() :: sequential | hybrid | concurrent.
+-type model() :: sequential | hybrid | concurrent | skel.
 
 -type funstat() :: {Name::atom(), Map::fun(), Reduce::fun(), Value::term()}.

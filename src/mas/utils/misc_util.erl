@@ -4,7 +4,7 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2, count_funstats/2,
-         seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, add_interactions_to_counter/2, determineStats/0]).
+         seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, add_interactions_to_counter/2, determineStats/0, add_miliseconds/2]).
 
 -include ("mas.hrl").
 
@@ -100,6 +100,11 @@ count_funstats(Agents, [{Stat, MapFun, ReduceFun, OldAcc}|T]) ->
         [MapFun(Agent) || Agent <- Agents]),
     [{Stat, MapFun, ReduceFun, NewAcc} | count_funstats(Agents,T)].
 
+-spec add_miliseconds({integer(),integer(),integer()},integer()) -> {integer(),integer(),integer()}.
+add_miliseconds({MegaSec, Sec, Milisec}, Time) ->
+    {MegaSec,
+        Sec + (Time div 1000),
+        Milisec + (Time rem 1000)}.
 
 %% @doc Maps function F(Elem, A) -> A' to an element A of List with Index. Returns updated list
 -spec mapIndex(Elem::term(), Index::integer(), List::[term()], F::fun()) -> [term()].
