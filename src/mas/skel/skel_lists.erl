@@ -1,6 +1,5 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.1
-%% @doc Model sekwencyjny, gdzie agenci sa na stale podzieleni w listach reprezentujacych wyspy.
 
 -module(skel_lists).
 -export([start/4]).
@@ -29,23 +28,27 @@ start(Time,Islands,Topology,Path) ->
 %% ====================================================================
 
 %% TODO add generic statistics (funstats)
-%% @doc Glowa petla programu. Kazda iteracja powoduje ewolucje nowej generacji osobnikow.
+%% @doc Main program loop
 -spec main([island()], non_neg_integer()) -> float().
 main(Islands, Time) ->
     Environment = config:agent_env(),
-    EndTime = addMiliseconds(os:timestamp(), Time),
-    Tag = {seq, fun(Island) ->
-                        [{Environment:behaviour_function(Agent), Agent} || Agent <- Island] %% bylo behaviour no_mig
-                end},
+    EndTime = misc_util:add_miliseconds(os:timestamp(), Time),
+    %%     Tag = {seq, fun(Island) ->
+    %%                         [{Environment:behaviour_function(Agent), Agent} || Agent <- Island] %% bylo behaviour no_mig
+    %%                 end},
+
+    Tag = {map, [{seq, fun(Agent) ->
+                               {Environment:behaviour_function(Agent), Agent} %% bylo behaviour no_mig
+                       end}]},
+
     Group = {seq, fun misc_util:groupBy/1},
 
     Log = {seq, fun(Island) ->
                         Counter = misc_util:createNewCounter(),
                         Counts = misc_util:add_interactions_to_counter(Island,Counter),
-                        skel_logger:reportResult(fight, dict:fetch(fight,Counts)),
-                        skel_logger:reportResult(reproduce, dict:fetch(reproduction,Counts)),
-                        skel_logger:reportResult(death, dict:fetch(death,Counts)),
-                        %% TODO migration is not counted
+                        skel_logger:report_result(fight, dict:fetch(fight,Counts)),
+                        skel_logger:report_result(reproduce, dict:fetch(reproduction,Counts)),
+                        skel_logger:report_result(death, dict:fetch(death,Counts)),
                         Island
                 end},
 
@@ -65,7 +68,8 @@ main(Islands, Time) ->
                        Shuffle]}]},
 
     Migration = {seq, fun(AllIslands) ->
-                              {_NrOfEmigrants, IslandsMigrated} = doMigrate(AllIslands),
+                              {NrOfEmigrants, IslandsMigrated} = do_migrate(AllIslands),
+                              skel_logger:report_result(migration, NrOfEmigrants),
                               IslandsMigrated
                       end},
 
@@ -75,46 +79,43 @@ main(Islands, Time) ->
                                _While = fun(List) ->
                                                 Fitness = lists:max([misc_util:result(Island) || Island <- List]),
                                                 Population = lists:sum([length(Island) || Island <- List]),
-                                                skel_logger:reportResult(fitness,Fitness),
-                                                skel_logger:reportResult(population,Population),
+                                                skel_logger:report_result(fitness, Fitness),
+                                                skel_logger:report_result(population, Population),
                                                 os:timestamp() < EndTime
                                         end}],
                              [Islands]),
     %%     io_util:printSeq(FinalIslands),
     misc_util:result(lists:flatten(FinalIslands)).
 
--spec addMiliseconds({integer(),integer(),integer()},integer()) -> {integer(),integer(),integer()}.
-addMiliseconds({MegaSec, Sec, Milisec}, Time) ->
-    {MegaSec,
-     Sec + (Time div 1000),
-     Milisec + (Time rem 1000)}.
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
-
 %% TODO maybe enhance migration
-%% @doc Funkcja dokonujaca migracji. Najpierw z kazdej wyspy pobierana jest statystyczna
-%% liczba agentow, ktorzy powinni ulec migracji. Dla kazdej grupy emigrantow wyznaczana jest wyspa docelowa
-%% i sa oni do niej dopisywani. Zwracana jest lista wysp po dokonanej migracji.
--spec doMigrate([island()]) -> {non_neg_integer(), [island()]}.
-doMigrate(Islands) ->
+%% @doc Function responsible for migration. For each island statistical number of agents is chosen to emigrate.
+%% These agents are added to particular islands and new islands are returned.
+-spec do_migrate([island()]) -> {non_neg_integer(), [island()]}.
+do_migrate(Islands) ->
     {Gathered, NewIslands} = gather(Islands, [], []),
     {length(Gathered), append(Gathered, lists:reverse(NewIslands))}.
 
-%% @doc Funkcja dla kazdej grupy emigrantow z listy wyznacza wyspe docelowa oraz dokleja ich do tamtejszej populacji.
+
+%% @doc Function assigns a new islands to each agent group and adds the agents to the population
 -spec append([{[agent()], integer()}], [island()]) -> [island()].
 append([], Islands) -> Islands;
+
 append([{Immigrants, From}|T], Islands) ->
     Destination = topology:getDestination(From),
     NewIslands = misc_util:mapIndex(Immigrants, Destination, Islands, fun lists:append/2),
     append(T, NewIslands).
 
-%% @doc Funkcja wyznacza ile srednio agentow z danej populacji powinno emigrowac i przesuwa ich do specjalnej listy emigrantow.
-%% Zwracana jest wyznaczona lista emigrantow oraz uszczuplona lista wysp.
+
+%% @doc Function determines how many agents should emigrate and extracts them from the islands.
+%% The emigrant list is returned with the new (smaller) list of islands.
 -spec gather([island()], [island()], [{[agent()], integer()}]) -> {[{[agent()], integer()}], [island()]}.
 gather([], Islands, Emigrants) ->
     {Emigrants, Islands};
+
 gather([I|T], Acc, Emigrants) ->
     N = misc_util:averageNumber(emas_config:migrationProbability(), I),
     case N of
