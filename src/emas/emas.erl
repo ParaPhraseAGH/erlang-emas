@@ -1,7 +1,7 @@
 -module (emas).
 -behaviour(agent_env).
 
--export ([starts/1, start/2, start/3, initial_population/0, behaviour_function/1, behaviours/0, meeting_function/1, stats/0]).
+-export ([starts/1, start/2, start/3, initial_agent/1, behaviour_function/2, behaviours/0, meeting_function/2, stats/0]).
 
 -include ("mas.hrl").
 
@@ -24,20 +24,20 @@ starts([Model, Time]) ->
     mas:start(?MODULE, erlang:list_to_atom(Model), erlang:list_to_integer(Time), load_params(), []).
 
 
--spec initial_population() -> [agent()].
-initial_population() ->
-    genetic:generatePopulation(emas_config:problemSize()).
+-spec initial_agent(sim_params()) -> [agent()].
+initial_agent(SimParams) ->
+    genetic:generate_agent(SimParams).
 
 
 %% @doc This function chooses a behaviour for the agent based on its energy.
--spec behaviour_function(agent()) -> agent_behaviour().
-behaviour_function({_,_,0}) ->
+-spec behaviour_function(agent(), sim_params()) -> agent_behaviour().
+behaviour_function({_,_,0}, _SimParams) ->
     death;
 
-behaviour_function({_, _, Energy}) ->
-    case random:uniform() < emas_config:migrationProbability() of
+behaviour_function({_, _, Energy}, SimParams) ->
+    case random:uniform() < SimParams#sim_params.migration_probability of
         true -> migration;
-        false -> case Energy > emas_config:reproductionThreshold() of
+        false -> case Energy > SimParams#sim_params.reproduction_threshold of
                      true -> reproduction;
                      false -> fight
                  end
@@ -49,20 +49,20 @@ behaviours() ->
     [reproduction, death, fight, migration].
 
 
--spec meeting_function({agent_behaviour(), [agent()]}) -> [agent()].
-meeting_function({death, _}) ->
+-spec meeting_function({agent_behaviour(), [agent()]}, sim_params()) -> [agent()].
+meeting_function({death, _}, _SimParams) ->
     [];
 
-meeting_function({reproduction, Agents}) ->
-    lists:flatmap(fun evolution:doReproduce/1, evolution:optionalPairs(Agents,[]));
+meeting_function({reproduction, Agents}, SimParams) ->
+    lists:flatten([evolution:do_reproduce(A, SimParams) || A <- evolution:optional_pairs(Agents,[])]);
 
-meeting_function({fight, Agents}) ->
-    lists:flatmap(fun evolution:doFight/1, evolution:optionalPairs(Agents,[]));
+meeting_function({fight, Agents}, SimParams) ->
+    lists:flatten([evolution:do_fight(A, SimParams) || A <- evolution:optional_pairs(Agents,[])]);
 
-meeting_function({migration, Agents}) ->
+meeting_function({migration, Agents}, _SimParams) ->
     Agents;
 
-meeting_function({_, _}) ->
+meeting_function({_, _}, _SimParams) ->
     erlang:error(unexpected_behaviour).
 
 

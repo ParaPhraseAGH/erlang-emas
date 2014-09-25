@@ -9,6 +9,6 @@
 
 -callback evaluation(solution()) -> float(). 
 
--callback mutation(solution()) -> solution().
+-callback mutation(solution(), sim_params()) -> solution().
 
 -callback recombination(solution(), solution()) -> {solution(), solution()}.

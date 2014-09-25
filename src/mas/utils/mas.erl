@@ -6,12 +6,12 @@
 -include ("mas.hrl").
 
 -spec start(atom(), model(), pos_integer(), sim_params(), [tuple()]) -> ok.
-start(Module, Model, Time, EmasParams, Options) ->
+start(Module, Model, Time, SimParams, Options) ->
     {ok, ConfigFromFile} = file:consult("etc/mas.config"),
     ConfigWithEnv = [{agent_env,Module}|ConfigFromFile],
     OverwrittenConfig = overwrite(Options, ConfigWithEnv),
     ConfigRecord = proplist_to_record(OverwrittenConfig),
-    %%     Model:start(Time,Islands,Topology,Path),
+    Model:start(Time, SimParams, ConfigRecord),
     ok.
 
 

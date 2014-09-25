@@ -1,6 +1,8 @@
 -module(skel_logger).
 -behaviour(gen_server).
 
+-include ("mas.hrl").
+
 %% API
 -export([start_link/1, report_result/2, close/0]).
 
@@ -26,9 +28,9 @@
 %%% API
 %%%===================================================================
 
--spec start_link(string()) -> {ok, pid()}.
-start_link(Path) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [Path], []).
+-spec start_link(config()) -> {ok, pid()}.
+start_link(Config) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
 
 -spec report_result(atom(),term()) -> ok.
 report_result(Stat,Value) ->
@@ -43,11 +45,11 @@ close() ->
 %%%===================================================================
 
 -spec init(term()) -> {ok,state()}.
-init([Path]) ->
-    timer:send_interval(config:writeInterval(), write),
+init([Config]) ->
+    timer:send_interval(Config#config.write_interval, write),
     Dictionary = lists:foldl(fun(Atom, Dict) ->
                                      Filename = atom_to_list(Atom) ++ ".txt",
-                                     {ok, Descriptor} = file:open(filename:join([Path, Filename]), [append, delayed_write, raw]),
+                                     {ok, Descriptor} = file:open(filename:join([Config#config.log_dir, Filename]), [append, delayed_write, raw]),
                                      dict:store(Atom, Descriptor, Dict)
                              end, dict:new(),
                              [fitness, population, reproduction, migration, fight, death]),

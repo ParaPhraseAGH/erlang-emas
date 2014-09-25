@@ -3,8 +3,9 @@
 %% @doc This module contains common helpers for different models of computation
 
 -module(misc_util).
--export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2, count_funstats/2,
-         seedRandom/0, logNow/1, meeting_proxy/2, create_new_counter/0, add_interactions_to_counter/2, determineStats/0, add_miliseconds/2]).
+-export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2,
+    count_funstats/2, seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, add_interactions_to_counter/2,
+    determineStats/0, add_miliseconds/2, generate_population/2]).
 
 -include ("mas.hrl").
 
@@ -22,9 +23,15 @@ groupBy(List) ->
 
 
 -spec shuffle(list()) -> list().
-shuffle(List) ->
-    Rand = [{random:uniform(), N} || N <- List],
-    [X || {_, X} <- lists:sort(Rand)].
+shuffle(L) ->
+    Rand = [{random:uniform(), N} || N <- L],
+    [X||{_,X} <- lists:sort(Rand)].
+
+
+%% @doc Generates a population of agents with random solutions.
+-spec generate_population(sim_params(), config()) -> [agent()].
+generate_population(SimParams, Config) ->
+    [genetic:generateAgent(SimParams) || _ <- lists:seq(1, Config#config.population_size)].
 
 
 -spec meeting_proxy({atom(),list()},model()) -> list().
