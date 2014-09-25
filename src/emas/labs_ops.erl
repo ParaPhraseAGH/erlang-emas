@@ -13,6 +13,10 @@ solution(ProblemSize) ->
 %% @doc Evaluates a given solution. Higher is better.
 -spec evaluation(solution()) -> float().
 evaluation(Solution) ->
+    local_search(Solution).
+
+-spec energy(solution()) -> float().
+energy(Solution) ->
     L = length(Solution),
     Cs = [foldzip(drop(Solution, K), Solution)
         || K <- lists:seq(1, L-1)],
@@ -38,7 +42,7 @@ recombinationFeatures(F1, F2) ->
 mutation(Solution) ->
     lists:map(fun(X) -> 
         case random:uniform() < emas_config:mutationRate() of
-            true -> -X + 1;
+            true -> fnot(X);
             _ -> X
         end
     end, Solution).
@@ -57,6 +61,45 @@ foldzip(_, [], Acc) -> Acc;
 foldzip([HA|TA], [HB|TB], Acc) ->
     foldzip(TA, TB, Acc + dot(HA,HB)).
 
-dot(N,N) -> 1;
-dot(_,_) -> -1.
+dot(X, X) -> 1;
+dot(_, _) -> -1.
 
+fnot(X) -> -X + 1.
+
+-spec local_search(solution()) -> float().
+local_search(Solution) ->
+    MaxIterations = 25,
+    {_Sol, Eval} = local_search(MaxIterations, Solution, energy(Solution)),
+    Eval.
+
+-spec local_search(integer(), solution(), float()) -> {solution(), float()}.
+local_search(0, Solution, Evaluation) ->
+    {Solution, Evaluation};
+local_search(RemainingSteps, Solution, Evaluation) ->
+    {BestSol, BestEval} = best_flipped(Solution),
+    case BestEval > Evaluation of
+        true -> local_search(RemainingSteps-1, BestSol, BestEval);
+        _ -> {Solution, Evaluation}
+    end.
+
+best_flipped(Solution) ->
+    FlippedSols = lists:map(fun (I) -> flip_nth(Solution,I) end,
+              lists:seq(1, length(Solution))),
+    First = hd(FlippedSols),
+    InitAcc = {First, energy(First)},
+    GetBest = fun (S, {AccSol, AccE}) ->
+        E = energy(S),
+        case E > AccE of
+            true -> {S, E};
+            _ -> {AccSol, AccE}
+        end
+    end,
+    lists:foldl(GetBest, InitAcc, FlippedSols).
+
+flip_nth(Sol, N) ->
+    flip_nth(Sol, [], N).
+
+flip_nth([HS | TS], Acc, 1) ->
+    lists:reverse(Acc) ++ [fnot(HS) | TS];
+flip_nth([HS | TS], Acc, N) ->
+    flip_nth(TS, [HS | Acc], N-1).
