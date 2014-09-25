@@ -4,7 +4,7 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2, count_funstats/2,
-         seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, add_interactions_to_counter/2, determineStats/0, add_miliseconds/2]).
+         seedRandom/0, logNow/1, meeting_proxy/2, create_new_counter/0, add_interactions_to_counter/2, determineStats/0, add_miliseconds/2]).
 
 -include ("mas.hrl").
 
@@ -22,9 +22,9 @@ groupBy(List) ->
 
 
 -spec shuffle(list()) -> list().
-shuffle(L) ->
-    Rand = [{random:uniform(), N} || N <- L],
-    [X||{_,X} <- lists:sort(Rand)].
+shuffle(List) ->
+    Rand = [{random:uniform(), N} || N <- List],
+    [X || {_, X} <- lists:sort(Rand)].
 
 
 -spec meeting_proxy({atom(),list()},model()) -> list().
@@ -77,8 +77,8 @@ logNow(LastLog) ->
     end.
 
 
--spec createNewCounter() -> counter().
-createNewCounter() ->
+-spec create_new_counter() -> counter().
+create_new_counter() ->
     Environment = config:agent_env(),
     BehaviourList = [{Behaviour,0} || Behaviour <- Environment:behaviours()],
     dict:from_list(BehaviourList).
