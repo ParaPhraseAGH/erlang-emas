@@ -1,7 +1,7 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.1
 
--module(skel).
+-module(skel_main).
 -export([start/4]).
 
 -include ("mas.hrl").
@@ -40,17 +40,29 @@ main(Population, Time) ->
                         {{Home, Environment:behaviour_function(Agent)}, Agent}
                 end},
 
-    Migrate = {seq, fun({{Home, Behaviour}, Agent}) ->
-                            case Behaviour of
-                                migration ->
-                                    {{topology:getDestination(Home), Behaviour}, Agent};
-                                _ ->
-                                    {{Home, Behaviour}, Agent}
-                            end
+    Migrate = {seq, fun _Migration({{Home, migration}, Agent}) ->
+                            dict:from_list([{{topology:getDestination(Home), migration}, [Agent]}]);
+                        _Migration({{Home, Behaviour}, Agent}) ->
+                            dict:from_list([{{Home, Behaviour}, [Agent]}])
                     end},
 
-    %% TODO make it parallel with the reduce skeleton
-    Group = {seq, fun misc_util:groupBy/1},
+    Group = {reduce,
+             fun(D1, D2) ->
+                     dict:merge(fun(_Key, Value1, Value2) ->
+                                        Value1 ++ Value2
+                                end, D1, D2)
+             end,
+             fun(X) -> X end},
+
+    Unpack = {seq, fun dict:to_list/1},
+
+%%         Migrate = {seq, fun Migration({{Home, migration}, Agent}) ->
+%%             {{topology:getDestination(Home), migration}, Agent};
+%%             Migration({{Home, Behaviour}, Agent}) ->
+%%                 {{Home, Behaviour}, Agent}
+%%         end},
+%%
+%%         Group = {seq, fun misc_util:groupBy/1},
 
     Log = {seq, fun(Chunks) ->
                         Counter = misc_util:create_new_counter(),
@@ -72,10 +84,11 @@ main(Population, Time) ->
                     end},
 
     Workflow = {pipe, [{map, [Tag, Migrate], Workers},
-                     Group,
-                     Log,
-                     {map, [Work], Workers},
-                     Shuffle]},
+                       Group,
+                       Unpack,
+                       Log,
+                       {map, [Work], Workers},
+                       Shuffle]},
 
     [_FinalIslands] = skel:do([{feedback,
                                 [Workflow],
