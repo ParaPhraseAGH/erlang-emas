@@ -7,12 +7,23 @@
 %% ====================================================================
 
 %% @doc the name of the module with the genetic operators and the genetic callback implementation
--ifdef(nif).
+-ifdef(nifops).
 genetic_ops() -> rastrigin_nif_ops.
+-else.
+
+-ifdef(binops).
+genetic_ops() -> rastrigin_bin_ops.
+-else.
+
+-ifdef(labsops).
+genetic_ops() -> labs_ops.
 -else.
 genetic_ops() -> rastrigin_ops.
 -endif.
 
+-endif.
+
+-endif.
 %% @doc The size of the problem represented by an agent
 problemSize() ->  100.
 
