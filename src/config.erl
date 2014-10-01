@@ -16,7 +16,7 @@ agent_env() -> emas.
 topology() -> mesh.
 
 %% @doc The default path to write the logs to (the folder must exist). The standard_io atom cause the logs to be sent to the standard output
-logDir() -> standard_io.
+logDir() -> tmp.
 
 %% @doc The number of islands
 islands() -> 4.
