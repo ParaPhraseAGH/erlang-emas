@@ -32,8 +32,8 @@ rtime=2000
 cores="4"
 # run_repeat=3
 run_repeat=1
-# models="sequential hybrid concurrent"
-models="hybrid"
+models="sequential" # skel_main"
+# models="hybrid"
 
 run nifops
 run binops

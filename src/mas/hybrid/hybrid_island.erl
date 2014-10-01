@@ -17,7 +17,7 @@ start() ->
     Environment = config:agent_env(),
     Agents = Environment:initial_population(),
     timer:send_interval(config:writeInterval(), write),
-    loop(Agents, misc_util:createNewCounter(), Environment:stats()).
+    loop(Agents, misc_util:create_new_counter(), Environment:stats()).
 
 -spec close(pid()) -> {finish, pid()}.
 close(Pid) ->
@@ -40,7 +40,7 @@ loop(Agents, InteractionCounter, Funstats) ->
         write ->
             [logger:log_countstat(self(), Interaction, Val) || {Interaction, Val} <- dict:to_list(InteractionCounter)],
             [logger:log_funstat(self(), StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- Funstats],
-            loop(Agents, misc_util:createNewCounter(), Funstats);
+            loop(Agents, misc_util:create_new_counter(), Funstats);
         {agent, _Pid, A} ->
             loop([A|Agents], InteractionCounter, Funstats);
         {finish, _Pid} ->

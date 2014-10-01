@@ -24,7 +24,7 @@ start(Time, Islands, Topology, Path) ->
     {ok, TRef} = timer:send_interval(config:writeInterval(), write),
     {_Time,_Result} = timer:tc(fun loop/3, [
                                             InitIslands,
-                                            [misc_util:createNewCounter() || _ <- lists:seq(1, Islands)],
+                                            [misc_util:create_new_counter() || _ <- lists:seq(1, Islands)],
                                             [Environment:stats() || _ <- lists:seq(1, Islands)]]),
     timer:cancel(TRef),
     topology:close(),
@@ -42,8 +42,8 @@ loop(Islands, Counters, Funstats) ->
         write ->
             [log_island(Nr, C, F) || {Nr, C, F} <- lists:zip3(lists:seq(1, length(Islands)), Counters, Funstats)],
             loop(Islands,
-                [misc_util:createNewCounter() || _ <- lists:seq(1, length(Islands))],
-                Funstats);
+                 [misc_util:create_new_counter() || _ <- lists:seq(1, length(Islands))],
+                 Funstats);
         theEnd ->
             lists:max([misc_util:result(I) || I <- Islands])
     after 0 ->
