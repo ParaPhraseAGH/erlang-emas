@@ -33,7 +33,7 @@ generate_agent(SimParams) ->
 reproduction(S, SimParams) ->
     Ops = SimParams#sim_params.genetic_ops,
     case random:uniform() < SimParams#sim_params.mutation_chance of
-        true -> Ops:mutation(S);
+        true -> Ops:mutation(S, SimParams);
         false -> S
     end.
 
