@@ -4,7 +4,7 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2,
-    count_funstats/2, seedRandom/0, logNow/1, meeting_proxy/2, createNewCounter/0, add_interactions_to_counter/2,
+    count_funstats/2, seedRandom/0, logNow/1, meeting_proxy/4, create_new_counter/1, add_interactions_to_counter/2,
     determineStats/0, add_miliseconds/2, generate_population/2]).
 
 -include ("mas.hrl").
@@ -31,23 +31,23 @@ shuffle(L) ->
 %% @doc Generates a population of agents with random solutions.
 -spec generate_population(sim_params(), config()) -> [agent()].
 generate_population(SimParams, Config) ->
-    [genetic:generateAgent(SimParams) || _ <- lists:seq(1, Config#config.population_size)].
+    [genetic:generate_agent(SimParams) || _ <- lists:seq(1, Config#config.population_size)].
 
 
--spec meeting_proxy({atom(),list()},model()) -> list().
-meeting_proxy({migration,_Agents},sequential) ->
+-spec meeting_proxy({atom(), list()}, model(), sim_params(), config()) -> list().
+meeting_proxy({migration, _Agents}, sequential, _SimParams, _Config) ->
     [];
 
-meeting_proxy({migration,Agents},hybrid) ->
+meeting_proxy({migration, Agents}, hybrid, _SimParams, _Config) ->
     [hybrid:sendAgent(Agent) || Agent <- Agents],
     [];
 
-meeting_proxy({migration,_Agents},concurrent) ->
+meeting_proxy({migration, _Agents}, concurrent, _SimParams, _Config) ->
     [];
 
-meeting_proxy(Group,_) ->
-    Environment = config:agent_env(),
-    Environment:meeting_function(Group).
+meeting_proxy(Group, _, SimParams, Config) ->
+    Environment = Config#config.agent_env,
+    Environment:meeting_function(Group, SimParams).
 
 
 -spec determineStats() -> [atom()].
@@ -84,9 +84,9 @@ logNow(LastLog) ->
     end.
 
 
--spec create_new_counter() -> counter().
-create_new_counter() ->
-    Environment = config:agent_env(),
+-spec create_new_counter(config()) -> counter().
+create_new_counter(Config) ->
+    Environment = Config#config.agent_env,
     BehaviourList = [{Behaviour,0} || Behaviour <- Environment:behaviours()],
     dict:from_list(BehaviourList).
 

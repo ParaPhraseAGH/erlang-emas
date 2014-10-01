@@ -2,7 +2,7 @@
 %% @version 1.0
 %% @doc A module with evolutionary functions which transform one generation into another, including migrations.
 -module(evolution).
--export([sendToWork/1, do_reproduce/2, do_fight/2, eachFightsAll/1, optional_pairs/2]).
+-export([send_to_work/2, do_reproduce/2, do_fight/2, optional_pairs/2]).
 
 -include ("emas.hrl").
 
@@ -11,34 +11,34 @@
 %% ====================================================================
 %% @doc This function receives an atom representing the type of the agents and a list of agents. It executes
 %% the appropriate action on every agent according to its type and returns the agregated results.
--spec sendToWork({agent_behaviour(),[agent()]}) -> [agent()].
-sendToWork({death, _}) ->
+-spec send_to_work({agent_behaviour(),[agent()]}, sim_params()) -> [agent()].
+send_to_work({death, _}, SimParams) -> %% TODO change this function
     [];
 
-sendToWork({fight, Agents}) ->
-    lists:flatmap(fun doFight/1, optionalPairs(Agents,[]));
+send_to_work({fight, Agents}, SimParams) ->
+    lists:flatmap(fun do_fight/2, optional_pairs(Agents,[]));
 
-sendToWork({reproduction,Agents}) ->
-    lists:flatmap(fun doReproduce/1, optionalPairs(Agents,[]));
+send_to_work({reproduction, Agents}, SimParams) ->
+    lists:flatmap(fun do_reproduce/2, optional_pairs(Agents,[]));
 
-sendToWork({migration,[]}) ->
+send_to_work({migration,[]}, _SimParams) ->
     [];
 
-sendToWork({migration,[Agent|T]}) when tuple_size(Agent) == 3 ->
+send_to_work({migration,[Agent|T]}, SimParams) when tuple_size(Agent) == 3 ->
     hybrid:sendAgent(Agent),
-    sendToWork({migration,T});
+    send_to_work({migration,T}, SimParams);
 
-sendToWork({migration,[{From,Agent}|T]}) ->
-    [{topology:getDestination(From),Agent} | sendToWork({migration,T})].
+send_to_work({migration,[{From,Agent}|T]}, SimParams) ->
+    [{topology:getDestination(From),Agent} | send_to_work({migration,T}, SimParams)].
 
 
 %% @doc This function implements an all-vs-all fight between agents. It returns the list of agents after the fight.
--spec eachFightsAll([agent()]) -> [agent()].
-eachFightsAll([]) -> [];
-
-eachFightsAll([H|T]) ->
-    {NewH,NewT} = oneFightsRest(H,T,[]),
-    [NewH | eachFightsAll(NewT)].
+%% -spec each_fights_all([agent()]) -> [agent()].
+%% each_fights_all([]) -> [];
+%%
+%% each_fights_all([H|T]) ->
+%%     {NewH,NewT} = one_fights_rest(H,T,[]),
+%%     [NewH | each_fights_all(NewT)].
 
 
 %% @doc The fight logic for a pair of agents. It returns a list of both agents updated after the fight.
@@ -82,11 +82,11 @@ optional_pairs([A,B|L],Acc) -> optional_pairs(L,[{A,B}|Acc]).
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-
-%% @doc Executes the doFight/1 function between agent A and every other agent from the ToFight list.
--spec oneFightsRest(Agent::agent(), ToFight::[agent()], Fought::[agent()]) -> {agent(),[agent()]}.
-oneFightsRest(Agent,[],Fought) -> {Agent,Fought};
-
-oneFightsRest(Agent,[H|ToFight],Fought) ->
-    [NewAgent,NewH]  = doFight({Agent,H}),
-    oneFightsRest(NewAgent,ToFight,[NewH|Fought]).
+%%
+%% %% @doc Executes the doFight/1 function between agent A and every other agent from the ToFight list.
+%% -spec one_fights_rest(Agent::agent(), ToFight::[agent()], Fought::[agent()]) -> {agent(),[agent()]}.
+%% one_fights_rest(Agent,[],Fought) -> {Agent,Fought};
+%%
+%% one_fights_rest(Agent,[H|ToFight],Fought) ->
+%%     [NewAgent,NewH]  = do_fight({Agent,H}),
+%%     one_fights_rest(NewAgent,ToFight,[NewH|Fought]).
