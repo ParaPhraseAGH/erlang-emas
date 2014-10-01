@@ -2,7 +2,7 @@
 %% @version 1.1
 
 -module(skel_main).
--export([start/4]).
+-export([start/3]).
 
 -include ("mas.hrl").
 
@@ -10,16 +10,16 @@
 %% API functions
 %% ====================================================================
 
--spec start(Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
-start(Time,Islands,Topology,Path) ->
-    topology:start_link(self(), Islands, Topology),
-    skel_logger:start_link(Path),
-    misc_util:seedRandom(),
-    misc_util:clearInbox(),
-    Environment = config:agent_env(),
-    InitPopulation = [lists:map(fun(A) -> {I, A} end, Environment:initial_population()) || I <- lists:seq(1, Islands)],
+-spec start(Time::pos_integer(), sim_params(), config()) -> ok.
+start(Time, SimParams, Config = #config{islands = Islands}) ->
+    topology:start_link(self(), Islands, Config#config.topology),
+    skel_logger:start_link(Config),
+    misc_util:seed_random(),
+    misc_util:clear_inbox(),
+    InitPopulation = [lists:map(fun(A) -> {I, A} end, misc_util:generate_population(SimParams, Config))
+                      || I <- lists:seq(1, Islands)],
     FlattenPopulation = lists:flatten(InitPopulation),
-    {_Time, _Result} = timer:tc(fun main/2, [FlattenPopulation, Time]),
+    {_Time, _Result} = timer:tc(fun main/4, [FlattenPopulation, Time, SimParams, Config]),
     topology:close(),
     skel_logger:close().
 %%     io:format("Total time:   ~p s~nFitness:     ~p~n", [_Time / 1000000, _Result]).
@@ -30,14 +30,14 @@ start(Time,Islands,Topology,Path) ->
 
 %% TODO add generic statistics (funstats)
 %% @doc Main program loop
--spec main([tuple()], non_neg_integer()) -> float().
-main(Population, Time) ->
-    Environment = config:agent_env(),
+-spec main([tuple()], non_neg_integer(), sim_params(), config()) -> float().
+main(Population, Time, SimParams, Config) ->
+    Environment = Config#config.agent_env,
     EndTime = misc_util:add_miliseconds(os:timestamp(), Time),
     Workers = 4,
 
     Tag = {seq, fun({Home, Agent}) ->
-                        {{Home, Environment:behaviour_function(Agent)}, Agent}
+                        {{Home, Environment:behaviour_function(Agent, SimParams)}, Agent}
                 end},
 
     Migrate = {seq, fun _Migration({{Home, migration}, Agent}) ->
@@ -56,7 +56,7 @@ main(Population, Time) ->
 
     Unpack = {seq, fun dict:to_list/1},
     Log = {seq, fun(Chunks) ->
-                        Counter = misc_util:create_new_counter(),
+                        Counter = misc_util:create_new_counter(Config),
                         Counts = misc_util:add_interactions_to_counter([{B, A} || {{_H, B}, A} <- Chunks], Counter),
                         skel_logger:report_result(fight, dict:fetch(fight, Counts)),
                         skel_logger:report_result(reproduce, dict:fetch(reproduction, Counts)),
@@ -66,7 +66,7 @@ main(Population, Time) ->
                 end},
 
     Work = {seq, fun({{Home, Behaviour}, Agents}) ->
-                         NewAgents = Environment:meeting_function({Behaviour, Agents}),
+                         NewAgents = Environment:meeting_function({Behaviour, Agents}, SimParams), %% TODO maybe proxy?
                          [{Home, A} || A <- NewAgents]
                  end },
 

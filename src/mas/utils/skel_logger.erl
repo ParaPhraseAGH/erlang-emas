@@ -14,7 +14,7 @@
          terminate/2,
          code_change/3]).
 
--record(state, {fds  = dict:new() :: dict(),
+-record(state, {fds  = dict:new() :: dict:dict(),
                 last_fitness = 0 :: number(),
                 last_population = 0 :: number(),
                 fights = 0 :: number(),
@@ -47,13 +47,13 @@ close() ->
 -spec init(term()) -> {ok,state()}.
 init([Config]) ->
     timer:send_interval(Config#config.write_interval, write),
-    Dictionary = lists:foldl(fun(Atom, Dict) ->
-                                     Filename = atom_to_list(Atom) ++ ".txt",
-                                     {ok, Descriptor} = file:open(filename:join([Config#config.log_dir, Filename]), [append, delayed_write, raw]),
-                                     dict:store(Atom, Descriptor, Dict)
-                             end, dict:new(),
-                             [fitness, population, reproduction, migration, fight, death]),
-
+%%     Dictionary = lists:foldl(fun(Atom, Dict) ->
+%%                                      Filename = atom_to_list(Atom) ++ ".txt",
+%%                                      {ok, Descriptor} = file:open(filename:join([Config#config.log_dir, Filename]), [append, delayed_write, raw]),
+%%                                      dict:store(Atom, Descriptor, Dict)
+%%                              end, dict:new(),
+%%                              [fitness, population, reproduction, migration, fight, death]),
+    Dictionary = dict:new(),
     {ok, #state{fds = Dictionary}}.
 
 
@@ -125,6 +125,6 @@ code_change(_OldVsn, State, _Extra) ->
 write(FD, Value) ->
     file:write(standard_io, io_lib:fwrite("~p\n", [Value])).
 
--spec close_files(dict()) -> list().
+-spec close_files(dict:dict()) -> list().
 close_files(Dict) ->
     [file:close(FD) || {_Key, FD} <- dict:to_list(Dict)].
