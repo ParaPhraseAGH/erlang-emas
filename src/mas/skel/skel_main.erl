@@ -55,15 +55,6 @@ main(Population, Time) ->
              fun(X) -> X end},
 
     Unpack = {seq, fun dict:to_list/1},
-
-%%         Migrate = {seq, fun Migration({{Home, migration}, Agent}) ->
-%%             {{topology:getDestination(Home), migration}, Agent};
-%%             Migration({{Home, Behaviour}, Agent}) ->
-%%                 {{Home, Behaviour}, Agent}
-%%         end},
-%%
-%%         Group = {seq, fun misc_util:groupBy/1},
-
     Log = {seq, fun(Chunks) ->
                         Counter = misc_util:create_new_counter(),
                         Counts = misc_util:add_interactions_to_counter([{B, A} || {{_H, B}, A} <- Chunks], Counter),
@@ -101,7 +92,3 @@ main(Population, Time) ->
                                          end}],
                               [Population]),
     result.
-
-%% ====================================================================
-%% Internal functions
-%% ====================================================================
