@@ -16,8 +16,8 @@ To run the project on your machine you need:
 
 First you need to clone the repository:
 
-    > git clone https://github.com/campanja/emas.git
-    > cd emas/
+    > git clone https://github.com/ParaPhraseAGH/erlang.git
+    > cd erlang/
 
     
 To build the project you can use rebar. On Linux:
