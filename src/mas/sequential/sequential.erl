@@ -14,8 +14,8 @@
 -spec start(Time::pos_integer(), sim_params(), config()) -> ok.
 start(Time, SimParams, Config = #config{islands = Islands, agent_env = Environment}) ->
     %%     io:format("{Model=sequential,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
-    misc_util:seedRandom(),
-    misc_util:clearInbox(),
+    misc_util:seed_random(),
+    misc_util:clear_inbox(),
     topology:start_link(self(), Islands, Config#config.topology),
     InitIslands = [misc_util:generate_population(SimParams, Config) || _ <- lists:seq(1, Islands)],
     logger:start_link(lists:seq(1, Islands), Config),
@@ -48,7 +48,7 @@ loop(Islands, Counters, Funstats, SimParams, Config = #config{agent_env = Enviro
         theEnd ->
             lists:max([misc_util:result(I) || I <- Islands])
     after 0 ->
-            Groups = [misc_util:groupBy([{Environment:behaviour_function(Agent, SimParams), Agent} || Agent <- I]) || I <- Islands],
+            Groups = [misc_util:group_by([{Environment:behaviour_function(Agent, SimParams), Agent} || Agent <- I]) || I <- Islands],
             Emigrants = [seq_migrate(lists:keyfind(migration, 1, Island), Nr) || {Island, Nr} <- lists:zip(Groups, lists:seq(1, length(Groups)))],
             NewGroups = [[misc_util:meeting_proxy(Activity, sequential, SimParams, Config) || Activity <- I] || I <- Groups],
             WithEmigrants = append(lists:flatten(Emigrants), NewGroups),
@@ -72,7 +72,7 @@ seq_migrate(false,_) ->
 
 seq_migrate({migration,Agents},From) ->
     Destinations = [{topology:getDestination(From),Agent} || Agent <- Agents],
-    misc_util:groupBy(Destinations).
+    misc_util:group_by(Destinations).
 
 
 -spec append({pos_integer(),[agent()]}, [list(agent())]) -> [list(agent())].
@@ -80,5 +80,5 @@ append([],Islands) ->
     Islands;
 
 append([{Destination,Immigrants}|T],Islands) ->
-    NewIslands = misc_util:mapIndex(Immigrants,Destination,Islands,fun lists:append/2),
+    NewIslands = misc_util:map_index(Immigrants,Destination,Islands,fun lists:append/2),
     append(T,NewIslands).

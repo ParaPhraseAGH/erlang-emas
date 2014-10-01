@@ -13,7 +13,7 @@
 %% @doc Generates initial data and starts the computation
 -spec start(sim_params(), config()) -> ok.
 start(SimParams, Config = #config{agent_env = Environment}) ->
-    misc_util:seedRandom(),
+    misc_util:seed_random(),
     Agents = misc_util:generate_population(SimParams, Config),
     timer:send_interval(Config#config.write_interval, write),
     loop(Agents, misc_util:create_new_counter(Config), Environment:stats(), SimParams, Config).
@@ -45,7 +45,7 @@ loop(Agents, InteractionCounter, Funstats, SimParams, Config) ->
         {finish, _Pid} ->
             ok
     after 0 ->
-            Groups = misc_util:groupBy([{Environment:behaviour_function(A, SimParams), A} || A <- Agents ]),
+            Groups = misc_util:group_by([{Environment:behaviour_function(A, SimParams), A} || A <- Agents ]),
             NewGroups = [misc_util:meeting_proxy(G, hybrid, SimParams, Config) || G <- Groups],
             NewAgents = misc_util:shuffle(lists:flatten(NewGroups)),
 

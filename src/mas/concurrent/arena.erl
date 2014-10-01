@@ -58,7 +58,7 @@ close(Pid) ->
                               {ok, State :: #state{}, timeout() | hibernate} |
                               {stop, Reason :: term()} | ignore).
 init([Supervisor, Interaction, SimParams, Config]) ->
-    misc_util:seedRandom(),
+    misc_util:seed_random(),
     Env = Config#config.agent_env,
     Funstats = Env:stats(),
     {ok, #state{supervisor = Supervisor,
@@ -147,9 +147,9 @@ code_change(_OldVsn, State, _Extra) ->
 
 -spec respond([agent()], {pid(), term()}, dict:dict(), sim_params(), config()) -> list().
 respond(Agents, Froms, Arenas, SimParams, Config) when length(Agents) >= length(Froms) ->
-    [gen_server:reply(From, Agent) || {From, Agent} <- misc_util:shortestZip(Froms, Agents)],
+    [gen_server:reply(From, Agent) || {From, Agent} <- misc_util:shortest_zip(Froms, Agents)],
     [spawn(agent, start, [Agent, Arenas, SimParams, Config]) || Agent <- lists:nthtail(length(Froms), Agents)];
 
 respond(Agents, Froms, _Arenas, _SimParams, _Config) when length(Agents) =< length(Froms) ->
-    [gen_server:reply(From, Agent) || {From, Agent} <- misc_util:shortestZip(Froms, Agents)],
+    [gen_server:reply(From, Agent) || {From, Agent} <- misc_util:shortest_zip(Froms, Agents)],
     [gen_server:reply(From, close) || From <- lists:nthtail(length(Agents), Froms)].

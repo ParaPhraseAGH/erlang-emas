@@ -13,7 +13,7 @@
 -spec start(Time::pos_integer(), sim_params(), config()) -> ok.
 start(Time, SimParams, Config = #config{islands = Islands}) ->
 %%     io:format("{Model=Concurrent,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
-    misc_util:clearInbox(),
+    misc_util:clear_inbox(),
     topology:start_link(self(), Islands, Config#config.topology),
     Supervisors = [conc_supervisor:start(SimParams, Config) || _ <- lists:seq(1,Islands)],
     logger:start_link(Supervisors, Config),

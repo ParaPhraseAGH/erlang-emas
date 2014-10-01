@@ -52,7 +52,7 @@ getDestination(X) ->
 
 -spec init(list()) -> {ok,state()}.
 init([King,IslandsNr,Topology]) ->
-    misc_util:seedRandom(),
+    misc_util:seed_random(),
     {ok, #state{n = IslandsNr, topology = Topology, king = King}}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |

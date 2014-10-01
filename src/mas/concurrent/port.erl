@@ -56,7 +56,7 @@ close(Pid) ->
 -spec init([pid()]) -> {ok,state()} |
                        {ok,state(),non_neg_integer()}.
 init([Supervisor, Config = #config{write_interval = WriteInterval}]) ->
-    misc_util:seedRandom(),
+    misc_util:seed_random(),
     timer:send_after(WriteInterval, {timer, WriteInterval}),
     Env = Config#config.agent_env,
     Funstats = Env:stats(),

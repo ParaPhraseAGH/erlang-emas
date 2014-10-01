@@ -40,7 +40,7 @@ close(Pid) ->
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
 init([SimParams, Config]) ->
-    misc_util:seedRandom(),
+    misc_util:seed_random(),
     Environment = Config#config.agent_env,
     Interactions = Environment:behaviours(),
     ArenaList = [{Interaction, arena:start_link(self(), Interaction, SimParams, Config)} || Interaction <- Interactions],

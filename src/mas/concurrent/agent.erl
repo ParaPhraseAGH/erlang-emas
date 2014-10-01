@@ -14,7 +14,7 @@
 %% @doc Initializes given agent on arenas given as parameter
 -spec start(agent(), dict:dict(string(), pid()), sim_params(), config()) -> ok.
 start(Agent, Arenas, SimParams, Config) ->
-    misc_util:seedRandom(),
+    misc_util:seed_random(),
     loop(Agent, Arenas, SimParams, Config).
 
 %% ====================================================================
