@@ -6,7 +6,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/4,  sendAgent/1]).
+-export([start/3,  sendAgent/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -19,10 +19,10 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start(Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
-start(Time,Islands,Topology,Path) ->
+-spec start(Time::pos_integer(), sim_params(), config()) -> ok.
+start(Time, SimParams, Config) ->
 %%     io:format("{Model=Hybrid,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
-    {ok, _} = gen_server:start({local,?MODULE}, ?MODULE, [Time,Islands,Topology,Path], []),
+    {ok, _} = gen_server:start({local,?MODULE}, ?MODULE, [Time, SimParams, Config], []),
     timer:sleep(Time).
 
 
@@ -36,11 +36,11 @@ sendAgent(Agent) ->
 %% ====================================================================
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
-init([Time,Islands,Topology,Path]) ->
+init([Time, SimParams, Config = #config{islands = Islands}]) ->
     timer:send_after(Time,theEnd),
-    Pids = [spawn_link(hybrid_island,start,[]) || _ <- lists:seq(1,Islands)],
-    topology:start_link(self(),Islands,Topology),
-    logger:start_link(Pids,Path),
+    Pids = [spawn_link(hybrid_island, start, [SimParams, Config]) || _ <- lists:seq(1, Islands)],
+    topology:start_link(self(), Islands, Config#config.topology),
+    logger:start_link(Pids, Config),
     {ok,Pids}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
