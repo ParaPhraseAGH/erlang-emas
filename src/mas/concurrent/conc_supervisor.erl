@@ -4,8 +4,10 @@
 -module(conc_supervisor).
 -behaviour(gen_server).
 
+-include("mas.hrl").
+
 %% API
--export([start/0, go/1, close/1]).
+-export([start/2, go/1, close/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -13,9 +15,9 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start() -> pid().
-start() ->
-    {ok,Pid} = gen_server:start(?MODULE,[],[]),
+-spec start(sim_params(), config()) -> pid().
+start(SimParams, Config) ->
+    {ok,Pid} = gen_server:start(?MODULE, [SimParams, Config], []),
     Pid.
 
 -spec go(pid()) -> ok.
@@ -24,27 +26,28 @@ go(Pid) ->
 
 -spec close(pid()) -> ok.
 close(Pid) ->
-    gen_server:call(Pid,close,infinity).
+    gen_server:call(Pid, close, infinity).
 
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
 -record(state, {arenas  = dict:new() :: dict:dict(),
-                diversity :: pid()}).
+                sim_params :: sim_params(),
+                config :: config()}).
 -type state() :: #state{}.
 
 
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
-init([]) ->
+init([SimParams, Config]) ->
     misc_util:seedRandom(),
-    Environment = config:agent_env(),
+    Environment = Config#config.agent_env,
     Interactions = Environment:behaviours(),
-    ArenaList = [{Interaction,arena:start_link(self(),Interaction)} || Interaction <- Interactions],
+    ArenaList = [{Interaction, arena:start_link(self(), Interaction, SimParams, Config)} || Interaction <- Interactions],
     Arenas = dict:from_list(ArenaList),
-    [ok = arena:giveArenas(Pid,Arenas) || {_Interaction,Pid} <- ArenaList],
+    [ok = arena:giveArenas(Pid, Arenas) || {_Interaction, Pid} <- ArenaList],
     io_util:printArenas(ArenaList),
-    {ok,#state{arenas = Arenas}}.
+    {ok,#state{arenas = Arenas, config = Config, sim_params = SimParams}}.
 
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -61,12 +64,10 @@ handle_call(close,_From,State) ->
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
 
-handle_cast(go, State) ->
-    Environment = config:agent_env(),
-    Agents = Environment:initial_population(),
-    _InitPopulation = [{spawn(agent,start,[A,State#state.arenas]),A} || A <- Agents],
-%%     diversity:initPopulation(State#state.diversity,InitPopulation),
-    {noreply,State}.
+handle_cast(go, State = #state{config = Config, sim_params = SimParams}) ->
+    Agents = misc_util:generate_population(SimParams, Config),
+    _InitPopulation = [spawn(agent, start, [A, State#state.arenas, SimParams, Config]) || A <- Agents],
+    {noreply, State}.
 
 
 -spec handle_info(term(),state()) -> {noreply,state()} |

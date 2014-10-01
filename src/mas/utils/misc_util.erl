@@ -4,8 +4,8 @@
 
 -module(misc_util).
 -export([groupBy/1, shuffle/1, clearInbox/0, result/1, find/2, averageNumber/2, mapIndex/4, shortestZip/2,
-    count_funstats/2, seedRandom/0, logNow/1, meeting_proxy/4, create_new_counter/1, add_interactions_to_counter/2,
-    determineStats/0, add_miliseconds/2, generate_population/2]).
+    count_funstats/2, seedRandom/0, log_now/2, meeting_proxy/4, create_new_counter/1, add_interactions_to_counter/2,
+    add_miliseconds/2, generate_population/2]).
 
 -include ("mas.hrl").
 
@@ -49,13 +49,6 @@ meeting_proxy(Group, _, SimParams, Config) ->
     Environment = Config#config.agent_env,
     Environment:meeting_function(Group, SimParams).
 
-
--spec determineStats() -> [atom()].
-determineStats() ->
-    Environment = config:agent_env(),
-    Environment:behaviours().
-
-
 %% @doc Computes an average number of elements that are chosen with given probability
 -spec averageNumber(float(),[term()]) -> integer().
 averageNumber(Probability,List) ->
@@ -70,15 +63,15 @@ averageNumber(Probability,List) ->
     end.
 
 
--spec logNow(erlang:timestamp()) -> {yes,erlang:timestamp()} | notyet.
-logNow(LastLog) ->
+-spec log_now(erlang:timestamp(), config()) -> {yes,erlang:timestamp()} | notyet.
+log_now(LastLog, #config{write_interval = WriteInterval}) ->
     Now = os:timestamp(),
-    Diff = timer:now_diff(Now,LastLog),
-    IntervalInMicros = config:writeInterval() * 1000,
+    Diff = timer:now_diff(Now, LastLog),
+    IntervalInMicros = WriteInterval * 1000,
     if
         Diff >= IntervalInMicros ->
-            {Mega,Sec,Micro} = LastLog,
-            {yes,{Mega,Sec+1,Micro}};
+            {Mega, Sec, Micro} = LastLog,
+            {yes,{Mega, Sec + 1, Micro}};
         true ->
             notyet
     end.

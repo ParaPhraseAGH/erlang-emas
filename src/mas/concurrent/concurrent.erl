@@ -3,19 +3,20 @@
 %% @doc This is the main module of concurrent model. It handles starting the system and cleaning after work
 
 -module(concurrent).
--export([start/4]).
+-export([start/3]).
+-include("mas.hrl").
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 
--spec start(Time::pos_integer(), Islands::pos_integer(), Topology::topology:topology(), Path::string()) -> ok.
-start(Time,Islands,Topology,Path) ->
+-spec start(Time::pos_integer(), sim_params(), config()) -> ok.
+start(Time, SimParams, Config = #config{islands = Islands}) ->
 %%     io:format("{Model=Concurrent,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
     misc_util:clearInbox(),
-    topology:start_link(self(),Islands,Topology),
-    Supervisors = [conc_supervisor:start() || _ <- lists:seq(1,Islands)],
-    logger:start_link(Supervisors, Path),
+    topology:start_link(self(), Islands, Config#config.topology),
+    Supervisors = [conc_supervisor:start(SimParams, Config) || _ <- lists:seq(1,Islands)],
+    logger:start_link(Supervisors, Config),
     receive
         ready ->
             trigger(Supervisors)
