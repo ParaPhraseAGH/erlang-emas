@@ -9,20 +9,10 @@
 start(Module, Model, Time, SimParams, Options) ->
     {ok, ConfigFromFile} = file:consult("etc/mas.config"),
     ConfigWithEnv = [{agent_env,Module}|ConfigFromFile],
-    OverwrittenConfig = overwrite(Options, ConfigWithEnv),
+    OverwrittenConfig = misc_util:overwrite_options(Options, ConfigWithEnv),
     ConfigRecord = proplist_to_record(OverwrittenConfig),
     Model:start(Time, SimParams, ConfigRecord),
     ok.
-
-
-%% @doc Overwrites the configuration parameters read from a file
-%%      with the options with which the application was run
--spec overwrite([tuple()],[tuple()]) -> [tuple()].
-overwrite([], Config) ->
-    Config;
-
-overwrite([{Key, Val}|OtherOptions], Config) ->
-    overwrite(OtherOptions, lists:keyreplace(Key, 1, Config, {Key, Val})).
 
 
 %% @doc Transform a proplist with config properties to a record

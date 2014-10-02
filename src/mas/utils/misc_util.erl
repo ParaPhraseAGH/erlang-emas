@@ -5,7 +5,7 @@
 -module(misc_util).
 -export([group_by/1, shuffle/1, clear_inbox/0, result/1, find/2, average_number/2, map_index/4, shortest_zip/2,
     count_funstats/2, seed_random/0, log_now/2, meeting_proxy/4, create_new_counter/1, add_interactions_to_counter/2,
-    add_miliseconds/2, generate_population/2]).
+    add_miliseconds/2, generate_population/2, overwrite_options/2]).
 
 -include ("mas.hrl").
 
@@ -49,6 +49,7 @@ meeting_proxy(Group, _, SimParams, Config) ->
     Environment = Config#config.agent_env,
     Environment:meeting_function(Group, SimParams).
 
+
 %% @doc Computes an average number of elements that are chosen with given probability
 -spec average_number(float(),[term()]) -> integer().
 average_number(Probability,List) ->
@@ -90,6 +91,17 @@ add_interactions_to_counter(Groups, Counter) ->
                         dict:update_counter(Activity, length(Value), TmpCounter)
                 end,Counter, Groups).
 
+
+%% @doc Overwrites the parameters in a proplist
+%%      with the keyvals from another proplist
+-spec overwrite_options([tuple()],[tuple()]) -> [tuple()].
+overwrite_options([], Overwritten) ->
+    Overwritten;
+
+overwrite_options([{Key, Val}|OtherOptions], ToBeOverwritten) ->
+    overwrite_options(OtherOptions, lists:keyreplace(Key, 1, ToBeOverwritten, {Key, Val})).
+
+
 -spec count_funstats([agent()], [funstat()]) -> [funstat()].
 count_funstats(_,[]) ->
     [];
@@ -99,6 +111,7 @@ count_funstats(Agents, [{Stat, MapFun, ReduceFun, OldAcc}|T]) ->
         OldAcc,
         [MapFun(Agent) || Agent <- Agents]),
     [{Stat, MapFun, ReduceFun, NewAcc} | count_funstats(Agents,T)].
+
 
 -spec add_miliseconds({integer(),integer(),integer()},integer()) -> {integer(),integer(),integer()}.
 add_miliseconds({MegaSec, Sec, Milisec}, Time) ->

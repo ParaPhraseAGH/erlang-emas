@@ -1,7 +1,7 @@
 -module (emas).
 -behaviour(agent_env).
 
--export ([starts/1, start/2, start/3, initial_agent/1, behaviour_function/2, behaviours/0, meeting_function/2, stats/0]).
+-export ([starts/1, start/2, start/3, start/4, initial_agent/1, behaviour_function/2, behaviours/0, meeting_function/2, stats/0]).
 
 -include ("mas.hrl").
 
@@ -11,12 +11,19 @@
 
 -spec start(model(),pos_integer()) -> ok.
 start(Model, Time) ->
-    mas:start(?MODULE, Model, Time, load_params(), []).
+    mas:start(?MODULE, Model, Time, proplist_to_record(load_params()), []).
 
 
 -spec start(model(),pos_integer(),[tuple()]) -> ok.
-start(Model, Time, Options) ->
-    mas:start(?MODULE, Model, Time, load_params(), Options).
+start(Model, Time, SimParamOptions) ->
+    SimParamsUpdated = misc_util:overwrite_options(SimParamOptions, load_params()),
+    mas:start(?MODULE, Model, Time, proplist_to_record(SimParamsUpdated), []).
+
+
+-spec start(model(),pos_integer(),[tuple()],[tuple()]) -> ok.
+start(Model, Time, SimParamOptions, ConfigOptions) ->
+    SimParamsUpdated = misc_util:overwrite_options(SimParamOptions, load_params()),
+    mas:start(?MODULE, Model, Time, proplist_to_record(SimParamsUpdated), ConfigOptions).
 
 
 -spec starts(list()) -> ok.
@@ -83,7 +90,7 @@ stats() ->
 -spec load_params() -> sim_params().
 load_params() ->
     {ok, ParamsFromFile} = file:consult("etc/emas.config"),
-    proplist_to_record(ParamsFromFile).
+ParamsFromFile.
 
 %% @doc Transform a proplist with simulation properties to a record
 -spec proplist_to_record([tuple()]) -> sim_params().
