@@ -55,6 +55,7 @@ main(Population, Time, SimParams, Config) ->
              fun(X) -> X end},
 
     Unpack = {seq, fun dict:to_list/1},
+
     Log = {seq, fun(Chunks) ->
                         Counter = misc_util:create_new_counter(Config),
                         Counts = misc_util:add_interactions_to_counter([{B, A} || {{_H, B}, A} <- Chunks], Counter),
@@ -66,7 +67,7 @@ main(Population, Time, SimParams, Config) ->
                 end},
 
     Work = {seq, fun({{Home, Behaviour}, Agents}) ->
-                         NewAgents = Environment:meeting_function({Behaviour, Agents}, SimParams), %% TODO maybe proxy?
+                         NewAgents = misc_util:meeting_proxy({Behaviour, Agents}, skel, SimParams, Config),
                          [{Home, A} || A <- NewAgents]
                  end },
 

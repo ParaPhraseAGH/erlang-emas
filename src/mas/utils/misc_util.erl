@@ -4,8 +4,8 @@
 
 -module(misc_util).
 -export([group_by/1, shuffle/1, clear_inbox/0, result/1, find/2, average_number/2, map_index/4, shortest_zip/2,
-    count_funstats/2, seed_random/0, log_now/2, meeting_proxy/4, create_new_counter/1, add_interactions_to_counter/2,
-    add_miliseconds/2, generate_population/2, overwrite_options/2]).
+         count_funstats/2, seed_random/0, log_now/2, meeting_proxy/4, create_new_counter/1, add_interactions_to_counter/2,
+         add_miliseconds/2, generate_population/2, overwrite_options/2]).
 
 -include ("mas.hrl").
 
@@ -44,6 +44,9 @@ meeting_proxy({migration, Agents}, hybrid, _SimParams, _Config) ->
 
 meeting_proxy({migration, _Agents}, concurrent, _SimParams, _Config) ->
     [];
+
+meeting_proxy({migration, Agents}, skel, _SimParams, _Config) ->
+    Agents;
 
 meeting_proxy(Group, _, SimParams, Config) ->
     Environment = Config#config.agent_env,
@@ -108,16 +111,16 @@ count_funstats(_,[]) ->
 
 count_funstats(Agents, [{Stat, MapFun, ReduceFun, OldAcc}|T]) ->
     NewAcc = lists:foldl(ReduceFun,
-        OldAcc,
-        [MapFun(Agent) || Agent <- Agents]),
+                         OldAcc,
+                         [MapFun(Agent) || Agent <- Agents]),
     [{Stat, MapFun, ReduceFun, NewAcc} | count_funstats(Agents,T)].
 
 
 -spec add_miliseconds({integer(),integer(),integer()},integer()) -> {integer(),integer(),integer()}.
 add_miliseconds({MegaSec, Sec, Milisec}, Time) ->
     {MegaSec,
-        Sec + (Time div 1000),
-        Milisec + (Time rem 1000)}.
+     Sec + (Time div 1000),
+     Milisec + (Time rem 1000)}.
 
 %% @doc Maps function F(Elem, A) -> A' to an element A of List with Index. Returns updated list
 -spec map_index(Elem::term(), Index::integer(), List::[term()], F::fun()) -> [term()].

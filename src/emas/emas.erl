@@ -90,7 +90,7 @@ stats() ->
 -spec load_params() -> sim_params().
 load_params() ->
     {ok, ParamsFromFile} = file:consult("etc/emas.config"),
-ParamsFromFile.
+    ParamsFromFile.
 
 %% @doc Transform a proplist with simulation properties to a record
 -spec proplist_to_record([tuple()]) -> sim_params().
