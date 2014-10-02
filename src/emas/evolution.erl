@@ -2,35 +2,13 @@
 %% @version 1.0
 %% @doc A module with evolutionary functions which transform one generation into another, including migrations.
 -module(evolution).
--export([send_to_work/2, do_reproduce/2, do_fight/2, optional_pairs/2]).
+-export([do_reproduce/2, do_fight/2, optional_pairs/2]).
 
 -include ("emas.hrl").
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
-%% @doc This function receives an atom representing the type of the agents and a list of agents. It executes
-%% the appropriate action on every agent according to its type and returns the agregated results.
--spec send_to_work({agent_behaviour(),[agent()]}, sim_params()) -> [agent()].
-send_to_work({death, _}, SimParams) -> %% TODO change this function
-    [];
-
-send_to_work({fight, Agents}, SimParams) ->
-    lists:flatmap(fun do_fight/2, optional_pairs(Agents,[]));
-
-send_to_work({reproduction, Agents}, SimParams) ->
-    lists:flatmap(fun do_reproduce/2, optional_pairs(Agents,[]));
-
-send_to_work({migration,[]}, _SimParams) ->
-    [];
-
-send_to_work({migration,[Agent|T]}, SimParams) when tuple_size(Agent) == 3 ->
-    hybrid:sendAgent(Agent),
-    send_to_work({migration,T}, SimParams);
-
-send_to_work({migration,[{From,Agent}|T]}, SimParams) ->
-    [{topology:getDestination(From),Agent} | send_to_work({migration,T}, SimParams)].
-
 
 %% @doc This function implements an all-vs-all fight between agents. It returns the list of agents after the fight.
 %% -spec each_fights_all([agent()]) -> [agent()].

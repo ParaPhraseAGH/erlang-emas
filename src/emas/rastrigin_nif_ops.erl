@@ -30,5 +30,7 @@ mutation(_Solution, _Range, _Rate) ->
 recombination(_Solution1, _Solution2) ->
     exit(nif_not_loaded).
 
+
+-spec mutation(solution(), sim_params()) -> solution().
 mutation(_Solution, SimParams) ->
     mutation(_Solution, SimParams#sim_params.mutation_range, SimParams#sim_params.mutation_rate).
