@@ -1,7 +1,9 @@
 /.project
+.rebar
 /.settings
 *.so
 *.o
+deps
 
 .idea
 *.iml

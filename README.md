@@ -9,7 +9,7 @@ By using the massive and efficient parallelism enabled by ParaPhrase technologie
 
 To run the project on your machine you need:
 
-* [Erlang](http://www.erlang.org/)
+* [Erlang (R17 or later)](http://www.erlang.org/)
 * [Git](http://git-scm.com/)
 
 ## How to build the project
@@ -19,20 +19,18 @@ First you need to clone the repository:
     > git clone https://github.com/ParaPhraseAGH/erlang.git
     > cd erlang/
 
-After the project is cloned you need to run:
-
-    > git submodule init
-    > git submodule update
     
-This will download the latest version of the project's submodules. To build the project you can use rebar. On Linux:
+To build the project you can use rebar. On Linux:
 
+    > ./rebar get-deps
     > ./rebar compile
     
 On Windows:
 
+    > rebar.cmd get-deps
     > rebar.cmd compile
     
-or alternatively (both Windows and Linux):
+or alternatively (both Windows and Linux, be sure to get-deps first):
 
     > erl -make
     
@@ -42,7 +40,7 @@ which uses the local Emakefile.
 
 To start a VM where you can run the application, first make sure that you are in the main project's folder:
 
-    > cd erlang/
+    > cd emas/
     
 Then you can run:
 
