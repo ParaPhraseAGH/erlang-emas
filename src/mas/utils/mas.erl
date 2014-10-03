@@ -5,6 +5,8 @@
 
 -include ("mas.hrl").
 
+-define(LOAD(Prop, Dict), Prop = dict:fetch(Prop,Dict)).
+
 -spec start(atom(), model(), pos_integer(), sim_params(), [tuple()]) -> ok.
 start(Module, Model, Time, SimParams, Options) ->
     {ok, ConfigFromFile} = file:consult("etc/mas.config"),
@@ -19,10 +21,10 @@ start(Module, Model, Time, SimParams, Options) ->
 -spec proplist_to_record([tuple()]) -> config().
 proplist_to_record(Proplist) ->
     Dict = dict:from_list(Proplist),
-    #config{agent_env = dict:fetch(agent_env,Dict),
-            topology = dict:fetch(topology,Dict),
-            log_dir = dict:fetch(log_dir,Dict),
-            islands = dict:fetch(islands,Dict),
-            population_size = dict:fetch(population_size,Dict),
-            write_interval = dict:fetch(write_interval,Dict),
-            arena_timeout = dict:fetch(arena_timeout,Dict)}.
+    #config{?LOAD(agent_env, Dict),
+            ?LOAD(topology, Dict),
+            ?LOAD(log_dir, Dict),
+            ?LOAD(islands, Dict),
+            ?LOAD(population_size, Dict),
+            ?LOAD(write_interval, Dict),
+            ?LOAD(arena_timeout, Dict)}.

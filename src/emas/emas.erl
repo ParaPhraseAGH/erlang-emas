@@ -5,6 +5,8 @@
 
 -include ("mas.hrl").
 
+-define(LOAD(Prop, Dict), Prop = dict:fetch(Prop,Dict)).
+
 %% ====================================================================
 %% Callbacks
 %% ====================================================================
@@ -100,16 +102,16 @@ load_params() ->
 -spec proplist_to_record([tuple()]) -> sim_params().
 proplist_to_record(Proplist) ->
     Dict = dict:from_list(Proplist),
-    #sim_params{genetic_ops = dict:fetch(genetic_ops,Dict),
-                problem_size = dict:fetch(problem_size,Dict),
-                monitor_diversity = dict:fetch(monitor_diversity,Dict),
-                initial_energy = dict:fetch(initial_energy,Dict),
-                reproduction_threshold = dict:fetch(reproduction_threshold,Dict),
-                reproduction_transfer = dict:fetch(reproduction_transfer,Dict),
-                fight_transfer = dict:fetch(fight_transfer,Dict),
-                mutation_rate = dict:fetch(mutation_rate,Dict),
-                mutation_range = dict:fetch(mutation_range,Dict),
-                mutation_chance = dict:fetch(mutation_chance,Dict),
-                migration_probability = dict:fetch(migration_probability,Dict),
-                recombination_chance = dict:fetch(recombination_chance,Dict),
-                fight_number = dict:fetch(fight_number,Dict)}.
+    #sim_params{?LOAD(genetic_ops, Dict),
+                ?LOAD(problem_size, Dict),
+                ?LOAD(monitor_diversity, Dict),
+                ?LOAD(initial_energy, Dict),
+                ?LOAD(reproduction_threshold, Dict),
+                ?LOAD(reproduction_transfer, Dict),
+                ?LOAD(fight_transfer, Dict),
+                ?LOAD(mutation_rate, Dict),
+                ?LOAD(mutation_range, Dict),
+                ?LOAD(mutation_chance, Dict),
+                ?LOAD(migration_probability, Dict),
+                ?LOAD(recombination_chance, Dict),
+                ?LOAD(fight_number, Dict)}.
