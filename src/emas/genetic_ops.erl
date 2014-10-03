@@ -5,10 +5,10 @@
 
 -include ("emas.hrl").
 
--callback solution(ProblemSize :: integer()) -> solution().
+-callback solution(sim_params()) -> solution().
 
--callback evaluation(solution()) -> float(). 
+-callback evaluation(solution(), sim_params()) -> float().
 
 -callback mutation(solution(), sim_params()) -> solution().
 
--callback recombination(solution(), solution()) -> {solution(), solution()}.
+-callback recombination(solution(), solution(), sim_params()) -> {solution(), solution()}.
