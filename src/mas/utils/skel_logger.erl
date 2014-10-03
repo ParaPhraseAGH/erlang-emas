@@ -1,6 +1,8 @@
 -module(skel_logger).
 -behaviour(gen_server).
 
+-include ("mas.hrl").
+
 %% API
 -export([start_link/1, report_result/2, close/0]).
 
@@ -12,7 +14,7 @@
          terminate/2,
          code_change/3]).
 
--record(state, {fds  = dict:new() :: dict(),
+-record(state, {fds  = dict:new() :: dict:dict(),
                 last_fitness = 0 :: number(),
                 last_population = 0 :: number(),
                 fights = 0 :: number(),
@@ -26,12 +28,12 @@
 %%% API
 %%%===================================================================
 
--spec start_link(string()) -> {ok, pid()}.
-start_link(Path) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [Path], []).
+-spec start_link(config()) -> {ok, pid()}.
+start_link(Cf) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [Cf], []).
 
 -spec report_result(atom(),term()) -> ok.
-report_result(Stat,Value) ->
+report_result(Stat, Value) ->
     gen_server:cast(?MODULE, {Stat, Value}).
 
 -spec close() -> ok.
@@ -43,15 +45,15 @@ close() ->
 %%%===================================================================
 
 -spec init(term()) -> {ok,state()}.
-init([Path]) ->
-    timer:send_interval(config:writeInterval(), write),
-    Dictionary = lists:foldl(fun(Atom, Dict) ->
-                                     Filename = atom_to_list(Atom) ++ ".txt",
-                                     {ok, Descriptor} = file:open(filename:join([Path, Filename]), [append, delayed_write, raw]),
-                                     dict:store(Atom, Descriptor, Dict)
-                             end, dict:new(),
-                             [fitness, population, reproduction, migration, fight, death]),
-
+init([Cf]) ->
+    timer:send_interval(Cf#config.write_interval, write),
+%%     Dictionary = lists:foldl(fun(Atom, Dict) ->
+%%                                      Filename = atom_to_list(Atom) ++ ".txt",
+%%                                      {ok, Descriptor} = file:open(filename:join([Cf#config.log_dir, Filename]), [append, delayed_write, raw]),
+%%                                      dict:store(Atom, Descriptor, Dict)
+%%                              end, dict:new(),
+%%                              [fitness, population, reproduction, migration, fight, death]),
+    Dictionary = dict:new(),
     {ok, #state{fds = Dictionary}}.
 
 
@@ -68,27 +70,27 @@ handle_call(_Request, _From, State) ->
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_cast({fitness, Value}, State) ->
-    {noreply, State#state{last_fitness = Value}};
+handle_cast({fitness, Value}, St) ->
+    {noreply, St#state{last_fitness = Value}};
 
-handle_cast({population, Value}, State) ->
-    {noreply, State#state{last_population = Value}};
+handle_cast({population, Value}, St) ->
+    {noreply, St#state{last_population = Value}};
 
-handle_cast({fight, Value}, State) ->
-    OldValue = State#state.fights,
-    {noreply, State#state{fights = Value + OldValue}};
+handle_cast({fight, Value}, St) ->
+    OldValue = St#state.fights,
+    {noreply, St#state{fights = Value + OldValue}};
 
-handle_cast({reproduce, Value}, State) ->
-    OldValue = State#state.reproductions,
-    {noreply, State#state{reproductions = Value + OldValue}};
+handle_cast({reproduce, Value}, St) ->
+    OldValue = St#state.reproductions,
+    {noreply, St#state{reproductions = Value + OldValue}};
 
-handle_cast({death, Value}, State) ->
-    OldValue = State#state.deaths,
-    {noreply, State#state{deaths = Value + OldValue}};
+handle_cast({death, Value}, St) ->
+    OldValue = St#state.deaths,
+    {noreply, St#state{deaths = Value + OldValue}};
 
-handle_cast({migration, Value}, State) ->
-    OldValue = State#state.migrations,
-    {noreply, State#state{migrations = Value + OldValue}};
+handle_cast({migration, Value}, St) ->
+    OldValue = St#state.migrations,
+    {noreply, St#state{migrations = Value + OldValue}};
 
 handle_cast(close, State) ->
     {stop, normal, State}.
@@ -98,18 +100,18 @@ handle_cast(close, State) ->
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_info(write, State) ->
-    file:write(standard_io, io_lib:fwrite("~p ~p\n", [fitness, State#state.last_fitness])),
-    file:write(standard_io, io_lib:fwrite("~p ~p\n", [population, State#state.last_population])),
-    file:write(standard_io, io_lib:fwrite("~p ~p\n", [death, State#state.deaths])),
-    file:write(standard_io, io_lib:fwrite("~p ~p\n", [reproduction, State#state.reproductions])),
-    file:write(standard_io, io_lib:fwrite("~p ~p\n", [fight, State#state.fights])),
-    file:write(standard_io, io_lib:fwrite("~p ~p\n", [migration, State#state.migrations])),
-    {noreply, State#state{fights = 0, deaths = 0, reproductions = 0, migrations = 0}}.
+handle_info(write, St) ->
+    file:write(standard_io, io_lib:fwrite("~p ~p\n", [fitness, St#state.last_fitness])),
+    file:write(standard_io, io_lib:fwrite("~p ~p\n", [population, St#state.last_population])),
+    file:write(standard_io, io_lib:fwrite("~p ~p\n", [death, St#state.deaths])),
+    file:write(standard_io, io_lib:fwrite("~p ~p\n", [reproduction, St#state.reproductions])),
+    file:write(standard_io, io_lib:fwrite("~p ~p\n", [fight, St#state.fights])),
+    file:write(standard_io, io_lib:fwrite("~p ~p\n", [migration, St#state.migrations])),
+    {noreply, St#state{fights = 0, deaths = 0, reproductions = 0, migrations = 0}}.
 
 -spec terminate(term(),state()) -> no_return().
-terminate(_Reason, State) ->
-    close_files(State#state.fds).
+terminate(_Reason, St) ->
+    close_files(St#state.fds).
 
 -spec code_change(term(),state(),term()) -> {ok, state()}.
 code_change(_OldVsn, State, _Extra) ->
@@ -123,6 +125,6 @@ code_change(_OldVsn, State, _Extra) ->
 write(FD, Value) ->
     file:write(standard_io, io_lib:fwrite("~p\n", [Value])).
 
--spec close_files(dict()) -> list().
+-spec close_files(dict:dict()) -> list().
 close_files(Dict) ->
     [file:close(FD) || {_Key, FD} <- dict:to_list(Dict)].

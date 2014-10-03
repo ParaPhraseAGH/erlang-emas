@@ -4,10 +4,10 @@
 
 -include ("mas.hrl").
 
--callback initial_population() -> [agent()].
+-callback initial_agent(sim_params()) -> [agent()].
 
--callback behaviour_function(agent()) -> agent_behaviour().
+-callback behaviour_function(agent(), sim_params()) -> agent_behaviour().
 
 -callback behaviours() -> [agent_behaviour()].
 
--callback meeting_function({agent_behaviour(), [agent()]}) -> [agent()].
+-callback meeting_function({agent_behaviour(), [agent()]}, sim_params()) -> [agent()].

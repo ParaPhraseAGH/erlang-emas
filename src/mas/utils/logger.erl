@@ -12,14 +12,14 @@
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--define(STATS, [fitness, population, death, fight, reproduction, migration]).
+%-define(STATS, [fitness, population, death, fight, reproduction, migration]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
--spec start_link(list(), string()) -> {ok, pid()}.
-start_link(Keys, Path) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [Keys, Path], []).
+-spec start_link(list(), config()) -> {ok, pid()}.
+start_link(Keys, Config) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [Keys, Config], []).
 
 -spec log_funstat(term(),atom(),term()) -> ok.
 log_funstat(Key,Stat,Value) ->
@@ -42,17 +42,22 @@ close() ->
                 funstats = [] :: [tuple()],
                 counters = dict:new() :: dict:dict(),
                 supervisor_from :: {pid(), term()},
+                config :: config(),
                 timeout = infinity :: infinity | non_neg_integer()}).
 -type state() :: #state{}.
 
 -spec init(term()) -> {ok,state()}.
-init([Keys, Path]) ->
+init([Keys, Cf]) ->
     self() ! delayTimerStart,
-    Env = config:agent_env(),
+    Env = Cf#config.agent_env,
     Funstats = Env:stats(),
     Stats = Env:behaviours() ++ [Name || {Name, _MapFun, _ReduceFun, _InitVal} <- Funstats],
-    Dict = prepareDictionary(Keys, dict:new(), Path, Stats),
-    {ok, #state{fds = Dict, funstats = Funstats, counters = createCounter(Keys), allstats = Stats}, infinity}.
+    Dict = prepareDictionary(Keys, dict:new(), Cf#config.log_dir, Stats),
+    {ok, #state{fds = Dict,
+                funstats = Funstats,
+                counters = create_counter(Keys, Cf),
+                config = Cf,
+                allstats = Stats}, infinity}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
                                                     {reply,term(),state(),hibernate | infinity | non_neg_integer()} |
@@ -60,48 +65,48 @@ init([Keys, Path]) ->
                                                     {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
-handle_call(close, From, State) ->
-    Timeout = trunc(config:writeInterval() * 0.8),
-    {noreply, State#state{timeout = Timeout, supervisor_from = From}, Timeout}.
+handle_call(close, From, St) ->
+    Timeout = trunc(St#state.config#config.write_interval * 0.8),
+    {noreply, St#state{timeout = Timeout, supervisor_from = From}, Timeout}.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_cast({funstat, Key, Stat, Value}, State) ->
-    IslandDict = dict:fetch(Key,State#state.counters),
-    OldVal = dict:fetch(Stat,IslandDict),
-    {Stat, _Map, Reduce, _InitVal} = lists:keyfind(Stat, 1, State#state.funstats),
+handle_cast({funstat, Key, Stat, Value}, St) ->
+    IslandDict = dict:fetch(Key, St#state.counters),
+    OldVal = dict:fetch(Stat, IslandDict),
+    {Stat, _Map, Reduce, _InitVal} = lists:keyfind(Stat, 1, St#state.funstats),
     NewVal = Reduce(OldVal, Value),
     NewIslandDict = dict:store(Stat, NewVal, IslandDict),
-    {noreply, State#state{counters = dict:store(Key,NewIslandDict,State#state.counters)}, State#state.timeout};
+    {noreply, St#state{counters = dict:store(Key,NewIslandDict,St#state.counters)}, St#state.timeout};
 
-handle_cast({countstat, Key, Stat, Value}, State) ->
-    IslandDict = dict:fetch(Key, State#state.counters),
+handle_cast({countstat, Key, Stat, Value}, St) ->
+    IslandDict = dict:fetch(Key, St#state.counters),
     DictUpdated = dict:update_counter(Stat, Value, IslandDict),
-    {noreply,State#state{counters = dict:store(Key, DictUpdated, State#state.counters)}, State#state.timeout}.
+    {noreply,St#state{counters = dict:store(Key, DictUpdated, St#state.counters)}, St#state.timeout}.
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_info(timer, State = #state{fds = FDs, counters = Counters, funstats = Funstats}) ->
+handle_info(timer, St = #state{fds = FDs, counters = Counters, funstats = Funstats}) ->
     NewCounters = dict:map(fun(Key, CounterDict) ->
-                                    FDDict = dict:fetch(Key, FDs),
-                                    logIsland(Key, dict:to_list(FDDict), CounterDict, Funstats)
-                            end, Counters),
-    {noreply, State#state{counters = NewCounters}, State#state.timeout};
+                                   FDDict = dict:fetch(Key, FDs),
+                                   logIsland(Key, dict:to_list(FDDict), CounterDict, Funstats)
+                           end, Counters),
+    {noreply, St#state{counters = NewCounters}, St#state.timeout};
 
-handle_info(delayTimerStart, State) ->
+handle_info(delayTimerStart, St) ->
     timer:sleep(700),
-    timer:send_interval(config:writeInterval(),timer),
-    {noreply, State,State#state.timeout};
+    timer:send_interval(St#state.config#config.write_interval, timer),
+    {noreply, St, St#state.timeout};
 
-handle_info(timeout, State) ->
-    gen_server:reply(State#state.supervisor_from,ok),
-    {stop, normal, State}.
+handle_info(timeout, St) ->
+    gen_server:reply(St#state.supervisor_from,ok),
+    {stop, normal, St}.
 
 -spec terminate(term(),state()) -> no_return().
-terminate(_Reason, State) ->
-    closeFiles(State#state.fds).
+terminate(_Reason, St) ->
+    closeFiles(St#state.fds).
 
 -spec code_change(term(),state(),term()) -> {ok, state()}.
 code_change(_OldVsn, State, _Extra) ->
@@ -149,14 +154,14 @@ createFDs(Path, InitDict, Files) ->
                 end, InitDict, Files).
 
 
--spec createCounter(list()) -> dict:dict().
-createCounter(Keys) ->
-    Environment = config:agent_env(),
+-spec create_counter(list(), config()) -> dict:dict().
+create_counter(Keys, Cf) ->
+    Environment = Cf#config.agent_env,
     Interactions = [{Interaction, 0} || Interaction <- Environment:behaviours()],
     Stats = [{Stat, InitValue} || {Stat, _MapFun, _ReduceFun, InitValue} <- Environment:stats()],
     IslandDict = dict:from_list(Interactions ++ Stats),
-    lists:foldl(fun(Key,Dict) ->
-                        dict:store(Key,IslandDict,Dict)
+    lists:foldl(fun(Key, Dict) ->
+                        dict:store(Key, IslandDict, Dict)
                 end, dict:new(), Keys).
 
 
