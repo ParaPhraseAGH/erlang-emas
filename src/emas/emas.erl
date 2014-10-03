@@ -61,10 +61,14 @@ meeting_function({death, _}, _SimParams) ->
     [];
 
 meeting_function({reproduction, Agents}, SimParams) ->
-    lists:flatten([evolution:do_reproduce(A, SimParams) || A <- evolution:optional_pairs(Agents,[])]);
+    lists:flatmap(fun(Pair) ->
+                          evolution:do_reproduce(Pair, SimParams)
+                  end, evolution:optional_pairs(Agents, []));
 
 meeting_function({fight, Agents}, SimParams) ->
-    lists:flatten([evolution:do_fight(A, SimParams) || A <- evolution:optional_pairs(Agents,[])]);
+    lists:flatmap(fun(Pair) ->
+                          evolution:do_fight(Pair, SimParams)
+                  end, evolution:optional_pairs(Agents, []));
 
 meeting_function({migration, Agents}, _SimParams) ->
     Agents;
