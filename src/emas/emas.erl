@@ -34,9 +34,9 @@ starts([Model, Time]) ->
 
 
 -spec initial_agent(sim_params()) -> agent().
-initial_agent(SimParams) ->
-    S = genetic:solution(SimParams),
-    {S, genetic:evaluation(S, SimParams), SimParams#sim_params.initial_energy}.
+initial_agent(SP) ->
+    S = genetic:solution(SP),
+    {S, genetic:evaluation(S, SP), SP#sim_params.initial_energy}.
 
 
 %% @doc This function chooses a behaviour for the agent based on its energy.
@@ -44,10 +44,10 @@ initial_agent(SimParams) ->
 behaviour_function({_,_,0}, _SimParams) ->
     death;
 
-behaviour_function({_, _, Energy}, SimParams) ->
-    case random:uniform() < SimParams#sim_params.migration_probability of
+behaviour_function({_, _, Energy}, SP) ->
+    case random:uniform() < SP#sim_params.migration_probability of
         true -> migration;
-        false -> case Energy > SimParams#sim_params.reproduction_threshold of
+        false -> case Energy > SP#sim_params.reproduction_threshold of
                      true -> reproduction;
                      false -> fight
                  end
@@ -60,29 +60,29 @@ behaviours() ->
 
 
 -spec meeting_function({agent_behaviour(), [agent()]}, sim_params()) -> [agent()].
-meeting_function({death, _}, _SimParams) ->
+meeting_function({death, _}, _SP) ->
     [];
 
-meeting_function({reproduction, Agents}, SimParams) ->
+meeting_function({reproduction, Agents}, SP) ->
     lists:flatmap(fun(Pair) ->
-                          evolution:do_reproduce(Pair, SimParams)
+                          evolution:do_reproduce(Pair, SP)
                   end, evolution:optional_pairs(Agents, []));
 
-meeting_function({fight, Agents}, SimParams) ->
+meeting_function({fight, Agents}, SP) ->
     lists:flatmap(fun(Pair) ->
-                          evolution:do_fight(Pair, SimParams)
+                          evolution:do_fight(Pair, SP)
                   end, evolution:optional_pairs(Agents, []));
 
-meeting_function({migration, Agents}, _SimParams) ->
+meeting_function({migration, Agents}, _SP) ->
     Agents;
 
-meeting_function({_, _}, _SimParams) ->
+meeting_function({_, _}, _SP) ->
     erlang:error(unexpected_behaviour).
 
 
 -spec stats() -> [funstat()].
 stats() ->
-    Fitness_map = fun({_Solution,Fitness,_Energy}) ->
+    Fitness_map = fun({_Solution, Fitness, _Energy}) ->
                           Fitness
                   end,
     Fitness_reduce = fun(F1, F2) ->

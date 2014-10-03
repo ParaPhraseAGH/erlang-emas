@@ -12,20 +12,20 @@
 %% ====================================================================
 
 -spec start(Time::pos_integer(), sim_params(), config()) -> ok.
-start(Time, SimParams, Config = #config{islands = Islands, agent_env = Environment}) ->
+start(Time, SP, Cf = #config{islands = Islands, agent_env = Environment}) ->
     %%     io:format("{Model=sequential,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
     misc_util:seed_random(),
     misc_util:clear_inbox(),
-    topology:start_link(self(), Islands, Config#config.topology),
-    InitIslands = [misc_util:generate_population(SimParams, Config) || _ <- lists:seq(1, Islands)],
-    logger:start_link(lists:seq(1, Islands), Config),
+    topology:start_link(self(), Islands, Cf#config.topology),
+    InitIslands = [misc_util:generate_population(SP, Cf) || _ <- lists:seq(1, Islands)],
+    logger:start_link(lists:seq(1, Islands), Cf),
     timer:send_after(Time, theEnd),
-    {ok, TRef} = timer:send_interval(Config#config.write_interval, write),
+    {ok, TRef} = timer:send_interval(Cf#config.write_interval, write),
     {_Time,_Result} = timer:tc(fun loop/5, [InitIslands,
-                                            [misc_util:create_new_counter(Config) || _ <- lists:seq(1, Islands)],
+                                            [misc_util:create_new_counter(Cf) || _ <- lists:seq(1, Islands)],
                                             [Environment:stats() || _ <- lists:seq(1, Islands)],
-                                            SimParams,
-                                            Config]),
+                                            SP,
+                                            Cf]),
     timer:cancel(TRef),
     topology:close(),
     logger:close().
@@ -36,28 +36,28 @@ start(Time, SimParams, Config = #config{islands = Islands, agent_env = Environme
 
 %% @doc The main island process loop. A new generation of the population is created in every iteration.
 -spec loop([island()], [counter()], [funstat()], sim_params(), config()) -> float().
-loop(Islands, Counters, Funstats, SimParams, Config = #config{agent_env = Environment}) ->
+loop(Islands, Counters, Funstats, SPa, Cf = #config{agent_env = Environment}) ->
     receive
         write ->
             [log_island(Nr, C, F) || {Nr, C, F} <- lists:zip3(lists:seq(1, length(Islands)), Counters, Funstats)],
             loop(Islands,
-                 [misc_util:create_new_counter(Config) || _ <- lists:seq(1, length(Islands))],
+                 [misc_util:create_new_counter(Cf) || _ <- lists:seq(1, length(Islands))],
                  Funstats,
-                 SimParams,
-                 Config);
+                 SPa,
+                 Cf);
         theEnd ->
             lists:max([misc_util:result(I) || I <- Islands])
     after 0 ->
-            Groups = [misc_util:group_by([{Environment:behaviour_function(Agent, SimParams), Agent} || Agent <- I]) || I <- Islands],
+            Groups = [misc_util:group_by([{Environment:behaviour_function(Agent, SPa), Agent} || Agent <- I]) || I <- Islands],
             Emigrants = [seq_migrate(lists:keyfind(migration, 1, Island), Nr) || {Island, Nr} <- lists:zip(Groups, lists:seq(1, length(Groups)))],
-            NewGroups = [[misc_util:meeting_proxy(Activity, sequential, SimParams, Config) || Activity <- I] || I <- Groups],
+            NewGroups = [[misc_util:meeting_proxy(Activity, sequential, SPa, Cf) || Activity <- I] || I <- Groups],
             WithEmigrants = append(lists:flatten(Emigrants), NewGroups),
             NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- WithEmigrants],
 
         NewCounters = [misc_util:add_interactions_to_counter(G, C) || {G, C} <- lists:zip(Groups, Counters)],
         NewFunstats = [misc_util:count_funstats(I, F) || {I, F} <- lists:zip(NewIslands, Funstats)],
 
-            loop(NewIslands, NewCounters, NewFunstats, SimParams, Config)
+            loop(NewIslands, NewCounters, NewFunstats, SPa, Cf)
     end.
 
 -spec log_island(pos_integer(), counter(), [funstat()]) -> [ok].

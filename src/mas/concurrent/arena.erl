@@ -29,12 +29,12 @@
 %%%===================================================================
 
 -spec start_link(pid(), atom(), sim_params(), config()) -> pid().
-start_link(Supervisor, migration, _SimParams, Config) ->
-    {ok, Pid} = port:start_link(Supervisor, Config),
+start_link(Supervisor, migration, _SP, Cf) ->
+    {ok, Pid} = port:start_link(Supervisor, Cf),
     Pid;
 
-start_link(Supervisor, Interaction, SimParams, Config) ->
-    {ok, Pid} = gen_server:start_link(?MODULE, [Supervisor, Interaction, SimParams, Config], []),
+start_link(Supervisor, Interaction, SP, Cf) ->
+    {ok, Pid} = gen_server:start_link(?MODULE, [Supervisor, Interaction, SP, Cf], []),
     Pid.
 
 %% @doc Sends a request with given agent to this arena
@@ -57,16 +57,16 @@ close(Pid) ->
 -spec(init(Args :: term()) -> {ok, State :: #state{}} |
                               {ok, State :: #state{}, timeout() | hibernate} |
                               {stop, Reason :: term()} | ignore).
-init([Supervisor, Interaction, SimParams, Config]) ->
+init([Supervisor, Interaction, SP, Cf]) ->
     misc_util:seed_random(),
-    Env = Config#config.agent_env,
+    Env = Cf#config.agent_env,
     Funstats = Env:stats(),
     {ok, #state{supervisor = Supervisor,
                 lastLog = os:timestamp(),
                 interaction = Interaction,
                 funstats = Funstats,
-                sim_params = SimParams,
-                config = Config}, Config#config.arena_timeout}.
+                sim_params = SP,
+                config = Cf}, Cf#config.arena_timeout}.
 
 
 -spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()}, State :: #state{}) ->
@@ -80,39 +80,38 @@ init([Supervisor, Interaction, SimParams, Config]) ->
 handle_call({interact, _Agent}, _From, cleaning) ->
     {reply, close, cleaning, ?CLOSING_TIMEOUT};
 
-handle_call({interact, Agent}, From, State = #state{sim_params = SimParams, config = Config}) ->
-    Waitlist = [Agent|State#state.waitlist],
-    Froms = [From|State#state.agentFroms],
+handle_call({interact, Agent}, From, St = #state{sim_params = SP, config = Cf}) ->
+    Waitlist = [Agent|St#state.waitlist],
+    Froms = [From|St#state.agentFroms],
     case length(Waitlist)  of
         ?AGENT_THRESHOLD ->
-            NewAgents = misc_util:meeting_proxy({State#state.interaction, Waitlist}, concurrent, SimParams, Config),
-            respond(NewAgents, Froms, State#state.arenas, SimParams, Config),
+            NewAgents = misc_util:meeting_proxy({St#state.interaction, Waitlist}, concurrent, SP, Cf),
+            respond(NewAgents, Froms, St#state.arenas, SP, Cf),
 
-            NewCounter = State#state.counter + length(Waitlist), % tu blad?!
-            NewFunstats = misc_util:count_funstats(NewAgents, State#state.funstats),
+            NewCounter = St#state.counter + length(Waitlist), % tu blad?!
+            NewFunstats = misc_util:count_funstats(NewAgents, St#state.funstats),
 
-            case misc_util:log_now(State#state.lastLog, Config) of
+            case misc_util:log_now(St#state.lastLog, Cf) of
                 {yes, NewLog} ->
-                    %%                     conc_logger:log(State#state.supervisor,State#state.interaction,NewCounter),
-                    logger:log_countstat(State#state.supervisor, State#state.interaction, NewCounter),
-                    [logger:log_funstat(State#state.supervisor, StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- NewFunstats],
-                    {noreply,State#state{waitlist = [],
+                    logger:log_countstat(St#state.supervisor, St#state.interaction, NewCounter),
+                    [logger:log_funstat(St#state.supervisor, StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- NewFunstats],
+                    {noreply,St#state{waitlist = [],
                                          agentFroms = [],
                                          lastLog = NewLog,
                                          funstats = NewFunstats,
-                                         counter = 0}, Config#config.arena_timeout};
+                                         counter = 0}, Cf#config.arena_timeout};
                 notyet ->
-                    {noreply,State#state{waitlist = [],
+                    {noreply,St#state{waitlist = [],
                                          agentFroms = [],
                                          funstats = NewFunstats,
-                                         counter = NewCounter}, Config#config.arena_timeout}
+                                         counter = NewCounter}, Cf#config.arena_timeout}
             end;
         _ ->
-            {noreply, State#state{agentFroms = Froms, waitlist = Waitlist}, Config#config.arena_timeout}
+            {noreply, St#state{agentFroms = Froms, waitlist = Waitlist}, Cf#config.arena_timeout}
     end;
 
-handle_call({arenas, Arenas}, _From, State = #state{ config = Config}) ->
-    {reply, ok, State#state{arenas = Arenas}, Config#config.arena_timeout}.
+handle_call({arenas, Arenas}, _From, St = #state{config = Cf}) ->
+    {reply, ok, St#state{arenas = Arenas}, Cf#config.arena_timeout}.
 
 -spec(handle_cast(Request :: term(), State :: #state{}) -> {noreply, NewState :: #state{}} |
                                                            {noreply, NewState :: #state{}, timeout() | hibernate} |
@@ -146,9 +145,9 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 
 -spec respond([agent()], {pid(), term()}, dict:dict(), sim_params(), config()) -> list().
-respond(Agents, Froms, Arenas, SimParams, Config) when length(Agents) >= length(Froms) ->
+respond(Agents, Froms, Arenas, SP, Cf) when length(Agents) >= length(Froms) ->
     [gen_server:reply(From, Agent) || {From, Agent} <- misc_util:shortest_zip(Froms, Agents)],
-    [spawn(agent, start, [Agent, Arenas, SimParams, Config]) || Agent <- lists:nthtail(length(Froms), Agents)];
+    [spawn(agent, start, [Agent, Arenas, SP, Cf]) || Agent <- lists:nthtail(length(Froms), Agents)];
 
 respond(Agents, Froms, _Arenas, _SimParams, _Config) when length(Agents) =< length(Froms) ->
     [gen_server:reply(From, Agent) || {From, Agent} <- misc_util:shortest_zip(Froms, Agents)],

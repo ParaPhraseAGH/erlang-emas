@@ -20,9 +20,9 @@
 %% API functions
 %% ====================================================================
 -spec start(Time::pos_integer(), sim_params(), config()) -> ok.
-start(Time, SimParams, Config) ->
+start(Time, SP, Cf) ->
 %%     io:format("{Model=Hybrid,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
-    {ok, _} = gen_server:start({local,?MODULE}, ?MODULE, [Time, SimParams, Config], []),
+    {ok, _} = gen_server:start({local,?MODULE}, ?MODULE, [Time, SP, Cf], []),
     timer:sleep(Time).
 
 
@@ -36,11 +36,11 @@ sendAgent(Agent) ->
 %% ====================================================================
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
-init([Time, SimParams, Config = #config{islands = Islands}]) ->
+init([Time, SP, Cf = #config{islands = Islands}]) ->
     timer:send_after(Time,theEnd),
-    Pids = [spawn_link(hybrid_island, start, [SimParams, Config]) || _ <- lists:seq(1, Islands)],
-    topology:start_link(self(), Islands, Config#config.topology),
-    logger:start_link(Pids, Config),
+    Pids = [spawn_link(hybrid_island, start, [SP, Cf]) || _ <- lists:seq(1, Islands)],
+    topology:start_link(self(), Islands, Cf#config.topology),
+    logger:start_link(Pids, Cf),
     {ok,Pids}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |

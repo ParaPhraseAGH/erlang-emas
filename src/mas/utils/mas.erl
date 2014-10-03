@@ -8,12 +8,12 @@
 -define(LOAD(Prop, Dict), Prop = dict:fetch(Prop,Dict)).
 
 -spec start(atom(), model(), pos_integer(), sim_params(), [tuple()]) -> ok.
-start(Module, Model, Time, SimParams, Options) ->
+start(Module, Model, Time, SP, Options) ->
     {ok, ConfigFromFile} = file:consult("etc/mas.config"),
     ConfigWithEnv = [{agent_env,Module}|ConfigFromFile],
     OverwrittenConfig = misc_util:overwrite_options(Options, ConfigWithEnv),
     ConfigRecord = proplist_to_record(OverwrittenConfig),
-    Model:start(Time, SimParams, ConfigRecord),
+    Model:start(Time, SP, ConfigRecord),
     ok.
 
 

@@ -30,9 +30,9 @@ shuffle(L) ->
 
 %% @doc Generates a population of agents with random solutions.
 -spec generate_population(sim_params(), config()) -> [agent()].
-generate_population(SimParams, Config) ->
-    Env = Config#config.agent_env,
-    [Env:initial_agent(SimParams) || _ <- lists:seq(1, Config#config.population_size)].
+generate_population(SP, Cf) ->
+    Env = Cf#config.agent_env,
+    [Env:initial_agent(SP) || _ <- lists:seq(1, Cf#config.population_size)].
 
 
 -spec meeting_proxy({atom(), list()}, model(), sim_params(), config()) -> list().
@@ -49,14 +49,13 @@ meeting_proxy({migration, _Agents}, concurrent, _SimParams, _Config) ->
 meeting_proxy({migration, Agents}, skel, _SimParams, _Config) ->
     Agents;
 
-meeting_proxy(Group, _, SimParams, Config) ->
-    Environment = Config#config.agent_env,
-    Environment:meeting_function(Group, SimParams).
+meeting_proxy(Group, _, SP, #config{agent_env = Env}) ->
+    Env:meeting_function(Group, SP).
 
 
 %% @doc Computes an average number of elements that are chosen with given probability
 -spec average_number(float(),[term()]) -> integer().
-average_number(Probability,List) ->
+average_number(Probability, List) ->
     N = Probability * length(List),
     if N == 0 -> 0;
        N < 1 ->
@@ -83,9 +82,8 @@ log_now(LastLog, #config{write_interval = WriteInterval}) ->
 
 
 -spec create_new_counter(config()) -> counter().
-create_new_counter(Config) ->
-    Environment = Config#config.agent_env,
-    BehaviourList = [{Behaviour,0} || Behaviour <- Environment:behaviours()],
+create_new_counter(#config{agent_env = Env}) ->
+    BehaviourList = [{Behaviour,0} || Behaviour <- Env:behaviours()],
     dict:from_list(BehaviourList).
 
 

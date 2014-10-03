@@ -11,15 +11,15 @@
 %% ====================================================================
 
 -spec start(Time::pos_integer(), sim_params(), config()) -> ok.
-start(Time, SimParams, Config = #config{islands = Islands, agent_env = Env}) ->
-    topology:start_link(self(), Islands, Config#config.topology),
-    skel_logger:start_link(Config),
+start(Time, SP, Cf = #config{islands = Islands, agent_env = Env}) ->
+    topology:start_link(self(), Islands, Cf#config.topology),
+    skel_logger:start_link(Cf),
     misc_util:seed_random(),
     misc_util:clear_inbox(),
-    Population = [{I, Env:initial_agent(SimParams)} ||
-                     _ <- lists:seq(1, Config#config.population_size),
+    Population = [{I, Env:initial_agent(SP)} ||
+                     _ <- lists:seq(1, Cf#config.population_size),
                      I <- lists:seq(1, Islands)],
-    {_Time, _Result} = timer:tc(fun main/4, [Population, Time, SimParams, Config]),
+    {_Time, _Result} = timer:tc(fun main/4, [Population, Time, SP, Cf]),
     topology:close(),
     skel_logger:close().
 %%     io:format("Total time:   ~p s~nFitness:     ~p~n", [_Time / 1000000, _Result]).
@@ -31,13 +31,13 @@ start(Time, SimParams, Config = #config{islands = Islands, agent_env = Env}) ->
 %% TODO add generic statistics (funstats)
 %% @doc Main program loop
 -spec main([tuple()], non_neg_integer(), sim_params(), config()) -> float().
-main(Population, Time, SimParams, Config) ->
-    Environment = Config#config.agent_env,
+main(Population, Time, SP, Cf) ->
+    Environment = Cf#config.agent_env,
     EndTime = misc_util:add_miliseconds(os:timestamp(), Time),
     Workers = 4,
 
     Tag = {seq, fun({Home, Agent}) ->
-                        {{Home, Environment:behaviour_function(Agent, SimParams)}, Agent}
+                        {{Home, Environment:behaviour_function(Agent, SP)}, Agent}
                 end},
 
     Migrate = {seq, fun _Migration({{Home, migration}, Agent}) ->
@@ -57,7 +57,7 @@ main(Population, Time, SimParams, Config) ->
     Unpack = {seq, fun dict:to_list/1},
 
     Log = {seq, fun(Chunks) ->
-                        Counter = misc_util:create_new_counter(Config),
+                        Counter = misc_util:create_new_counter(Cf),
                         Counts = misc_util:add_interactions_to_counter([{B, A} || {{_H, B}, A} <- Chunks], Counter),
                         skel_logger:report_result(fight, dict:fetch(fight, Counts)),
                         skel_logger:report_result(reproduce, dict:fetch(reproduction, Counts)),
@@ -67,7 +67,7 @@ main(Population, Time, SimParams, Config) ->
                 end},
 
     Work = {seq, fun({{Home, Behaviour}, Agents}) ->
-                         NewAgents = misc_util:meeting_proxy({Behaviour, Agents}, skel, SimParams, Config),
+                         NewAgents = misc_util:meeting_proxy({Behaviour, Agents}, skel, SP, Cf),
                          [{Home, A} || A <- NewAgents]
                  end },
 

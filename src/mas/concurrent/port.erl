@@ -19,8 +19,8 @@
 %% API functions
 %% ====================================================================
 -spec start_link(pid(), config()) -> {ok,pid()}.
-start_link(Supervisor, Config) ->
-    gen_server:start_link(?MODULE, [Supervisor, Config], []).
+start_link(Supervisor, Cf) ->
+    gen_server:start_link(?MODULE, [Supervisor, Cf], []).
 
 -spec giveArenas(pid(), dict:dict()) -> ok.
 giveArenas(Pid, Arenas) ->
@@ -55,15 +55,15 @@ close(Pid) ->
 
 -spec init([pid()]) -> {ok,state()} |
                        {ok,state(),non_neg_integer()}.
-init([Supervisor, Config = #config{write_interval = WriteInterval}]) ->
+init([Supervisor, Cf = #config{write_interval = WriteInterval}]) ->
     misc_util:seed_random(),
     timer:send_after(WriteInterval, {timer, WriteInterval}),
-    Env = Config#config.agent_env,
+    Env = Cf#config.agent_env,
     Funstats = Env:stats(),
     {ok, #state{mySupervisor = Supervisor,
                 lastLog = os:timestamp(),
                 funstats = Funstats,
-                config = Config}}.
+                config = Cf}}.
 
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -72,19 +72,19 @@ init([Supervisor, Config = #config{write_interval = WriteInterval}]) ->
                                                     {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
-handle_call({arenas, Arenas}, _From, State) ->
+handle_call({arenas, Arenas}, _From, St) ->
     topology:helloPort(),
-    {reply, ok, State#state{arenas = Arenas}};
+    {reply, ok, St#state{arenas = Arenas}};
 
 handle_call({emigrate, _Agent}, {Pid, _}, cleaning) ->
     exit(Pid, finished),
     {noreply, cleaning, ?TIMEOUT};
 
-handle_call({emigrate, Agent}, From, State) ->
+handle_call({emigrate, Agent}, From, St) ->
     {HisPid, _} = From,
-    {Emigrants, Immigrants, LastLog} = check(State),
+    {Emigrants, Immigrants, LastLog} = check(St),
     topology:emigrant({Agent, From}),
-    {noreply,State#state{emigrants = [HisPid|Emigrants], immigrants = Immigrants, lastLog = LastLog}}.
+    {noreply, St#state{emigrants = [HisPid|Emigrants], immigrants = Immigrants, lastLog = LastLog}}.
 
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
@@ -95,11 +95,11 @@ handle_cast({immigrant, {_Agent, {Pid, _}}}, cleaning) ->
     exit(Pid, finished),
     {noreply, cleaning, ?TIMEOUT};
 
-handle_cast({immigrant, {Agent, From}}, State) ->
-    gen_server:reply(From, State#state.arenas),
-    {Emigrants, Immigrants, LastLog} = check(State),
+handle_cast({immigrant, {Agent, From}}, St) ->
+    gen_server:reply(From, St#state.arenas),
+    {Emigrants, Immigrants, LastLog} = check(St),
     {HisPid, _} = From,
-    {noreply, State#state{immigrants = [{HisPid,Agent}|Immigrants], emigrants = Emigrants, lastLog = LastLog}};
+    {noreply, St#state{immigrants = [{HisPid,Agent}|Immigrants], emigrants = Emigrants, lastLog = LastLog}};
 
 handle_cast(close, _State) ->
     {noreply, cleaning, ?TIMEOUT}.
@@ -114,9 +114,9 @@ handle_info(timeout, cleaning) ->
 handle_info({timer, WriteInterval}, cleaning) ->
     {noreply, cleaning, WriteInterval / 2};
 
-handle_info({timer, _}, State) ->
-    {Emigrants, Immigrants, LastLog} = check(State),
-    {noreply, State#state{emigrants = Emigrants,
+handle_info({timer, _}, St) ->
+    {Emigrants, Immigrants, LastLog} = check(St),
+    {noreply, St#state{emigrants = Emigrants,
                           immigrants = Immigrants,
                           lastLog = LastLog}}.
 
@@ -140,13 +140,12 @@ check(#state{emigrants = Emigrants,
              funstats = Funstats,
              lastLog = LastLog,
              mySupervisor = Supervisor,
-             config = Config}) ->
-    WriteInterval = Config#config.write_interval,
-    case misc_util:log_now(LastLog, Config) of
-        {yes,NewLog} ->
+             config = Cf}) ->
+    WriteInterval = Cf#config.write_interval,
+    case misc_util:log_now(LastLog, Cf) of
+        {yes, NewLog} ->
             logger:log_countstat(Supervisor, migration, length(Emigrants)),
             [logger:log_funstat(Supervisor, StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- Funstats],
-            %%             conc_logger:log(State#state.mySupervisor,migration,{length(Emigrants),length(Immigrants)}),
             timer:send_after(WriteInterval, {timer, WriteInterval}),
             {[], [], NewLog};
         notyet ->

@@ -13,9 +13,9 @@
 
 %% @doc Initializes given agent on arenas given as parameter
 -spec start(agent(), dict:dict(string(), pid()), sim_params(), config()) -> ok.
-start(Agent, Arenas, SimParams, Config) ->
+start(Agent, Arenas, SP, Cf) ->
     misc_util:seed_random(),
-    loop(Agent, Arenas, SimParams, Config).
+    loop(Agent, Arenas, SP, Cf).
 
 %% ====================================================================
 %% Internal functions
@@ -23,17 +23,17 @@ start(Agent, Arenas, SimParams, Config) ->
 
 %% @doc Defines a life cycle of a single agent
 -spec loop(agent(), dict:dict(), sim_params(), config()) -> ok.
-loop(Agent, Arenas, SimParams, Config) ->
-    Environment = Config#config.agent_env,
-    case Environment:behaviour_function(Agent, SimParams) of
+loop(Agent, Arenas, SP, Cf) ->
+    Environment = Cf#config.agent_env,
+    case Environment:behaviour_function(Agent, SP) of
         migration ->
-            loop(Agent, port:emigrate(dict:fetch(migration, Arenas), Agent), SimParams, Config);
+            loop(Agent, port:emigrate(dict:fetch(migration, Arenas), Agent), SP, Cf);
         Activity ->
             ArenaPid = dict:fetch(Activity, Arenas),
             case arena:call(ArenaPid, Agent) of
                 close ->
                     ok;
                 NewAgent ->
-                    loop(NewAgent, Arenas, SimParams, Config)
+                    loop(NewAgent, Arenas, SP, Cf)
             end
     end.

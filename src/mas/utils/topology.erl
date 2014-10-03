@@ -19,8 +19,8 @@
 %% API functions
 %% ====================================================================
 -spec start_link(pid(),integer(),topology()) -> {ok,pid()}.
-start_link(King,IslandsNr,Topology) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [King,IslandsNr,Topology], []).
+start_link(King, IslandsNr, Topology) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [King, IslandsNr, Topology], []).
 
 -spec helloPort() -> ok.
 helloPort() ->
@@ -51,7 +51,7 @@ getDestination(X) ->
 -type state() :: #state{}.
 
 -spec init(list()) -> {ok,state()}.
-init([King,IslandsNr,Topology]) ->
+init([King, IslandsNr, Topology]) ->
     misc_util:seed_random(),
     {ok, #state{n = IslandsNr, topology = Topology, king = King}}.
 
@@ -68,26 +68,26 @@ handle_call({destination, X}, _From, State) ->
 -spec handle_cast(term(),state()) -> {noreply,state()} |
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
-handle_cast({emigrant,Pid,AgentInfo}, State) ->
-    NewPort = case State#state.n of
+handle_cast({emigrant,Pid,AgentInfo}, St) ->
+    NewPort = case St#state.n of
                   1 -> Pid;
                   _ ->
-                      OldPort = misc_util:find(Pid,State#state.ports),
-                      %%                       io:format("Emigration from ~p to ~p~n",[OldPort,computeDestination(OldPort,State)]),
-                      lists:nth(computeDestination(OldPort,State),State#state.ports)
+                      OldPort = misc_util:find(Pid,St#state.ports),
+                      %%                       io:format("Emigration from ~p to ~p~n",[OldPort,computeDestination(OldPort,St)]),
+                      lists:nth(computeDestination(OldPort, St), St#state.ports)
               end,
     port:immigrate(NewPort,AgentInfo),
-    {noreply, State};
+    {noreply, St};
 
-handle_cast({helloPort,Pid}, State) ->
-    N = State#state.n,
-    case length(State#state.ports) + 1 of
+handle_cast({helloPort,Pid}, St) ->
+    N = St#state.n,
+    case length(St#state.ports) + 1 of
         N ->
-            State#state.king ! ready;
+            St#state.king ! ready;
         _ ->
             nothing
     end,
-    {noreply, State#state{ports = [Pid|State#state.ports]}};
+    {noreply, St#state{ports = [Pid|St#state.ports]}};
 
 handle_cast(close, State) ->
     {stop, normal, State}.
@@ -110,11 +110,11 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal functions
 %% ====================================================================
 
-computeDestination(From,State) ->
-    case State#state.n of
+computeDestination(From, St) ->
+    case St#state.n of
         1 -> 1;
         N ->
-            case State#state.topology of
+            case St#state.topology of
                 ring ->
                     NewIsland = case random:uniform() < 0.5 of
                                     true -> From + 1;
@@ -126,9 +126,9 @@ computeDestination(From,State) ->
                         _ -> NewIsland
                     end;
                 mesh ->
-                    Destinations = [I || I <- lists:seq(1,N), I =/= From],
+                    Destinations = [I || I <- lists:seq(1, N), I =/= From],
                     Index = random:uniform(length(Destinations)),
-                    lists:nth(Index,Destinations);
+                    lists:nth(Index, Destinations);
                 _ ->
                     erlang:error(wrongTopology)
             end
