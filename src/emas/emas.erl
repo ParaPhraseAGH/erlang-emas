@@ -13,13 +13,12 @@
 
 -spec start(model(),pos_integer()) -> ok.
 start(Model, Time) ->
-    mas:start(?MODULE, Model, Time, proplist_to_record(load_params()), []).
+    start(Model, Time, []).
 
 
 -spec start(model(),pos_integer(),[tuple()]) -> ok.
 start(Model, Time, SimParamOptions) ->
-    SimParamsUpdated = misc_util:overwrite_options(SimParamOptions, load_params()),
-    mas:start(?MODULE, Model, Time, proplist_to_record(SimParamsUpdated), []).
+    start(Model, Time, SimParamOptions, []).
 
 
 -spec start(model(),pos_integer(),[tuple()],[tuple()]) -> ok.
@@ -28,9 +27,10 @@ start(Model, Time, SimParamOptions, ConfigOptions) ->
     mas:start(?MODULE, Model, Time, proplist_to_record(SimParamsUpdated), ConfigOptions).
 
 
+%% @doc function for starting `emas` from command line
 -spec starts(list()) -> ok.
 starts([Model, Time]) ->
-    mas:start(?MODULE, erlang:list_to_atom(Model), erlang:list_to_integer(Time), load_params(), []).
+    start(erlang:list_to_atom(Model), erlang:list_to_integer(Time)).
 
 
 -spec initial_agent(sim_params()) -> agent().
