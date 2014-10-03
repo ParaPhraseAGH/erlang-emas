@@ -3,7 +3,7 @@
 %% @doc The module contains abstract genetic operators
 
 -module(genetic).
--export([solution/1, evaluation/2, reproduction/2, reproduction/3, generate_agent/1]).
+-export([solution/1, evaluation/2, reproduction/2, reproduction/3]).
 
 -include ("emas.hrl").
 
@@ -21,12 +21,6 @@ solution(SP) ->
 evaluation(S, SP) ->
     Ops = SP#sim_params.genetic_ops,
     Ops:evaluation(S, SP).
-
-%% @doc Generates an agent with a random solution.
--spec generate_agent(sim_params()) -> agent().
-generate_agent(SP) ->
-    S = solution(SP),
-    {S, evaluation(S, SP), SP#sim_params.initial_energy}.
 
 %% @doc Reproduction function for a single agent (mutation only).
 -spec reproduction(solution(), sim_params()) -> solution().

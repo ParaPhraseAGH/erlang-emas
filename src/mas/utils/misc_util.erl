@@ -31,7 +31,8 @@ shuffle(L) ->
 %% @doc Generates a population of agents with random solutions.
 -spec generate_population(sim_params(), config()) -> [agent()].
 generate_population(SimParams, Config) ->
-    [genetic:generate_agent(SimParams) || _ <- lists:seq(1, Config#config.population_size)].
+    Env = Config#config.agent_env,
+    [Env:initial_agent(SimParams) || _ <- lists:seq(1, Config#config.population_size)].
 
 
 -spec meeting_proxy({atom(), list()}, model(), sim_params(), config()) -> list().

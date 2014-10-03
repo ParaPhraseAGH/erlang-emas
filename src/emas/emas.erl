@@ -35,7 +35,8 @@ starts([Model, Time]) ->
 
 -spec initial_agent(sim_params()) -> [agent()].
 initial_agent(SimParams) ->
-    genetic:generate_agent(SimParams).
+    S = genetic:solution(SimParams),
+    {S, genetic:evaluation(S, SimParams), SimParams#sim_params.initial_energy}.
 
 
 %% @doc This function chooses a behaviour for the agent based on its energy.
