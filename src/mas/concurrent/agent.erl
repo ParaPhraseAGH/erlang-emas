@@ -22,7 +22,7 @@ start(Agent, Arenas, SimParams, Config) ->
 %% ====================================================================
 
 %% @doc Defines a life cycle of a single agent
--spec loop(agent(), dict:dict(), config(), sim_params()) -> ok.
+-spec loop(agent(), dict:dict(), sim_params(), config()) -> ok.
 loop(Agent, Arenas, SimParams, Config) ->
     Environment = Config#config.agent_env,
     case Environment:behaviour_function(Agent, SimParams) of
