@@ -11,15 +11,15 @@
 %% ====================================================================
 
 -spec start(Time::pos_integer(), sim_params(), config()) -> ok.
-start(Time, SimParams, Config = #config{islands = Islands}) ->
+start(Time, SimParams, Config = #config{islands = Islands, agent_env = Env}) ->
     topology:start_link(self(), Islands, Config#config.topology),
     skel_logger:start_link(Config),
     misc_util:seed_random(),
     misc_util:clear_inbox(),
-    InitPopulation = [lists:map(fun(A) -> {I, A} end, misc_util:generate_population(SimParams, Config))
-                      || I <- lists:seq(1, Islands)],
-    FlattenPopulation = lists:flatten(InitPopulation),
-    {_Time, _Result} = timer:tc(fun main/4, [FlattenPopulation, Time, SimParams, Config]),
+    Population = [{I, Env:initial_agent(SimParams)} ||
+                     _ <- lists:seq(1, Config#config.population_size),
+                     I <- lists:seq(1, Islands)],
+    {_Time, _Result} = timer:tc(fun main/4, [Population, Time, SimParams, Config]),
     topology:close(),
     skel_logger:close().
 %%     io:format("Total time:   ~p s~nFitness:     ~p~n", [_Time / 1000000, _Result]).

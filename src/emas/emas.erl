@@ -33,7 +33,7 @@ starts([Model, Time]) ->
     mas:start(?MODULE, erlang:list_to_atom(Model), erlang:list_to_integer(Time), load_params(), []).
 
 
--spec initial_agent(sim_params()) -> [agent()].
+-spec initial_agent(sim_params()) -> agent().
 initial_agent(SimParams) ->
     S = genetic:solution(SimParams),
     {S, genetic:evaluation(S, SimParams), SimParams#sim_params.initial_energy}.
