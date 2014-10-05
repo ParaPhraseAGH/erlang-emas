@@ -40,21 +40,14 @@ main(Population, Time, SP, Cf) ->
                         {{Home, Environment:behaviour_function(Agent, SP)}, Agent}
                 end},
 
-    Migrate = {seq, fun _Migration({{Home, migration}, Agent}) ->
-                            dict:from_list([{{topology:getDestination(Home), migration}, [Agent]}]);
-                        _Migration({{Home, Behaviour}, Agent}) ->
-                            dict:from_list([{{Home, Behaviour}, [Agent]}])
-                    end},
+    Migrate = {seq,
+               fun({{Home, migration}, Agent}) ->
+                       {{topology:getDestination(Home), Behaviour}, Agent};
+                  (OtherAgent)->
+                       OtherAgent
+               end},
 
-    Group = {reduce,
-             fun(D1, D2) ->
-                     dict:merge(fun(_Key, Value1, Value2) ->
-                                        Value1 ++ Value2
-                                end, D1, D2)
-             end,
-             fun(X) -> X end},
-
-    Unpack = {seq, fun dict:to_list/1},
+    Group = {seq,fun misc_util:group_by/1},
 
     Log = {seq, fun(Chunks) ->
                         Counter = misc_util:create_new_counter(Cf),
@@ -77,7 +70,6 @@ main(Population, Time, SP, Cf) ->
 
     Workflow = {pipe, [{map, [Tag, Migrate], Workers},
                        Group,
-                       Unpack,
                        Log,
                        {map, [Work], Workers},
                        Shuffle]},
