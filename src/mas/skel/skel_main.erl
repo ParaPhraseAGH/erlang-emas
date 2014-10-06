@@ -34,7 +34,7 @@ start(Time, SP, Cf = #config{islands = Islands, agent_env = Env}) ->
 main(Population, Time, SP, Cf) ->
     Environment = Cf#config.agent_env,
     EndTime = misc_util:add_miliseconds(os:timestamp(), Time),
-    Workers = 4,
+    Workers = Cf#config.skel_workers,
 
     Tag = {seq, fun({Home, Agent}) ->
                         {{Home, Environment:behaviour_function(Agent, SP)}, Agent}

@@ -14,6 +14,7 @@
                  islands :: pos_integer(),
                  population_size :: pos_integer(),
                  write_interval :: pos_integer(),
+                 skel_workers :: pos_integer(),
                  arena_timeout :: pos_integer()}).
 
 -type config() :: #config{}.
