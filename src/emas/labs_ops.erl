@@ -1,18 +1,18 @@
 -module (labs_ops).
 -behaviour (genetic_ops).
--export ([solution/1, evaluation/1, mutation/1, recombination/2]).
+-export ([solution/1, evaluation/2, mutation/2, recombination/3]).
 
 -include ("emas.hrl").
 
 %% @doc Generates a random solution.
--spec solution(integer()) -> solution().
-solution(ProblemSize) ->
-   [random:uniform(2)-1 || _ <- lists:seq(1, ProblemSize)].
+-spec solution(sim_params()) -> solution().
+solution(SP) ->
+   [random:uniform(2)-1 || _ <- lists:seq(1, SP#sim_params.problem_size)].
 
 
 %% @doc Evaluates a given solution. Higher is better.
--spec evaluation(solution()) -> float().
-evaluation(Solution) ->
+-spec evaluation(solution(), sim_params()) -> float().
+evaluation(Solution, _SP) ->
     local_search(Solution).
 
 -spec energy(solution()) -> float().
@@ -24,24 +24,24 @@ energy(Solution) ->
     L*L*0.5/E.
 
 
--spec recombination(solution(),solution()) -> {solution(),solution()}.
-recombination(S1, S2) ->
-    lists:unzip([recombinationFeatures(F1, F2) || {F1, F2} <- lists:zip(S1,S2)]).
+-spec recombination(solution(), solution(), sim_params()) -> {solution(), solution()}.
+recombination(S1, S2, _SP) ->
+    lists:unzip([recombination_features(F1, F2) || {F1, F2} <- lists:zip(S1, S2)]).
 
 %% @doc Chooses a random order between the two initial features.
--spec recombinationFeatures(float(),float()) -> {float(),float()}.
-recombinationFeatures(F, F) -> {F, F};
-recombinationFeatures(F1, F2) ->
+-spec recombination_features(float(), float()) -> {float(), float()}.
+recombination_features(F, F) -> {F, F};
+recombination_features(F1, F2) ->
     case random:uniform() < 0.5 of
         true -> {F1, F2};
         false -> {F2, F1}
     end.
 
 %% @doc Reproduction function for a single agent (mutation only).
--spec mutation(solution()) -> solution().
-mutation(Solution) ->
-    lists:map(fun(X) -> 
-        case random:uniform() < emas_config:mutationRate() of
+-spec mutation(solution(), sim_params()) -> solution().
+mutation(Solution, SP) ->
+    lists:map(fun(X) ->
+        case random:uniform() < SP#sim_params.mutation_rate of
             true -> fnot(X);
             _ -> X
         end
