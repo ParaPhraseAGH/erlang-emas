@@ -57,7 +57,7 @@ close(Pid) ->
                        {ok,state(),non_neg_integer()}.
 init([Supervisor, Cf = #config{write_interval = WriteInterval}]) ->
     misc_util:seed_random(),
-    timer:send_after(WriteInterval, {timer, WriteInterval}),
+    timer:send_after(WriteInterval, timer),
     Env = Cf#config.agent_env,
     Funstats = Env:stats(),
     {ok, #state{mySupervisor = Supervisor,
@@ -101,7 +101,8 @@ handle_cast({immigrant, {Agent, From}}, St) ->
     {HisPid, _} = From,
     {noreply, St#state{immigrants = [{HisPid,Agent}|Immigrants], emigrants = Emigrants, lastLog = LastLog}};
 
-handle_cast(close, _State) ->
+handle_cast(close, St) ->
+    _ = check(St),
     {noreply, cleaning, ?TIMEOUT}.
 
 
@@ -111,10 +112,10 @@ handle_cast(close, _State) ->
 handle_info(timeout, cleaning) ->
     {stop, normal, cleaning};
 
-handle_info({timer, WriteInterval}, cleaning) ->
-    {noreply, cleaning, WriteInterval / 2};
+handle_info(timer, cleaning) ->
+    {noreply, cleaning, ?TIMEOUT};
 
-handle_info({timer, _}, St) ->
+handle_info(timer, St) ->
     {Emigrants, Immigrants, LastLog} = check(St),
     {noreply, St#state{emigrants = Emigrants,
                           immigrants = Immigrants,
@@ -146,7 +147,7 @@ check(#state{emigrants = Emigrants,
         {yes, NewLog} ->
             logger:log_countstat(Supervisor, migration, length(Emigrants)),
             [logger:log_funstat(Supervisor, StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- Funstats],
-            timer:send_after(WriteInterval, {timer, WriteInterval}),
+            timer:send_after(WriteInterval, timer),
             {[], [], NewLog};
         notyet ->
             {Emigrants, Immigrants, LastLog}
