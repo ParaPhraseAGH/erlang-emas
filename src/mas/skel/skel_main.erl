@@ -58,13 +58,16 @@ main(Population, Time, SP, Cf) ->
                      Chunks
              end,
 
-    Tag = {seq, TagFun},
 
-    Migrate = {seq, MigrateFun},
+    TMGL = fun (Agents) ->
+                   Tagged = lists:map(TagFun,
+                                      Agents),
+                   Migrated = lists:map(MigrateFun,
+                                        Tagged),
+                   Grouped = GroupFun(Migrated),
+                   LogFun(Grouped)
+           end,
 
-    Group = {seq, GroupFun},
-
-    Log = {seq, LogFun},
 
     Work = {seq, fun({{Home, Behaviour}, Agents}) ->
                          NewAgents = misc_util:meeting_proxy({Behaviour, Agents}, skel, SP, Cf),
@@ -75,9 +78,7 @@ main(Population, Time, SP, Cf) ->
                             misc_util:shuffle(lists:flatten(Agents))
                     end},
 
-    Workflow = {pipe, [{map, [Tag, Migrate], Workers},
-                       Group,
-                       Log,
+    Workflow = {pipe, [{seq, TMGL},
                        {map, [Work], Workers},
                        Shuffle]},
 
