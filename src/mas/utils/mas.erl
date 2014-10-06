@@ -27,4 +27,5 @@ proplist_to_record(Proplist) ->
             ?LOAD(islands, Dict),
             ?LOAD(population_size, Dict),
             ?LOAD(write_interval, Dict),
+            ?LOAD(skel_workers, Dict),
             ?LOAD(arena_timeout, Dict)}.
