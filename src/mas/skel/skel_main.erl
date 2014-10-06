@@ -36,28 +36,35 @@ main(Population, Time, SP, Cf) ->
     EndTime = misc_util:add_miliseconds(os:timestamp(), Time),
     Workers = 4,
 
-    Tag = {seq, fun({Home, Agent}) ->
-                        {{Home, Environment:behaviour_function(Agent, SP)}, Agent}
-                end},
+    TagFun = fun({Home, Agent}) ->
+                     {{Home, Environment:behaviour_function(Agent, SP)}, Agent}
+             end,
 
-    Migrate = {seq,
-               fun({{Home, migration}, Agent}) ->
-                       {{topology:getDestination(Home), Behaviour}, Agent};
-                  (OtherAgent)->
-                       OtherAgent
-               end},
+    MigrateFun = fun({{Home, migration}, Agent}) ->
+                         {{topology:getDestination(Home), migration}, Agent};
+                    (OtherAgent)->
+                         OtherAgent
+                 end,
 
-    Group = {seq,fun misc_util:group_by/1},
+    GroupFun = fun misc_util:group_by/1,
 
-    Log = {seq, fun(Chunks) ->
-                        Counter = misc_util:create_new_counter(Cf),
-                        Counts = misc_util:add_interactions_to_counter([{B, A} || {{_H, B}, A} <- Chunks], Counter),
-                        skel_logger:report_result(fight, dict:fetch(fight, Counts)),
-                        skel_logger:report_result(reproduce, dict:fetch(reproduction, Counts)),
-                        skel_logger:report_result(death, dict:fetch(death, Counts)),
-                        skel_logger:report_result(migration, dict:fetch(migration, Counts)),
-                        Chunks
-                end},
+    LogFun = fun(Chunks) ->
+                     Counter = misc_util:create_new_counter(Cf),
+                     Counts = misc_util:add_interactions_to_counter([{B, A} || {{_H, B}, A} <- Chunks], Counter),
+                     skel_logger:report_result(fight, dict:fetch(fight, Counts)),
+                     skel_logger:report_result(reproduce, dict:fetch(reproduction, Counts)),
+                     skel_logger:report_result(death, dict:fetch(death, Counts)),
+                     skel_logger:report_result(migration, dict:fetch(migration, Counts)),
+                     Chunks
+             end,
+
+    Tag = {seq, TagFun},
+
+    Migrate = {seq, MigrateFun},
+
+    Group = {seq, GroupFun},
+
+    Log = {seq, LogFun},
 
     Work = {seq, fun({{Home, Behaviour}, Agents}) ->
                          NewAgents = misc_util:meeting_proxy({Behaviour, Agents}, skel, SP, Cf),
