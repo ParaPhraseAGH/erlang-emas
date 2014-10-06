@@ -74,6 +74,7 @@ main(Population, Time, SP, Cf) ->
                  end },
 
     Shuffle = {seq, fun(Agents) ->
+                            seed_random_once_per_process(),
                             misc_util:shuffle(lists:flatten(Agents))
                     end},
 
@@ -92,3 +93,14 @@ main(Population, Time, SP, Cf) ->
                                          end}],
                               [Population]),
     result.
+
+
+
+seed_random_once_per_process() ->
+    case get(was_seeded) of
+        undefined ->
+            misc_util:seed_random(),
+            put(was_seeded, true);
+        true ->
+            ok
+    end.
