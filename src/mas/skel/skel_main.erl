@@ -2,7 +2,8 @@
 %% @version 1.1
 
 -module(skel_main).
--export([start/3]).
+-export([start/3,
+         seed_random_once_per_process/0]).
 
 -include ("mas.hrl").
 
