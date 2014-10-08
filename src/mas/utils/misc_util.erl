@@ -5,7 +5,7 @@
 -module(misc_util).
 -export([group_by/1, shuffle/1, clear_inbox/0, result/1, find/2, average_number/2, map_index/4, shortest_zip/2,
          count_funstats/2, seed_random/0, log_now/2, meeting_proxy/4, create_new_counter/1, add_interactions_to_counter/2,
-         add_miliseconds/2, generate_population/2, overwrite_options/2, determine_behaviours/1]).
+         add_miliseconds/2, generate_population/2, overwrite_options/2, determine_behaviours/1, behaviour_proxy/3]).
 
 -include ("mas.hrl").
 
@@ -51,6 +51,14 @@ meeting_proxy({migration, Agents}, skel, _SimParams, _Config) ->
 
 meeting_proxy(Group, _, SP, #config{agent_env = Env}) ->
     Env:meeting_function(Group, SP).
+
+
+-spec behaviour_proxy(agent(), sim_params(), config()) -> agent_behaviour() | migration.
+behaviour_proxy(Agent, SP, #config{migration_probability = MP, agent_env = Env}) ->
+    case random:uniform() < MP of
+        true -> migration;
+        false -> Env:behaviour_function(Agent, SP)
+    end.
 
 
 -spec determine_behaviours(config()) -> [agent_behaviour() | migration].

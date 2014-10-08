@@ -23,6 +23,7 @@ proplist_to_record(Proplist) ->
     Dict = dict:from_list(Proplist),
     #config{?LOAD(agent_env, Dict),
             ?LOAD(topology, Dict),
+            ?LOAD(migration_probability, Dict),
             ?LOAD(log_dir, Dict),
             ?LOAD(islands, Dict),
             ?LOAD(population_size, Dict),
