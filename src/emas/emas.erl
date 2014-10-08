@@ -56,7 +56,7 @@ behaviour_function({_, _, Energy}, SP) ->
 
 -spec behaviours() -> [agent_behaviour()].
 behaviours() ->
-    [reproduction, death, fight, migration].
+    [reproduction, death, fight].
 
 
 -spec meeting_function({agent_behaviour(), [agent()]}, sim_params()) -> [agent()].
@@ -72,9 +72,6 @@ meeting_function({fight, Agents}, SP) ->
     lists:flatmap(fun(Pair) ->
                           evolution:do_fight(Pair, SP)
                   end, evolution:optional_pairs(Agents, []));
-
-meeting_function({migration, Agents}, _SP) ->
-    Agents;
 
 meeting_function({_, _}, _SP) ->
     erlang:error(unexpected_behaviour).

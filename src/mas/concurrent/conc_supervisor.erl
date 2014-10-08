@@ -41,8 +41,7 @@ close(Pid) ->
                       {ok,state(),non_neg_integer()}.
 init([SP, Cf]) ->
     misc_util:seed_random(),
-    Environment = Cf#config.agent_env,
-    Interactions = Environment:behaviours(),
+    Interactions = misc_util:determine_behaviours(Cf),
     ArenaList = [{Interaction, arena:start_link(self(), Interaction, SP, Cf)} || Interaction <- Interactions],
     Arenas = dict:from_list(ArenaList),
     [ok = arena:giveArenas(Pid, Arenas) || {_Interaction, Pid} <- ArenaList],
