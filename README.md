@@ -1,5 +1,6 @@
 erlang
 ======
+[![Build Status](https://secure.travis-ci.org/ParaPhraseAGH/erlang.svg?branch=master "Build Status")](http://travis-ci.org/ParaPhraseAGH/erlang)
 
 The ParaPhrase project aims to produce a new structured design and implementation process for heterogeneous parallel architectures, where developers exploit a variety of parallel patterns to develop component based applications that can be mapped to the available hardware resources, and which may then be dynamically re-mapped to meet application needs and hardware availability.
 
