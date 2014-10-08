@@ -44,19 +44,16 @@ initial_agent(SP) ->
 behaviour_function({_,_,0}, _SimParams) ->
     death;
 
-behaviour_function({_, _, Energy}, SP) ->
-    case random:uniform() < SP#sim_params.migration_probability of
-        true -> migration;
-        false -> case Energy > SP#sim_params.reproduction_threshold of
-                     true -> reproduction;
-                     false -> fight
-                 end
+behaviour_function({_, _, Energy}, #sim_params{reproduction_threshold = RT}) ->
+    case Energy > RT of
+        true -> reproduction;
+        false -> fight
     end.
 
 
 -spec behaviours() -> [agent_behaviour()].
 behaviours() ->
-    [reproduction, death, fight, migration].
+    [reproduction, death, fight].
 
 
 -spec meeting_function({agent_behaviour(), [agent()]}, sim_params()) -> [agent()].
@@ -72,9 +69,6 @@ meeting_function({fight, Agents}, SP) ->
     lists:flatmap(fun(Pair) ->
                           evolution:do_fight(Pair, SP)
                   end, evolution:optional_pairs(Agents, []));
-
-meeting_function({migration, Agents}, _SP) ->
-    Agents;
 
 meeting_function({_, _}, _SP) ->
     erlang:error(unexpected_behaviour).
@@ -114,6 +108,5 @@ proplist_to_record(Proplist) ->
                 ?LOAD(mutation_rate, Dict),
                 ?LOAD(mutation_range, Dict),
                 ?LOAD(mutation_chance, Dict),
-                ?LOAD(migration_probability, Dict),
                 ?LOAD(recombination_chance, Dict),
                 ?LOAD(fight_number, Dict)}.

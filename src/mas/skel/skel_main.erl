@@ -32,12 +32,11 @@ start(Time, SP, Cf = #config{islands = Islands, agent_env = Env}) ->
 %% @doc Main program loop
 -spec main([tuple()], non_neg_integer(), sim_params(), config()) -> float().
 main(Population, Time, SP, Cf) ->
-    Environment = Cf#config.agent_env,
     EndTime = misc_util:add_miliseconds(os:timestamp(), Time),
     Workers = Cf#config.skel_workers,
 
     TagFun = fun({Home, Agent}) ->
-                     {{Home, Environment:behaviour_function(Agent, SP)}, Agent}
+                     {{Home, misc_util:behaviour_proxy(Agent, SP, Cf)}, Agent}
              end,
 
     MigrateFun = fun({{Home, migration}, Agent}) ->
