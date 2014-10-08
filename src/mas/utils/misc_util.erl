@@ -4,8 +4,8 @@
 
 -module(misc_util).
 -export([group_by/1, shuffle/1, clear_inbox/0, result/1, find/2, average_number/2, map_index/4, shortest_zip/2,
-         count_funstats/2, seed_random/0, log_now/2, meeting_proxy/4, create_new_counter/1, add_interactions_to_counter/2,
-         add_miliseconds/2, generate_population/2, overwrite_options/2, determine_behaviours/1, behaviour_proxy/3]).
+    count_funstats/2, seed_random/0, log_now/2, meeting_proxy/4, create_new_counter/1, add_interactions_to_counter/2,
+    add_miliseconds/2, generate_population/2, overwrite_options/2, determine_behaviours/1, behaviour_proxy/3, get_config_dir/0]).
 
 -include ("mas.hrl").
 
