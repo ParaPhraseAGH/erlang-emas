@@ -13,7 +13,6 @@
 
 -spec start(Time::pos_integer(), sim_params(), config()) -> ok.
 start(Time, SP, Cf = #config{islands = Islands, agent_env = Environment}) ->
-    %%     io:format("{Model=sequential,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
     misc_util:seed_random(),
     misc_util:clear_inbox(),
     topology:start_link(self(), Islands, Cf#config.topology),
@@ -36,28 +35,28 @@ start(Time, SP, Cf = #config{islands = Islands, agent_env = Environment}) ->
 
 %% @doc The main island process loop. A new generation of the population is created in every iteration.
 -spec loop([island()], [counter()], [funstat()], sim_params(), config()) -> float().
-loop(Islands, Counters, Funstats, SPa, Cf = #config{agent_env = Environment}) ->
+loop(Islands, Counters, Funstats, SP, Cf) ->
     receive
         write ->
             [log_island(Nr, C, F) || {Nr, C, F} <- lists:zip3(lists:seq(1, length(Islands)), Counters, Funstats)],
             loop(Islands,
                  [misc_util:create_new_counter(Cf) || _ <- lists:seq(1, length(Islands))],
                  Funstats,
-                 SPa,
+                 SP,
                  Cf);
         theEnd ->
             lists:max([misc_util:result(I) || I <- Islands])
     after 0 ->
-            Groups = [misc_util:group_by([{Environment:behaviour_function(Agent, SPa), Agent} || Agent <- I]) || I <- Islands],
+            Groups = [misc_util:group_by([{misc_util:behaviour_proxy(Agent, SP, Cf), Agent} || Agent <- I]) || I <- Islands],
             Emigrants = [seq_migrate(lists:keyfind(migration, 1, Island), Nr) || {Island, Nr} <- lists:zip(Groups, lists:seq(1, length(Groups)))],
-            NewGroups = [[misc_util:meeting_proxy(Activity, sequential, SPa, Cf) || Activity <- I] || I <- Groups],
+            NewGroups = [[misc_util:meeting_proxy(Activity, sequential, SP, Cf) || Activity <- I] || I <- Groups],
             WithEmigrants = append(lists:flatten(Emigrants), NewGroups),
             NewIslands = [misc_util:shuffle(lists:flatten(I)) || I <- WithEmigrants],
 
-        NewCounters = [misc_util:add_interactions_to_counter(G, C) || {G, C} <- lists:zip(Groups, Counters)],
-        NewFunstats = [misc_util:count_funstats(I, F) || {I, F} <- lists:zip(NewIslands, Funstats)],
+            NewCounters = [misc_util:add_interactions_to_counter(G, C) || {G, C} <- lists:zip(Groups, Counters)],
+            NewFunstats = [misc_util:count_funstats(I, F) || {I, F} <- lists:zip(NewIslands, Funstats)],
 
-            loop(NewIslands, NewCounters, NewFunstats, SPa, Cf)
+            loop(NewIslands, NewCounters, NewFunstats, SP, Cf)
     end.
 
 -spec log_island(pos_integer(), counter(), [funstat()]) -> [ok].

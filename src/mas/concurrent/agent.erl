@@ -24,8 +24,7 @@ start(Agent, Arenas, SP, Cf) ->
 %% @doc Defines a life cycle of a single agent
 -spec loop(agent(), dict:dict(), sim_params(), config()) -> ok.
 loop(Agent, Arenas, SP, Cf) ->
-    Environment = Cf#config.agent_env,
-    case Environment:behaviour_function(Agent, SP) of
+    case misc_util:behaviour_proxy(Agent, SP, Cf) of
         migration ->
             loop(Agent, port:emigrate(dict:fetch(migration, Arenas), Agent), SP, Cf);
         Activity ->

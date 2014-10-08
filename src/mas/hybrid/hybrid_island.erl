@@ -34,7 +34,6 @@ sendAgent(Pid, Agent) ->
 %% @doc The main island process loop. A new generation of the population is created in every iteration.
 -spec loop([agent()], counter(), [tuple()], sim_params(), config()) -> ok.
 loop(Agents, InteractionCounter, Funstats, SP, Cf) ->
-    Environment = Cf#config.agent_env,
     receive
         write ->
             [logger:log_countstat(self(), Interaction, Val) || {Interaction, Val} <- dict:to_list(InteractionCounter)],
@@ -45,7 +44,7 @@ loop(Agents, InteractionCounter, Funstats, SP, Cf) ->
         {finish, _Pid} ->
             ok
     after 0 ->
-            Groups = misc_util:group_by([{Environment:behaviour_function(A, SP), A} || A <- Agents ]),
+            Groups = misc_util:group_by([{misc_util:behaviour_proxy(A, SP, Cf), A} || A <- Agents ]),
             NewGroups = [misc_util:meeting_proxy(G, hybrid, SP, Cf) || G <- Groups],
             NewAgents = misc_util:shuffle(lists:flatten(NewGroups)),
 

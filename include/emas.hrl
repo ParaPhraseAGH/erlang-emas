@@ -1,7 +1,7 @@
 
 -type solution() :: [float()].
 -type agent() :: {Solution::solution(), Fitness::float(), Energy::pos_integer()}.
--type agent_behaviour() :: death | reproduction | fight | migration.
+-type agent_behaviour() :: death | reproduction | fight.
 
 -record(sim_params, {genetic_ops :: atom(),
                      problem_size :: pos_integer(),
@@ -13,7 +13,6 @@
                      mutation_rate :: float(),
                      mutation_range :: float(),
                      mutation_chance :: float(),
-                     migration_probability :: float(),
                      recombination_chance :: float(),
                      fight_number :: pos_integer()}).
 

@@ -44,13 +44,10 @@ initial_agent(SP) ->
 behaviour_function({_,_,0}, _SimParams) ->
     death;
 
-behaviour_function({_, _, Energy}, SP) ->
-    case random:uniform() < SP#sim_params.migration_probability of
-        true -> migration;
-        false -> case Energy > SP#sim_params.reproduction_threshold of
-                     true -> reproduction;
-                     false -> fight
-                 end
+behaviour_function({_, _, Energy}, #sim_params{reproduction_threshold = RT}) ->
+    case Energy > RT of
+        true -> reproduction;
+        false -> fight
     end.
 
 
@@ -111,6 +108,5 @@ proplist_to_record(Proplist) ->
                 ?LOAD(mutation_rate, Dict),
                 ?LOAD(mutation_range, Dict),
                 ?LOAD(mutation_chance, Dict),
-                ?LOAD(migration_probability, Dict),
                 ?LOAD(recombination_chance, Dict),
                 ?LOAD(fight_number, Dict)}.
