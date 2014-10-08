@@ -9,7 +9,8 @@
 
 -spec start(atom(), model(), pos_integer(), sim_params(), [tuple()]) -> ok.
 start(Module, Model, Time, SP, Options) ->
-    {ok, ConfigFromFile} = file:consult("etc/mas.config"),
+    ConfigFile = filename:join(misc_util:get_config_dir(), "mas.config"),
+    {ok, ConfigFromFile} = file:consult(ConfigFile),
     ConfigWithEnv = [{agent_env,Module}|ConfigFromFile],
     OverwrittenConfig = misc_util:overwrite_options(Options, ConfigWithEnv),
     ConfigRecord = proplist_to_record(OverwrittenConfig),
