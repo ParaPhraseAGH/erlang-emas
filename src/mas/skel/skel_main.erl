@@ -13,7 +13,8 @@
 -spec start(Time::pos_integer(), sim_params(), config()) -> ok.
 start(Time, SP, Cf = #config{islands = Islands, agent_env = Env}) ->
     topology:start_link(self(), Islands, Cf#config.topology),
-    skel_logger:start_link(Cf),
+    %%     skel_logger:start_link(Cf),
+    logger:start_link(lists:seq(1, Cf#config.islands), Cf),
     misc_util:seed_random(),
     misc_util:clear_inbox(),
     Population = [{I, Env:initial_agent(SP)} ||
@@ -21,7 +22,8 @@ start(Time, SP, Cf = #config{islands = Islands, agent_env = Env}) ->
                      I <- lists:seq(1, Islands)],
     {_Time, _Result} = timer:tc(fun main/4, [Population, Time, SP, Cf]),
     topology:close(),
-    skel_logger:close().
+    logger:close().
+%%     skel_logger:close().
 %%     io:format("Total time:   ~p s~nFitness:     ~p~n", [_Time / 1000000, _Result]).
 
 %% ====================================================================
@@ -47,24 +49,29 @@ main(Population, Time, SP, Cf) ->
 
     GroupFun = fun misc_util:group_by/1,
 
-    LogFun = fun(Chunks) ->
-                     Counter = misc_util:create_new_counter(Cf),
-                     Counts = misc_util:add_interactions_to_counter([{B, A} || {{_H, B}, A} <- Chunks], Counter),
-                     skel_logger:report_result(fight, dict:fetch(fight, Counts)),
-                     skel_logger:report_result(reproduce, dict:fetch(reproduction, Counts)),
-                     skel_logger:report_result(death, dict:fetch(death, Counts)),
-                     skel_logger:report_result(migration, dict:fetch(migration, Counts)),
-                     Chunks
+    LogFun = fun(Agents) ->
+                     BigDict = dict:from_list([{I, misc_util:create_new_counter(Cf)}
+                                               || I <- lists:seq(1, Cf#config.islands)]),
+
+                     NewBigDict = lists:foldl(fun({{Home, Behaviour}, Agent}, AccBD) ->
+                                                      IslandDict = dict:fetch(Home, AccBD),
+                                                      NewIslandDict = dict:update_counter(Behaviour, 1, IslandDict),
+                                                      dict:store(Home, NewIslandDict, AccBD)
+                                              end, BigDict, Agents),
+                     [[logger:log_countstat(Island, Stat, Val)
+                       || {Stat, Val} <- dict:to_list(Counter)]
+                      || {Island, Counter} <- dict:to_list(NewBigDict)],
+                     Agents
              end,
 
 
-    TMGL = fun (Agents) ->
+    TLMG = fun (Agents) ->
                    Tagged = lists:map(TagFun,
                                       Agents),
+                   Logged = LogFun(Tagged),
                    Migrated = lists:map(MigrateFun,
-                                        Tagged),
-                   Grouped = GroupFun(Migrated),
-                   LogFun(Grouped)
+                                        Logged),
+                   GroupFun(Migrated)
            end,
 
 
@@ -77,7 +84,7 @@ main(Population, Time, SP, Cf) ->
                             misc_util:shuffle(lists:flatten(Agents))
                     end},
 
-    Workflow = {pipe, [{seq, TMGL},
+    Workflow = {pipe, [{seq, TLMG},
                        {map, [Work], Workers},
                        Shuffle]},
 
