@@ -5,7 +5,7 @@
 -module(misc_util).
 -export([group_by/1, shuffle/1, clear_inbox/0, result/1, find/2, average_number/2, map_index/4, shortest_zip/2,
          count_funstats/2, seed_random/0, log_now/2, meeting_proxy/4, create_new_counter/1, add_interactions_to_counter/2, get_config_dir/0,
-         add_miliseconds/2, generate_population/2, overwrite_options/2]).
+         add_miliseconds/2, generate_population/2, overwrite_options/2, determine_behaviours/1]).
 
 -include ("mas.hrl").
 
@@ -53,6 +53,11 @@ meeting_proxy(Group, _, SP, #config{agent_env = Env}) ->
     Env:meeting_function(Group, SP).
 
 
+-spec determine_behaviours(config()) -> [agent_behaviour() | migration].
+determine_behaviours(#config{agent_env = Env}) ->
+    [migration | Env:behaviours()].
+
+
 %% @doc Computes an average number of elements that are chosen with given probability
 -spec average_number(float(),[term()]) -> integer().
 average_number(Probability, List) ->
@@ -82,8 +87,8 @@ log_now(LastLog, #config{write_interval = WriteInterval}) ->
 
 
 -spec create_new_counter(config()) -> counter().
-create_new_counter(#config{agent_env = Env}) ->
-    BehaviourList = [{Behaviour,0} || Behaviour <- Env:behaviours()],
+create_new_counter(Config) ->
+    BehaviourList = [{Behaviour,0} || Behaviour <- determine_behaviours(Config)],
     dict:from_list(BehaviourList).
 
 
@@ -121,10 +126,11 @@ add_miliseconds({MegaSec, Sec, Milisec}, Time) ->
      Sec + (Time div 1000),
      Milisec + (Time rem 1000)}.
 
+
 %% @doc Maps function F(Elem, A) -> A' to an element A of List with Index. Returns updated list
 -spec map_index(Elem::term(), Index::integer(), List::[term()], F::fun()) -> [term()].
 map_index(Elem,Index,List,F) ->
-    mapIndex(Elem,Index,List,F,[]).
+    map_index(Elem,Index,List,F,[]).
 
 
 -spec clear_inbox() -> ok.
@@ -135,9 +141,11 @@ clear_inbox() ->
             ok
     end.
 
+
 -spec shortest_zip(list(),list()) -> list().
 shortest_zip(L1,L2) ->
-    shortestZip(L1,L2,[]).
+    shortest_zip(L1,L2,[]).
+
 
 %% @doc Returns the index of a given element in a given list
 -spec find(term(),[term()]) -> integer() | 'notFound'.
@@ -152,6 +160,7 @@ result([]) ->
 
 result(Agents) ->
     lists:max([ Fitness || {_ ,Fitness, _} <- Agents]).
+
 
 -spec seed_random() -> {integer(),integer(),integer()}.
 seed_random() ->
@@ -171,25 +180,31 @@ get_config_dir() ->
 -spec find(term(),[term()],integer()) -> integer() | 'notFound'.
 find(Elem,[Elem|_],Inc) ->
     Inc;
+
 find(_,[],_) ->
     notFound;
+
 find(Elem,[_|T],Inc) ->
     find(Elem,T,Inc+1).
 
 
--spec mapIndex(Elem::term(), Index::integer(), List::[term()], F::fun(), Acc::[term()]) -> [term()].
-mapIndex(_,_,[],_,_) ->
+-spec map_index(Elem::term(), Index::integer(), List::[term()], F::fun(), Acc::[term()]) -> [term()].
+map_index(_,_,[],_,_) ->
     erlang:error(wrongIndex);
-mapIndex(Elem,1,[H|T],F,Acc) ->
+
+map_index(Elem,1,[H|T],F,Acc) ->
     lists:reverse(Acc,[F(Elem,H)|T]);
-mapIndex(Elem,Index,[H|T],F,Acc) ->
-    mapIndex(Elem,Index - 1,T,F,[H|Acc]).
 
-shortestZip([],_L2,Acc) ->
+map_index(Elem,Index,[H|T],F,Acc) ->
+    map_index(Elem,Index - 1,T,F,[H|Acc]).
+
+
+-spec shortest_zip(list(), list(), list()) -> list().
+shortest_zip([],_L2,Acc) ->
     Acc;
 
-shortestZip(_L1,[],Acc) ->
+shortest_zip(_L1,[],Acc) ->
     Acc;
 
-shortestZip([H1|T1],[H2|T2],Acc) ->
-    shortestZip(T1,T2,[{H1,H2}|Acc]).
+shortest_zip([H1|T1],[H2|T2],Acc) ->
+    shortest_zip(T1,T2,[{H1,H2}|Acc]).
