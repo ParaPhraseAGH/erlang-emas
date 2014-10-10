@@ -96,7 +96,7 @@ extract_best(Agents) ->
                  (_, Acc) ->
                      Acc
              end,
-    {_Sol, _Fit, _Energy} = lists:foldl(ArgMax, hd(Agents), Agents).
+    {_Sol, _Fit, _Energy} = lists:foldl(ArgMax, hd(Agents), tl(Agents)).
 
 -spec load_params() -> sim_params().
 load_params() ->

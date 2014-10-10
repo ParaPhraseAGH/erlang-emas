@@ -7,6 +7,7 @@
 -include("mas.hrl").
 
 -define(RESULT_SINK, result_sink).
+-define(RESULT_SINK_TIMEOUT, 2500).
 
 %% ====================================================================
 %% API functions
@@ -51,7 +52,6 @@ receive_results(Acc) ->
     receive
         {result, Agent} ->
             receive_results([Agent | Acc])
-    after
-        2500 ->
+    after ?RESULT_SINK_TIMEOUT ->
             Acc
     end.
