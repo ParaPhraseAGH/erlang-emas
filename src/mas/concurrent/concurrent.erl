@@ -3,8 +3,10 @@
 %% @doc This is the main module of concurrent model. It handles starting the system and cleaning after work
 
 -module(concurrent).
--export([start/3]).
+-export([start/3, send_result/1]).
 -include("mas.hrl").
+
+-define(RESULT_SINK, result_sink).
 
 %% ====================================================================
 %% API functions
@@ -21,10 +23,18 @@ start(Time, SP, Cf = #config{islands = Islands}) ->
         ready ->
             trigger(Supervisors)
     end,
+    register(?RESULT_SINK, self()),
     timer:sleep(Time),
     [ok = conc_supervisor:close(Pid) || Pid <- Supervisors],
     topology:close(),
-    logger:close().
+    logger:close(),
+    Agents = receive_results(),
+    unregister(?RESULT_SINK),
+    Agents.
+
+-spec send_result(agent()) -> ok.
+send_result(Agent) ->
+    whereis(?RESULT_SINK) ! {result, Agent}.
 
 %% ====================================================================
 %% Internal functions
@@ -33,3 +43,15 @@ start(Time, SP, Cf = #config{islands = Islands}) ->
 -spec trigger([pid()]) -> [ok].
 trigger(Supervisors) ->
     [conc_supervisor:go(Pid) || Pid <- Supervisors].
+
+receive_results() ->
+    receive_results([]).
+
+receive_results(Acc) ->
+    receive
+        {result, Agent} ->
+            receive_results([Agent | Acc])
+    after
+        2500 ->
+            Acc
+    end.
