@@ -12,7 +12,7 @@
 %% ====================================================================
 
 -spec start(Time::pos_integer(), sim_params(), config()) -> ok.
-start(Time, SP, Cf = #config{islands = Islands, agent_env = Environment}) ->
+start(Time, SP, Cf = #config{islands = Islands, agent_env = Env}) ->
     misc_util:seed_random(),
     misc_util:clear_inbox(),
     topology:start_link(self(), Islands, Cf#config.topology),
@@ -22,7 +22,7 @@ start(Time, SP, Cf = #config{islands = Islands, agent_env = Environment}) ->
     {ok, TRef} = timer:send_interval(Cf#config.write_interval, write),
     {_Time,_Result} = timer:tc(fun loop/5, [InitIslands,
                                             [misc_util:create_new_counter(Cf) || _ <- lists:seq(1, Islands)],
-                                            [Environment:stats() || _ <- lists:seq(1, Islands)],
+                                            [Env:stats() || _ <- lists:seq(1, Islands)],
                                             SP,
                                             Cf]),
     timer:cancel(TRef),
