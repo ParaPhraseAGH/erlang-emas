@@ -24,7 +24,8 @@ start(Model, Time, SimParamOptions) ->
 -spec start(model(),pos_integer(),[tuple()],[tuple()]) -> ok.
 start(Model, Time, SimParamOptions, ConfigOptions) ->
     SimParamsUpdated = misc_util:overwrite_options(SimParamOptions, load_params()),
-    mas:start(?MODULE, Model, Time, proplist_to_record(SimParamsUpdated), ConfigOptions).
+    Agents = mas:start(?MODULE, Model, Time, proplist_to_record(SimParamsUpdated), ConfigOptions),
+    extract_best(Agents).
 
 
 %% @doc function for starting `emas` from command line
@@ -87,6 +88,15 @@ stats() ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
+
+-spec extract_best([agent()]) -> agent().
+extract_best(Agents) ->
+    ArgMax = fun (A = {_, F, _}, {_, AccF, _}) when F > AccF ->
+                     A;
+                 (_, Acc) ->
+                     Acc
+             end,
+    {_Sol, _Fit, _Energy} = lists:foldl(ArgMax, hd(Agents), tl(Agents)).
 
 -spec load_params() -> sim_params().
 load_params() ->

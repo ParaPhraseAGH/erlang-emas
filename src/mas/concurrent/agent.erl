@@ -32,6 +32,8 @@ loop(Agent, Arenas, SP, Cf) ->
             case arena:call(ArenaPid, Agent) of
                 close ->
                     ok;
+                the_end ->
+                    concurrent:send_result(Agent);
                 NewAgent ->
                     loop(NewAgent, Arenas, SP, Cf)
             end

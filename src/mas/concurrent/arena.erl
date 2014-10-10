@@ -78,7 +78,7 @@ init([Supervisor, Interaction, SP, Cf]) ->
              {stop, Reason :: term(), NewState :: #state{}}).
 
 handle_call({interact, _Agent}, _From, cleaning) ->
-    {reply, close, cleaning, ?CLOSING_TIMEOUT};
+    {reply, the_end, cleaning, ?CLOSING_TIMEOUT};
 
 handle_call({interact, Agent}, From, St = #state{sim_params = SP, config = Cf}) ->
     Waitlist = [Agent|St#state.waitlist],

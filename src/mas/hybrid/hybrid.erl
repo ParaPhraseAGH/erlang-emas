@@ -9,11 +9,11 @@
 -export([start/3,  sendAgent/1]).
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
-         code_change/3]).
+         code_change/3, send_result/1]).
 
 -include ("mas.hrl").
 
-
+-define(RESULT_SINK, result_sink).
 -type state() :: [pid()].
 
 %% ====================================================================
@@ -23,13 +23,20 @@
 start(Time, SP, Cf) ->
 %%     io:format("{Model=Hybrid,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
     {ok, _} = gen_server:start({local,?MODULE}, ?MODULE, [Time, SP, Cf], []),
-    timer:sleep(Time).
-
+    register(?RESULT_SINK, self()),
+    Islands = [receive_results() || _ <- lists:seq(1, Cf#config.islands)],
+    unregister(?RESULT_SINK),
+    lists:flatten(Islands).
 
 %% @doc Asynchronously sends an agent from an arena to the supervisor
 -spec sendAgent(agent()) -> ok.
 sendAgent(Agent) ->
     gen_server:cast(whereis(?MODULE), {agent,self(),Agent}).
+
+%% @doc Asynchronously send back result from an island
+-spec send_result([agent()]) -> ok.
+send_result(Agents) ->
+    whereis(?RESULT_SINK) ! {result, Agents}.
 
 %% ====================================================================
 %% Callbacks
@@ -76,3 +83,9 @@ terminate(_Reason,Pids) ->
 -spec code_change(term(),state(),term()) -> {ok, state()}.
 code_change(_OldVsn,State,_Extra) ->
     {ok, State}.
+
+-spec receive_results() -> [agent()].
+receive_results() ->
+    receive
+        {result, Agents} -> Agents
+    end.
