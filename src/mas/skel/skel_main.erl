@@ -19,9 +19,10 @@ start(Time, SP, Cf = #config{islands = Islands, agent_env = Env}) ->
     Population = [{I, Env:initial_agent(SP)} ||
                      _ <- lists:seq(1, Cf#config.population_size),
                      I <- lists:seq(1, Islands)],
-    {_Time, _Result} = timer:tc(fun main/4, [Population, Time, SP, Cf]),
+    {_Time, Result} = timer:tc(fun main/4, [Population, Time, SP, Cf]),
     topology:close(),
-    logger:close().
+    logger:close(),
+    Result.
 %%     io:format("Total time:   ~p s~nFitness:     ~p~n", [_Time / 1000000, _Result]).
 
 %% ====================================================================
@@ -76,13 +77,13 @@ main(Population, Time, SP, Cf) ->
                        {map, [Work], Workers},
                        Shuffle]},
 
-    [_FinalIslands] = skel:do([{feedback,
+    [FinalIslands] = skel:do([{feedback,
                                 [Workflow],
                                 _While = fun(_Agents) ->
                                                  os:timestamp() < EndTime
                                          end}],
                               [Population]),
-    result.
+    lists:flatten(FinalIslands).
 
 %% ====================================================================
 %% Internal functions
