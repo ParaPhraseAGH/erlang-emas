@@ -14,7 +14,8 @@ start(Module, Model, Time, SP, Options) ->
     ConfigWithEnv = [{agent_env,Module}|ConfigFromFile],
     OverwrittenConfig = misc_util:overwrite_options(Options, ConfigWithEnv),
     ConfigRecord = proplist_to_record(OverwrittenConfig),
-    Model:start(Time, SP, ConfigRecord),
+    Result = Model:start(Time, SP, ConfigRecord),
+    io:format("Len(Result)=~p~n", [length(Result)]),
     ok.
 
 

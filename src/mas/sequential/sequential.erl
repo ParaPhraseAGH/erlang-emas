@@ -11,23 +11,24 @@
 %% API functions
 %% ====================================================================
 
--spec start(Time::pos_integer(), sim_params(), config()) -> ok.
+-spec start(Time::pos_integer(), sim_params(), config()) -> [agent()].
 start(Time, SP, Cf = #config{islands = Islands, agent_env = Env}) ->
     misc_util:seed_random(),
     misc_util:clear_inbox(),
     topology:start_link(self(), Islands, Cf#config.topology),
     InitIslands = [misc_util:generate_population(SP, Cf) || _ <- lists:seq(1, Islands)],
     logger:start_link(lists:seq(1, Islands), Cf),
-    timer:send_after(Time, theEnd),
+    timer:send_after(Time, the_end),
     {ok, TRef} = timer:send_interval(Cf#config.write_interval, write),
-    {_Time,_Result} = timer:tc(fun loop/5, [InitIslands,
+    {_Time, Result} = timer:tc(fun loop/5, [InitIslands,
                                             [misc_util:create_new_counter(Cf) || _ <- lists:seq(1, Islands)],
                                             [Env:stats() || _ <- lists:seq(1, Islands)],
                                             SP,
                                             Cf]),
     timer:cancel(TRef),
     topology:close(),
-    logger:close().
+    logger:close(),
+    Result.
 
 %% ====================================================================
 %% Internal functions
@@ -44,8 +45,8 @@ loop(Islands, Counters, Funstats, SP, Cf) ->
                  Funstats,
                  SP,
                  Cf);
-        theEnd ->
-            lists:max([misc_util:result(I) || I <- Islands])
+        the_end ->
+            lists:flatten(Islands)
     after 0 ->
             Groups = [misc_util:group_by([{misc_util:behaviour_proxy(Agent, SP, Cf), Agent} || Agent <- I]) || I <- Islands],
             Emigrants = [seq_migrate(lists:keyfind(migration, 1, Island), Nr) || {Island, Nr} <- lists:zip(Groups, lists:seq(1, length(Groups)))],
