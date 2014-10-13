@@ -52,7 +52,7 @@ init([Keys, Cf]) ->
     Env = Cf#config.agent_env,
     Funstats = Env:stats(),
     Stats = misc_util:determine_behaviours(Cf) ++ [Name || {Name, _MapFun, _ReduceFun, _InitVal} <- Funstats],
-    Dict = prepareDictionary(Keys, dict:new(), Cf#config.log_dir, Stats),
+    Dict = prepareDictionary(lists:reverse(Keys), dict:new(), Cf#config.log_dir, Stats),
     {ok, #state{fds = Dict,
                 funstats = Funstats,
                 counters = create_counter(Keys, Cf),

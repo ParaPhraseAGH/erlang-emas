@@ -7,16 +7,14 @@
 
 -define(LOAD(Prop, Dict), Prop = dict:fetch(Prop,Dict)).
 
--spec start(atom(), model(), pos_integer(), sim_params(), [tuple()]) -> ok.
+-spec start(atom(), model(), pos_integer(), sim_params(), [tuple()]) -> [agent()].
 start(Module, Model, Time, SP, Options) ->
     ConfigFile = filename:join(misc_util:get_config_dir(), "mas.config"),
     {ok, ConfigFromFile} = file:consult(ConfigFile),
     ConfigWithEnv = [{agent_env,Module}|ConfigFromFile],
     OverwrittenConfig = misc_util:overwrite_options(Options, ConfigWithEnv),
     ConfigRecord = proplist_to_record(OverwrittenConfig),
-    Model:start(Time, SP, ConfigRecord),
-    ok.
-
+    Model:start(Time, SP, ConfigRecord).
 
 %% @doc Transform a proplist with config properties to a record
 -spec proplist_to_record([tuple()]) -> config().

@@ -47,7 +47,7 @@ Then you can run:
 
     > erl -pa ebin/ -pa deps/skel/ebin/
     
-which will start the Erlang VM. Flags -pa declare the classpath where the VM will look for all the necessary .beam files, which in our case are directories ~/ebin/ and ~/deps/skel/ebin/.
+which will start the Erlang VM. Flags -pa declare the classpath where the VM will look for all the necessary .beam files, which in our case are directories `~/ebin/` and `~/deps/skel/ebin/`.
 
 To run the application you can type:
 
@@ -56,5 +56,5 @@ To run the application you can type:
 which will start the algorithm. The word _emas_ is the name of the main module of your usecase (we provide the implemenentation of the EMAS algorithm as an example).
 You can choose to implement a new one, which should be started in the same way as shown above.
 
-The word _concurrent_ defines the version of the program which will be used to execute the program. Currently you can choose from _concurrent_, _hybrid_, _skel_lists_ and _sequential_ versions.
+The word _concurrent_ defines the version of the program which will be used to execute the program. Currently you can choose from _concurrent_, _hybrid_, _skel_main_ and _sequential_ versions.
 The second parameter is the expected time of the execution in miliseconds and the third one is the option list. By default, the program will write all its results to stdout, so you can see if everything is configured correctly.
