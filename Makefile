@@ -8,7 +8,7 @@ ERL=erl
 REBAR=./rebar
 
 .PHONY: all compile doc clean test dialyzer typer shell distclean pdf \
-  update-deps
+	update-deps
 
 all: deps compile
 
@@ -26,15 +26,15 @@ compile:
 doc:
 	$(REBAR) skip_deps=true doc
 
-test: all 
-	$(REBAR) ct 
+test: all
+	$(REBAR) ct
 	./run_tests.sh
 
 $(DEPS_PLT):
 	@echo Building local plt at $(DEPS_PLT)
 	@echo
 	dialyzer --output_plt $(DEPS_PLT) --build_plt \
-	   --apps $(DEPS) -r deps
+		 --apps $(DEPS) -r deps
 
 dialyzer: $(DEPS_PLT)
 	dialyzer --fullpath --plt $(DEPS_PLT) -Wrace_conditions -r ./ebin
