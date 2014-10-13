@@ -83,7 +83,9 @@ main(Population, Time, SP, Cf) ->
                                                  os:timestamp() < EndTime
                                          end}],
                               [Population]),
-    lists:flatten(FinalIslands).
+    FinalAgents =
+        [Agent || {_Island, Agent} <- FinalIslands],
+    lists:flatten(FinalAgents).
 
 %% ====================================================================
 %% Internal functions
