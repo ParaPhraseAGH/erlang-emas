@@ -39,6 +39,7 @@ should_be_called_in_each_worker(_Conf) ->
 
     %% THEN
     meck:wait(NumberOfWorkers, misc_util, seed_random, '_', 2000),
+    ct:fail("just go home"),
     ok.
 
 

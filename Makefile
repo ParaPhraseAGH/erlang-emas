@@ -26,10 +26,9 @@ compile:
 doc:
 	$(REBAR) skip_deps=true doc
 
-eunit: compile
-	$(REBAR) skip_deps=true eunit
-
-test: compile eunit
+test: all 
+	$(REBAR) ct 
+	./run_tests.sh
 
 $(DEPS_PLT):
 	@echo Building local plt at $(DEPS_PLT)
