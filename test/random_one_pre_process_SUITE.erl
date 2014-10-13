@@ -26,6 +26,7 @@ end_per_testcase(_AnyTestCase, _Conf) ->
 should_be_called_in_each_worker(_Conf) ->
     %% GIVEN
     meck:expect(misc_util, seed_random, 0, ok),
+    NumberOfWorkers = 4,
 
     %% WHEN
     %% four processes with random
@@ -33,11 +34,11 @@ should_be_called_in_each_worker(_Conf) ->
                              skel_main:seed_random_once_per_process(),
                              Any
                      end],
-               _Workers = 4}],
+               NumberOfWorkers}],
              _Data = [[a,b,c,d,e]]),
 
     %% THEN
-    meck:wait(4, misc_util, seed_random, '_', 2000),
+    meck:wait(NumberOfWorkers, misc_util, seed_random, '_', 2000),
     ok.
 
 
