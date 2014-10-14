@@ -2,9 +2,12 @@
 %% @version 1.1
 
 -module(skel_main).
--export([start/3]).
+-export([start/3,
+         seed_random_once_per_process/0]).
 
 -include ("mas.hrl").
+
+-compile([{inline,[ seed_random_once_per_process/0]}]).
 
 %% ====================================================================
 %% API functions
@@ -36,6 +39,7 @@ main(Population, Time, SP, Cf) ->
     Workers = Cf#config.skel_workers,
 
     TagFun = fun({Home, Agent}) ->
+                     seed_random_once_per_process(),
                      {{Home, misc_util:behaviour_proxy(Agent, SP, Cf)}, Agent}
              end,
 
@@ -65,11 +69,13 @@ main(Population, Time, SP, Cf) ->
 
 
     Work = {seq, fun({{Home, Behaviour}, Agents}) ->
+                         seed_random_once_per_process(),
                          NewAgents = misc_util:meeting_proxy({Behaviour, Agents}, skel, SP, Cf),
                          [{Home, A} || A <- NewAgents]
                  end },
 
     Shuffle = {seq, fun(Agents) ->
+                            seed_random_once_per_process(),
                             misc_util:shuffle(lists:flatten(Agents))
                     end},
 
@@ -125,3 +131,14 @@ log_funstats(Groups, Cf) ->
      || {Home, Stats} <- dict:to_list(NewDict)],
 
     ok.
+
+
+
+seed_random_once_per_process() ->
+    case get(was_seeded) of
+        undefined ->
+            misc_util:seed_random(),
+            put(was_seeded, true);
+        true ->
+            ok
+    end.

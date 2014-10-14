@@ -1,6 +1,7 @@
 /.project
 .rebar
 /.settings
+*.beam
 *.so
 *.o
 deps
