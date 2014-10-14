@@ -7,7 +7,7 @@
 
 -include ("mas.hrl").
 
--compile([{inline,[ seed_random_once_per_process/0]}]).
+-compile([{inline, [seed_random_once_per_process/0]}]).
 
 %% ====================================================================
 %% API functions
@@ -70,7 +70,11 @@ main(Population, Time, SP, Cf) ->
 
     Work = {seq, fun({{Home, Behaviour}, Agents}) ->
                          seed_random_once_per_process(),
-                         NewAgents = misc_util:meeting_proxy({Behaviour, Agents}, skel, SP, Cf),
+                         NewAgents =
+                             misc_util:meeting_proxy({Behaviour, Agents},
+                                                     skel,
+                                                     SP,
+                                                     Cf),
                          [{Home, A} || A <- NewAgents]
                  end },
 

@@ -35,7 +35,7 @@ should_be_called_in_each_worker(_Conf) ->
                              Any
                      end],
                NumberOfWorkers}],
-             _Data = [[a,b,c,d,e]]),
+             _Data = [[a, b, c, d, e]]),
 
     %% THEN
     meck:wait(NumberOfWorkers, misc_util, seed_random, '_', 2000),
