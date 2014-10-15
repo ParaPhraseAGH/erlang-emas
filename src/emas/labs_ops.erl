@@ -7,7 +7,7 @@
 %% @doc Generates a random solution.
 -spec solution(sim_params()) -> solution().
 solution(SP) ->
-   [random:uniform(2)-1 || _ <- lists:seq(1, SP#sim_params.problem_size)].
+    [random:uniform(2)-1 || _ <- lists:seq(1, SP#sim_params.problem_size)].
 
 
 %% @doc Evaluates a given solution. Higher is better.
@@ -19,14 +19,16 @@ evaluation(Solution, _SP) ->
 energy(Solution) ->
     L = length(Solution),
     Cs = [foldzip(drop(Solution, K), Solution)
-        || K <- lists:seq(1, L-1)],
+          || K <- lists:seq(1, L-1)],
     E = lists:foldl(fun (X, Acc) -> X*X + Acc end, 0, Cs),
     L*L*0.5/E.
 
 
--spec recombination(solution(), solution(), sim_params()) -> {solution(), solution()}.
+-spec recombination(solution(), solution(), sim_params()) ->
+                           {solution(), solution()}.
 recombination(S1, S2, _SP) ->
-    lists:unzip([recombination_features(F1, F2) || {F1, F2} <- lists:zip(S1, S2)]).
+    Zipped = [recombination_features(F1, F2) || {F1, F2} <- lists:zip(S1, S2)],
+    lists:unzip(Zipped).
 
 %% @doc Chooses a random order between the two initial features.
 -spec recombination_features(float(), float()) -> {float(), float()}.
@@ -41,11 +43,11 @@ recombination_features(F1, F2) ->
 -spec mutation(solution(), sim_params()) -> solution().
 mutation(Solution, SP) ->
     lists:map(fun(X) ->
-        case random:uniform() < SP#sim_params.mutation_rate of
-            true -> fnot(X);
-            _ -> X
-        end
-    end, Solution).
+                      case random:uniform() < SP#sim_params.mutation_rate of
+                          true -> fnot(X);
+                          _ -> X
+                      end
+              end, Solution).
 
 %% internal functions
 
@@ -59,7 +61,7 @@ foldzip(A, B) -> foldzip(A, B, 0).
 foldzip([], _, Acc) -> Acc;
 foldzip(_, [], Acc) -> Acc;
 foldzip([HA|TA], [HB|TB], Acc) ->
-    foldzip(TA, TB, Acc + dot(HA,HB)).
+    foldzip(TA, TB, Acc + dot(HA, HB)).
 
 dot(X, X) -> 1;
 dot(_, _) -> -1.
@@ -83,17 +85,17 @@ local_search(RemainingSteps, Solution, Evaluation) ->
     end.
 
 best_flipped(Solution) ->
-    FlippedSols = lists:map(fun (I) -> flip_nth(Solution,I) end,
-              lists:seq(1, length(Solution))),
+    FlippedSols = lists:map(fun (I) -> flip_nth(Solution, I) end,
+                            lists:seq(1, length(Solution))),
     First = hd(FlippedSols),
     InitAcc = {First, energy(First)},
     GetBest = fun (S, {AccSol, AccE}) ->
-        E = energy(S),
-        case E > AccE of
-            true -> {S, E};
-            _ -> {AccSol, AccE}
-        end
-    end,
+                      E = energy(S),
+                      case E > AccE of
+                          true -> {S, E};
+                          _ -> {AccSol, AccE}
+                      end
+              end,
     lists:foldl(GetBest, InitAcc, FlippedSols).
 
 flip_nth(Sol, N) ->
