@@ -3,6 +3,9 @@
 -type agent() :: {Solution::solution(), Fitness::float(), Energy::pos_integer()}.
 -type agent_behaviour() :: death | reproduction | fight.
 
+-type model() :: any().
+-type funstat() :: any().
+
 -record(sim_params, {genetic_ops :: atom(),
                      problem_size :: pos_integer(),
                      monitor_diversity :: boolean(),

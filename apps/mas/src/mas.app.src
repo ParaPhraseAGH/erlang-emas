@@ -1,0 +1,19 @@
+%%%-------------------------------------------------------------------
+%%% @author jstypka
+%%% @copyright (C) 2014, <COMPANY>
+%%% @doc
+%%%
+%%% @end
+%%% Created : 15. paź 2014 17:36
+%%%-------------------------------------------------------------------
+{application, mas, [
+    {description, "Framework for multiagent simulations"},
+    {vsn, "0.1"},
+    {registered, []},
+    {applications, [
+        kernel,
+        stdlib,
+        skel
+    ]},
+    {env, []}
+]}.

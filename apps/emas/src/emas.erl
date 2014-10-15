@@ -3,7 +3,7 @@
 
 -export ([starts/1, start/2, start/3, start/4, initial_agent/1, behaviour_function/2, behaviours/0, meeting_function/2, stats/0]).
 
--include ("mas.hrl").
+-include ("emas.hrl").
 
 -define(LOAD(Prop, Dict), Prop = dict:fetch(Prop,Dict)).
 
