@@ -2,21 +2,23 @@
 
 run () {
 
-    for run in `seq 1 $run_repeat`; do
-        for model in $models; do
-            for core in $cores; do
-                for workers in $skel_workers; do
-                    mkdir -p $output_root/$model/$core/w$workers
+    for model in $models; do
+        for core in $cores; do
+            for workers in $skel_workers; do
+                for ops in $operators; do
+                    for run in `seq 1 $run_repeat`; do
+                        mkdir -p $output_root/$ops/$model/$core/w$workers
 
-                    echo "running $model in $rtime mlsecs with $workers skel workers on $core cores.."
-                    logfile="emas_$rtime"`date +"-%s"`".log"
+                        echo "running $model in $rtime mlsecs with $workers skel workers on $core cores with $ops operators.."
+                        logfile="emas_$rtime"`date +"-%s"`".log"
 
-                    output_file=$output_root/$model/$core/w$workers/$logfile
-                    echo $output_file
-                    erl +S 4:$core -pa ebin -pa deps/*/ebin \
-                        -eval "emas:start($model,$rtime,[{skel_workers,$workers}])." \
-                        -run init stop -noshell
-                    #> $output_file
+                        output_file=$output_root/$ops/$model/$core/w$workers/$logfile
+                        echo $output_file
+                        erl +S 4:$core -pa ebin -pa deps/*/ebin \
+                            -eval "emas:start($model,$rtime,[{skel_workers,$workers},{genetic_ops,$ops},{problem_size,30}])." \
+                            -run init stop -noshell
+                        #> $output_file
+                    done
                 done
             done
         done
@@ -27,17 +29,17 @@ run () {
 
 output_dir="output"
 # rtime=120000
-rtime=5000
+rtime=2000
 
 # cores="1 2 4"
 cores="4"
 # run_repeat=3
 run_repeat=1
 skel_workers="4 8"
-models="skel_main" # "sequential"
+models="skel_main sequential hybrid concurrent"
+operators="rastrigin_bin_ops labs_ops"
 # models="hybrid"
 
 output_root=$output_dir/tests
 
 run
-
