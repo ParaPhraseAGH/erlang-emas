@@ -31,7 +31,7 @@ should_be_called_in_each_worker(_Conf) ->
     %% WHEN
     %% four processes with random
     skel:do( [{map, [fun (Any) ->
-                             skel_main:seed_random_once_per_process(),
+                             mas_skel:seed_random_once_per_process(),
                              Any
                      end],
                NumberOfWorkers}],
@@ -56,7 +56,7 @@ one_process_should_call_random_only_once(_Conf) ->
     %% one process is called DataLen times
     skel:do( [{seq,
                fun (Any) ->
-                       skel_main:seed_random_once_per_process(),
+                       mas_skel:seed_random_once_per_process(),
                        helpers:id(Any)
                end}],
              _Data = lists:seq(1, DataLen )),

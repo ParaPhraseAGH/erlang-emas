@@ -2,7 +2,7 @@
 %% @version 1.1
 %% @doc This is the main module of hybrid model. It handles starting the system, migrating agents and cleaning after work
 
--module(hybrid).
+-module(mas_hybrid).
 -behaviour(gen_server).
 
 %% API
@@ -45,9 +45,9 @@ send_result(Agents) ->
                       {ok,state(),non_neg_integer()}.
 init([Time, SP, Cf = #config{islands = Islands}]) ->
     timer:send_after(Time,theEnd),
-    Pids = [spawn_link(hybrid_island, start, [SP, Cf]) || _ <- lists:seq(1, Islands)],
-    topology:start_link(self(), Islands, Cf#config.topology),
-    logger:start_link(Pids, Cf),
+    Pids = [spawn_link(mas_hybrid_island, start, [SP, Cf]) || _ <- lists:seq(1, Islands)],
+    mas_topology:start_link(self(), Islands, Cf#config.topology),
+    mas_logger:start_link(Pids, Cf),
     {ok,Pids}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -63,9 +63,9 @@ handle_call(_,_,State) ->
                                      {noreply,state(),hibernate | infinity | non_neg_integer()} |
                                      {stop,term(),state()}.
 handle_cast({agent,From,Agent},Pids) ->
-    IslandFrom = misc_util:find(From,Pids),
-    IslandTo = topology:getDestination(IslandFrom),
-    hybrid_island:sendAgent(lists:nth(IslandTo,Pids),Agent),
+    IslandFrom = mas_misc_util:find(From,Pids),
+    IslandTo = mas_topology:getDestination(IslandFrom),
+    mas_hybrid_island:sendAgent(lists:nth(IslandTo,Pids),Agent),
     {noreply,Pids}.
 
 -spec handle_info(term(),state()) -> {noreply,state()} |
@@ -76,9 +76,9 @@ handle_info(theEnd,Pids) ->
 
 -spec terminate(term(),state()) -> no_return().
 terminate(_Reason,Pids) ->
-    [hybrid_island:close(Pid) || Pid <- Pids],
-    topology:close(),
-    logger:close().
+    [mas_hybrid_island:close(Pid) || Pid <- Pids],
+    mas_topology:close(),
+    mas_logger:close().
 
 -spec code_change(term(),state(),term()) -> {ok, state()}.
 code_change(_OldVsn,State,_Extra) ->

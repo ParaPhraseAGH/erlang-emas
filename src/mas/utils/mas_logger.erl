@@ -2,7 +2,7 @@
 %% @version 1.0
 %% @doc This module handles logging statistics of non-concurrent models
 
--module(logger).
+-module(mas_logger).
 -behaviour(gen_server).
 
 -include ("mas.hrl").
@@ -51,7 +51,7 @@ init([Keys, Cf]) ->
     self() ! delayTimerStart,
     Env = Cf#config.agent_env,
     Funstats = Env:stats(),
-    Stats = misc_util:determine_behaviours(Cf) ++ [Name || {Name, _MapFun, _ReduceFun, _InitVal} <- Funstats],
+    Stats = mas_misc_util:determine_behaviours(Cf) ++ [Name || {Name, _MapFun, _ReduceFun, _InitVal} <- Funstats],
     Dict = prepareDictionary(lists:reverse(Keys), dict:new(), Cf#config.log_dir, Stats),
     {ok, #state{fds = Dict,
                 funstats = Funstats,
@@ -157,7 +157,7 @@ createFDs(Path, InitDict, Files) ->
 -spec create_counter(list(), config()) -> dict:dict().
 create_counter(Keys, Cf) ->
     Environment = Cf#config.agent_env,
-    Interactions = [{Interaction, 0} || Interaction <- misc_util:determine_behaviours(Cf)],
+    Interactions = [{Interaction, 0} || Interaction <- mas_misc_util:determine_behaviours(Cf)],
     Stats = [{Stat, InitValue} || {Stat, _MapFun, _ReduceFun, InitValue} <- Environment:stats()],
     IslandDict = dict:from_list(Interactions ++ Stats),
     lists:foldl(fun(Key, Dict) ->

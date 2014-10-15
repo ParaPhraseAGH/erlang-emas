@@ -4,7 +4,7 @@
 %% Functions are mostly use-case dependent.
 %% This module is deprecated
 
--module(io_util).
+-module(mas_io_util).
 -export([printSeq/1, printMoreStats/1, genPath/4, sumEnergy/1, printArenas/1]).
 
 -include ("mas.hrl").
@@ -19,7 +19,7 @@
 -spec printSeq([island()]) -> ok.
 printSeq([]) -> ok;
 printSeq([Island|T]) ->
-    io:format("Island ~p Fitness ~p Population ~p Energy ~p~n",[length(T),misc_util:result(Island),length(Island),sumEnergy(Island)]),
+    io:format("Island ~p Fitness ~p Population ~p Energy ~p~n",[length(T), mas_misc_util:result(Island),length(Island),sumEnergy(Island)]),
     printSeq(T).
 
 %% @doc Computes energy sum for the population

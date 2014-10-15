@@ -1,6 +1,6 @@
 %% @doc The module contains the definition of agent environment operator callbacks to be implemented.
 
--module (agent_env).
+-module (mas_agent_env).
 
 -include ("mas.hrl").
 

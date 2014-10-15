@@ -1,5 +1,5 @@
 -module (rastrigin_nif_ops).
--behaviour (genetic_ops).
+-behaviour (emas_genetic_ops).
 -export ([solution/1, evaluation/2,
     mutation/2, mutation/3, recombination/3]).
 -on_load(init/0).

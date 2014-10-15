@@ -2,7 +2,7 @@
 %% @version 1.0
 %% @doc This module handles current islands topology info and also computes destination for migrating agents
 
--module(topology).
+-module(mas_topology).
 -behaviour(gen_server).
 
 %% API
@@ -52,7 +52,7 @@ getDestination(X) ->
 
 -spec init(list()) -> {ok,state()}.
 init([King, IslandsNr, Topology]) ->
-    misc_util:seed_random(),
+    mas_misc_util:seed_random(),
     {ok, #state{n = IslandsNr, topology = Topology, king = King}}.
 
 -spec handle_call(term(),{pid(),term()},state()) -> {reply,term(),state()} |
@@ -72,11 +72,11 @@ handle_cast({emigrant,Pid,AgentInfo}, St) ->
     NewPort = case St#state.n of
                   1 -> Pid;
                   _ ->
-                      OldPort = misc_util:find(Pid,St#state.ports),
+                      OldPort = mas_misc_util:find(Pid,St#state.ports),
                       %%                       io:format("Emigration from ~p to ~p~n",[OldPort,computeDestination(OldPort,St)]),
                       lists:nth(computeDestination(OldPort, St), St#state.ports)
               end,
-    port:immigrate(NewPort,AgentInfo),
+    mas_conc_port:immigrate(NewPort,AgentInfo),
     {noreply, St};
 
 handle_cast({helloPort,Pid}, St) ->

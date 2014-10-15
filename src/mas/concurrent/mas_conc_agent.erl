@@ -2,7 +2,7 @@
 %% @version 1.0
 %% @doc This module handles logic of a single agent
 
--module(agent).
+-module(mas_conc_agent).
 -export([start/4]).
 
 -include("mas.hrl").
@@ -14,7 +14,7 @@
 %% @doc Initializes given agent on arenas given as parameter
 -spec start(agent(), dict:dict(string(), pid()), sim_params(), config()) -> ok.
 start(Agent, Arenas, SP, Cf) ->
-    misc_util:seed_random(),
+    mas_misc_util:seed_random(),
     loop(Agent, Arenas, SP, Cf).
 
 %% ====================================================================
@@ -24,16 +24,16 @@ start(Agent, Arenas, SP, Cf) ->
 %% @doc Defines a life cycle of a single agent
 -spec loop(agent(), dict:dict(), sim_params(), config()) -> ok.
 loop(Agent, Arenas, SP, Cf) ->
-    case misc_util:behaviour_proxy(Agent, SP, Cf) of
+    case mas_misc_util:behaviour_proxy(Agent, SP, Cf) of
         migration ->
-            loop(Agent, port:emigrate(dict:fetch(migration, Arenas), Agent), SP, Cf);
+            loop(Agent, mas_conc_port:emigrate(dict:fetch(migration, Arenas), Agent), SP, Cf);
         Activity ->
             ArenaPid = dict:fetch(Activity, Arenas),
-            case arena:call(ArenaPid, Agent) of
+            case mas_conc_arena:call(ArenaPid, Agent) of
                 close ->
                     ok;
                 the_end ->
-                    concurrent:send_result(Agent);
+                    mas_concurrent:send_result(Agent);
                 NewAgent ->
                     loop(NewAgent, Arenas, SP, Cf)
             end

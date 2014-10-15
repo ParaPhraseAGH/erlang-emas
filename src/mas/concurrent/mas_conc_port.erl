@@ -2,7 +2,7 @@
 %% @version 1.0
 %% @doc The module of a migration arena
 
--module(port).
+-module(mas_conc_port).
 -behaviour(gen_server).
 
 -define(TIMEOUT,10000).
@@ -56,7 +56,7 @@ close(Pid) ->
 -spec init([pid()]) -> {ok,state()} |
                        {ok,state(),non_neg_integer()}.
 init([Supervisor, Cf = #config{write_interval = WriteInterval}]) ->
-    misc_util:seed_random(),
+    mas_misc_util:seed_random(),
     timer:send_after(WriteInterval, timer),
     Env = Cf#config.agent_env,
     Funstats = Env:stats(),
@@ -73,7 +73,7 @@ init([Supervisor, Cf = #config{write_interval = WriteInterval}]) ->
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
 handle_call({arenas, Arenas}, _From, St) ->
-    topology:helloPort(),
+    mas_topology:helloPort(),
     {reply, ok, St#state{arenas = Arenas}};
 
 handle_call({emigrate, _Agent}, {Pid, _}, cleaning) ->
@@ -83,7 +83,7 @@ handle_call({emigrate, _Agent}, {Pid, _}, cleaning) ->
 handle_call({emigrate, Agent}, From, St) ->
     {HisPid, _} = From,
     {Emigrants, Immigrants, LastLog} = check(St),
-    topology:emigrant({Agent, From}),
+    mas_topology:emigrant({Agent, From}),
     {noreply, St#state{emigrants = [HisPid|Emigrants], immigrants = Immigrants, lastLog = LastLog}}.
 
 
@@ -143,10 +143,10 @@ check(#state{emigrants = Emigrants,
              mySupervisor = Supervisor,
              config = Cf}) ->
     WriteInterval = Cf#config.write_interval,
-    case misc_util:log_now(LastLog, Cf) of
+    case mas_misc_util:log_now(LastLog, Cf) of
         {yes, NewLog} ->
-            logger:log_countstat(Supervisor, migration, length(Emigrants)),
-            [logger:log_funstat(Supervisor, StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- Funstats],
+            mas_logger:log_countstat(Supervisor, migration, length(Emigrants)),
+            [mas_logger:log_funstat(Supervisor, StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- Funstats],
             timer:send_after(WriteInterval, timer),
             {[], [], NewLog};
         notyet ->

@@ -1,5 +1,5 @@
 -module (emas).
--behaviour(agent_env).
+-behaviour(mas_agent_env).
 
 -export ([starts/1, start/2, start/3, start/4, initial_agent/1, behaviour_function/2, behaviours/0, meeting_function/2, stats/0]).
 
@@ -23,7 +23,7 @@ start(Model, Time, SimParamOptions) ->
 
 -spec start(model(),pos_integer(),[tuple()],[tuple()]) -> ok.
 start(Model, Time, SimParamOptions, ConfigOptions) ->
-    SimParamsUpdated = misc_util:overwrite_options(SimParamOptions, load_params()),
+    SimParamsUpdated = mas_misc_util:overwrite_options(SimParamOptions, load_params()),
     Agents = mas:start(?MODULE, Model, Time, proplist_to_record(SimParamsUpdated), ConfigOptions),
     extract_best(Agents).
 
@@ -36,8 +36,8 @@ starts([Model, Time]) ->
 
 -spec initial_agent(sim_params()) -> agent().
 initial_agent(SP) ->
-    S = genetic:solution(SP),
-    {S, genetic:evaluation(S, SP), SP#sim_params.initial_energy}.
+    S = emas_genetic:solution(SP),
+    {S, emas_genetic:evaluation(S, SP), SP#sim_params.initial_energy}.
 
 
 %% @doc This function chooses a behaviour for the agent based on its energy.
@@ -63,13 +63,13 @@ meeting_function({death, _}, _SP) ->
 
 meeting_function({reproduction, Agents}, SP) ->
     lists:flatmap(fun(Pair) ->
-                          evolution:do_reproduce(Pair, SP)
-                  end, evolution:optional_pairs(Agents, []));
+                          emas_evolution:do_reproduce(Pair, SP)
+                  end, emas_evolution:optional_pairs(Agents, []));
 
 meeting_function({fight, Agents}, SP) ->
     lists:flatmap(fun(Pair) ->
-                          evolution:do_fight(Pair, SP)
-                  end, evolution:optional_pairs(Agents, []));
+                          emas_evolution:do_fight(Pair, SP)
+                  end, emas_evolution:optional_pairs(Agents, []));
 
 meeting_function({_, _}, _SP) ->
     erlang:error(unexpected_behaviour).
@@ -100,7 +100,7 @@ extract_best(Agents) ->
 
 -spec load_params() -> sim_params().
 load_params() ->
-    ConfigFile = filename:join(misc_util:get_config_dir(), "emas.config"),
+    ConfigFile = filename:join(mas_misc_util:get_config_dir(), "emas.config"),
     {ok, ParamsFromFile} = file:consult(ConfigFile),
     ParamsFromFile.
 

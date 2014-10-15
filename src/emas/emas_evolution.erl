@@ -1,7 +1,7 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
 %% @doc A module with evolutionary functions which transform one generation into another, including migrations.
--module(evolution).
+-module(emas_evolution).
 -export([do_reproduce/2, do_fight/2, optional_pairs/2]).
 
 -include ("emas.hrl").
@@ -36,15 +36,15 @@ do_fight({{SolA, EvA, EnA}, {SolB, EvB, EnB}}, SP) ->
 %% @doc The reproduction logic for a single agent. It returns a list with the updated parent and new child.
 -spec do_reproduce({agent()} | {agent(), agent()}, sim_params()) -> [agent()].
 do_reproduce({{SolA, EvA, EnA}}, SP) ->
-    SolB = genetic:reproduction(SolA, SP),
-    EvB = genetic:evaluation(SolB, SP),
+    SolB = emas_genetic:reproduction(SolA, SP),
+    EvB = emas_genetic:evaluation(SolB, SP),
     AtoBtransfer = erlang:min(SP#sim_params.reproduction_transfer, EnA),
     [{SolA, EvA, EnA - AtoBtransfer}, {SolB, EvB, AtoBtransfer}];
 
 %% @doc The reproduction logic for a pair of agents. It returns a list with the updated parents and new children.
 do_reproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}, SP) ->
-    [SolC, SolD] = genetic:reproduction(SolA, SolB, SP),
-    [EvC, EvD] = [genetic:evaluation(S, SP) || S <- [SolC, SolD]],
+    [SolC, SolD] = emas_genetic:reproduction(SolA, SolB, SP),
+    [EvC, EvD] = [emas_genetic:evaluation(S, SP) || S <- [SolC, SolD]],
     [AtoCTransfer, BtoDTransfer] = [erlang:min(SP#sim_params.reproduction_transfer, E) || E <- [EnA, EnB]],
     [{SolA, EvA, EnA - AtoCTransfer}, {SolB, EvB, EnB - BtoDTransfer}, {SolC, EvC, AtoCTransfer}, {SolD, EvD, BtoDTransfer}].
 

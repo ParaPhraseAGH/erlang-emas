@@ -1,6 +1,6 @@
 -module(rastrigin_bin_ops).
 
--behaviour(genetic_ops).
+-behaviour(emas_genetic_ops).
 
 -export ([evaluation/2, mutation/2, recombination/3, solution/1]).
 
@@ -30,7 +30,7 @@ recombination(B1, B2, _SP) ->
 -spec mutation(solution(), sim_params()) -> solution().
 mutation(B, SP) ->
     S = erlang:binary_to_term(B),
-    NrGenesMutated = misc_util:average_number(SP#sim_params.mutation_rate, S),
+    NrGenesMutated = mas_misc_util:average_number(SP#sim_params.mutation_rate, S),
     Indexes = [random:uniform(length(S)) || _ <- lists:seq(1, NrGenesMutated)], % indices may be duplicated
     Mut = mutate_genes(S, lists:usort(Indexes), 1, [], SP), % usort removes duplicates
     erlang:term_to_binary(Mut).

@@ -1,7 +1,7 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
 %% @doc The module contains the definition of genetic operator callbacks to be implemented.
--module (genetic_ops).
+-module (emas_genetic_ops).
 
 -include ("emas.hrl").
 

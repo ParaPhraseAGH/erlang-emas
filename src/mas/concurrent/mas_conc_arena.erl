@@ -1,4 +1,4 @@
--module(arena).
+-module(mas_conc_arena).
 -behaviour(gen_server).
 
 %% API
@@ -30,7 +30,7 @@
 
 -spec start_link(pid(), atom(), sim_params(), config()) -> pid().
 start_link(Supervisor, migration, _SP, Cf) ->
-    {ok, Pid} = port:start_link(Supervisor, Cf),
+    {ok, Pid} = mas_conc_port:start_link(Supervisor, Cf),
     Pid;
 
 start_link(Supervisor, Interaction, SP, Cf) ->
@@ -58,7 +58,7 @@ close(Pid) ->
                               {ok, State :: #state{}, timeout() | hibernate} |
                               {stop, Reason :: term()} | ignore).
 init([Supervisor, Interaction, SP, Cf]) ->
-    misc_util:seed_random(),
+    mas_misc_util:seed_random(),
     Env = Cf#config.agent_env,
     Funstats = Env:stats(),
     {ok, #state{supervisor = Supervisor,
@@ -85,16 +85,16 @@ handle_call({interact, Agent}, From, St = #state{sim_params = SP, config = Cf}) 
     Froms = [From|St#state.agentFroms],
     case length(Waitlist)  of
         ?AGENT_THRESHOLD ->
-            NewAgents = misc_util:meeting_proxy({St#state.interaction, Waitlist}, concurrent, SP, Cf),
+            NewAgents = mas_misc_util:meeting_proxy({St#state.interaction, Waitlist}, concurrent, SP, Cf),
             respond(NewAgents, Froms, St#state.arenas, SP, Cf),
 
             NewCounter = St#state.counter + length(Waitlist), % tu blad?!
-            NewFunstats = misc_util:count_funstats(NewAgents, St#state.funstats),
+            NewFunstats = mas_misc_util:count_funstats(NewAgents, St#state.funstats),
 
-            case misc_util:log_now(St#state.lastLog, Cf) of
+            case mas_misc_util:log_now(St#state.lastLog, Cf) of
                 {yes, NewLog} ->
-                    logger:log_countstat(St#state.supervisor, St#state.interaction, NewCounter),
-                    [logger:log_funstat(St#state.supervisor, StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- NewFunstats],
+                    mas_logger:log_countstat(St#state.supervisor, St#state.interaction, NewCounter),
+                    [mas_logger:log_funstat(St#state.supervisor, StatName, Val) || {StatName, _MapFun, _ReduceFun, Val} <- NewFunstats],
                     {noreply,St#state{waitlist = [],
                                          agentFroms = [],
                                          lastLog = NewLog,
@@ -146,9 +146,9 @@ code_change(_OldVsn, State, _Extra) ->
 
 -spec respond([agent()], {pid(), term()}, dict:dict(), sim_params(), config()) -> list().
 respond(Agents, Froms, Arenas, SP, Cf) when length(Agents) >= length(Froms) ->
-    [gen_server:reply(From, Agent) || {From, Agent} <- misc_util:shortest_zip(Froms, Agents)],
-    [spawn(agent, start, [Agent, Arenas, SP, Cf]) || Agent <- lists:nthtail(length(Froms), Agents)];
+    [gen_server:reply(From, Agent) || {From, Agent} <- mas_misc_util:shortest_zip(Froms, Agents)],
+    [spawn(mas_conc_agent, start, [Agent, Arenas, SP, Cf]) || Agent <- lists:nthtail(length(Froms), Agents)];
 
 respond(Agents, Froms, _Arenas, _SimParams, _Config) when length(Agents) =< length(Froms) ->
-    [gen_server:reply(From, Agent) || {From, Agent} <- misc_util:shortest_zip(Froms, Agents)],
+    [gen_server:reply(From, Agent) || {From, Agent} <- mas_misc_util:shortest_zip(Froms, Agents)],
     [gen_server:reply(From, close) || From <- lists:nthtail(length(Agents), Froms)].

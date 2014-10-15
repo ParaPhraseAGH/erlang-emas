@@ -1,7 +1,7 @@
 %% @author jstypka <jasieek@student.agh.edu.pl>
 %% @version 1.0
 
--module(conc_supervisor).
+-module(mas_conc_supervisor).
 -behaviour(gen_server).
 
 -include("mas.hrl").
@@ -40,12 +40,12 @@ close(Pid) ->
 -spec init(term()) -> {ok,state()} |
                       {ok,state(),non_neg_integer()}.
 init([SP, Cf]) ->
-    misc_util:seed_random(),
-    Interactions = misc_util:determine_behaviours(Cf),
-    ArenaList = [{Interaction, arena:start_link(self(), Interaction, SP, Cf)} || Interaction <- Interactions],
+    mas_misc_util:seed_random(),
+    Interactions = mas_misc_util:determine_behaviours(Cf),
+    ArenaList = [{Interaction, mas_conc_arena:start_link(self(), Interaction, SP, Cf)} || Interaction <- Interactions],
     Arenas = dict:from_list(ArenaList),
-    [ok = arena:giveArenas(Pid, Arenas) || {_Interaction, Pid} <- ArenaList],
-    io_util:printArenas(ArenaList),
+    [ok = mas_conc_arena:giveArenas(Pid, Arenas) || {_Interaction, Pid} <- ArenaList],
+    mas_io_util:printArenas(ArenaList),
     {ok, #state{arenas = Arenas, config = Cf, sim_params = SP}}.
 
 
@@ -56,7 +56,7 @@ init([SP, Cf]) ->
                                                     {stop,term(),term(),state()} |
                                                     {stop,term(),state()}.
 handle_call(close, _From, St) ->
-    [arena:close(Pid) || {_Name,Pid} <- dict:to_list(St#state.arenas)],
+    [mas_conc_arena:close(Pid) || {_Name,Pid} <- dict:to_list(St#state.arenas)],
     {stop, normal, ok, St}.
 
 -spec handle_cast(term(),state()) -> {noreply,state()} |
@@ -64,8 +64,8 @@ handle_call(close, _From, St) ->
                                      {stop,term(),state()}.
 
 handle_cast(go, St = #state{config = Cf, sim_params = SP}) ->
-    Agents = misc_util:generate_population(SP, Cf),
-    _InitPopulation = [spawn(agent, start, [A, St#state.arenas, SP, Cf]) || A <- Agents],
+    Agents = mas_misc_util:generate_population(SP, Cf),
+    _InitPopulation = [spawn(mas_conc_agent, start, [A, St#state.arenas, SP, Cf]) || A <- Agents],
     {noreply, St}.
 
 
