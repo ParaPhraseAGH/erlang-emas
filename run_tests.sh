@@ -26,14 +26,14 @@ run () {
 
 output_dir="output"
 # rtime=120000
-rtime=2000
+rtime=3000
 
 # cores="1 2 4"
 cores="4"
 # run_repeat=3
 run_repeat=1
 skel_workers=4
-models="mas_skel" # "mas_sequential"
+models="mas_skel mas_sequential mas_concurrent mas_hybrid"
 
 output_root=$output_dir/tests
 
