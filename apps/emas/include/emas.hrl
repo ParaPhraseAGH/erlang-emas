@@ -1,10 +1,11 @@
+-include_lib("mas/include/mas.hrl").
 
 -type solution() :: [float()].
--type agent() :: {Solution::solution(), Fitness::float(), Energy::pos_integer()}.
--type agent_behaviour() :: death | reproduction | fight.
+%% -type agent() :: {Solution::solution(), Fitness::float(), Energy::pos_integer()}.
+%% -type agent_behaviour() :: death | reproduction | fight.
 
--type model() :: any().
--type funstat() :: any().
+%% -type model() :: any().
+%% -type funstat() :: any().
 
 -record(sim_params, {genetic_ops :: atom(),
                      problem_size :: pos_integer(),
@@ -19,4 +20,4 @@
                      recombination_chance :: float(),
                      fight_number :: pos_integer()}).
 
--type sim_params() :: #sim_params{}.
+%% -type sim_params() :: #sim_params{}.
