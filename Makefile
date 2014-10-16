@@ -27,7 +27,6 @@ doc:
 	$(REBAR) skip_deps=true doc
 
 test: all
-	$(REBAR) ct
 	./run_tests.sh
 
 $(DEPS_PLT):
