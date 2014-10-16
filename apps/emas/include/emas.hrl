@@ -2,9 +2,6 @@
 
 -type solution() :: [float()].
 
-%% -type model() :: any().
-%% -type funstat() :: any().
-
 -record(sim_params, {genetic_ops :: atom(),
                      problem_size :: pos_integer(),
                      monitor_diversity :: boolean(),
