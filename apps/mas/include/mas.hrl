@@ -6,8 +6,6 @@
 
 -type funstat() :: {Name::atom(), Map::fun(), Reduce::fun(), Value::term()}.
 
--type agent_behaviour() :: any().
-
 -record(config, {agent_env :: atom(),
                  topology :: atom(),
                  log_dir :: atom(),

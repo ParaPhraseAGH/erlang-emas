@@ -5,7 +5,9 @@
 -export_type([agent/0,
               agent/1,
               sim_params/0,
-              sim_params/1]).
+              sim_params/1,
+              agent_behaviour/0,
+              agent_behaviour/1]).
 
 -include ("mas.hrl").
 
@@ -14,6 +16,9 @@
 
 -type sim_params(Any) :: Any.
 -type sim_params() :: sim_params(any()).
+
+-type agent_behaviour(Any) :: Any.
+-type agent_behaviour() :: agent_behaviour(any()).
 
 -define(LOAD(Prop, Dict), Prop = dict:fetch(Prop,Dict)).
 

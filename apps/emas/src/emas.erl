@@ -13,6 +13,7 @@
                             Energy::pos_integer()}).
 
 -type sim_params() :: mas:sim_params(#sim_params{}).
+-type agent_behaviour() :: mas:agent_behaviour(death | reproduction | fight).
 
 %% ====================================================================
 %% Callbacks

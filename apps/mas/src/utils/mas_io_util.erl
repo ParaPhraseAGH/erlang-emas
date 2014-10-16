@@ -9,7 +9,7 @@
 
 -include ("mas.hrl").
 
--type groups() :: [{agent_behaviour(),[mas:agent()]}].
+-type groups() :: [{mas:agent_behaviour(),[mas:agent()]}].
 
 %% ====================================================================
 %% API functions

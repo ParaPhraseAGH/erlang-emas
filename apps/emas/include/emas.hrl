@@ -1,7 +1,6 @@
 -include_lib("mas/include/mas.hrl").
 
 -type solution() :: [float()].
-%% -type agent_behaviour() :: death | reproduction | fight.
 
 %% -type model() :: any().
 %% -type funstat() :: any().

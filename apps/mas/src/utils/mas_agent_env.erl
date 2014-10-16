@@ -6,6 +6,7 @@
 
 -type agent() :: mas:agent().
 -type sim_params() :: mas:sim_params().
+-type agent_behaviour() :: mas:agent_behaviour().
 
 -callback start(model(), pos_integer()) -> ok.
 

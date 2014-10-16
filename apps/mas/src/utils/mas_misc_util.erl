@@ -11,6 +11,7 @@
 
 -type agent() :: mas:agent().
 -type sim_params() :: mas:sim_params().
+-type agent_behaviour() :: mas:agent_behaviour().
 
 %% ====================================================================
 %% API functions
