@@ -2,7 +2,7 @@
 
 -type counter() :: dict:dict().
 
--type model() :: sequential | hybrid | concurrent | skel.
+-type model() :: mas_sequential | mas_hybrid | mas_concurrent | mas_skel.
 
 -type funstat() :: {Name::atom(), Map::fun(), Reduce::fun(), Value::term()}.
 
