@@ -25,6 +25,7 @@
 -define(AGENT_THRESHOLD, 2). %% TODO this should be user-configurable and use case dependent
 
 -type agent() :: mas:agent().
+-type sim_params() :: mas:sim_params().
 
 %%%===================================================================
 %%% API

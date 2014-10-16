@@ -7,6 +7,7 @@
 -include ("emas.hrl").
 
 -type agent() :: emas:agent().
+-type sim_params() :: emas:sim_params().
 
 %% ====================================================================
 %% API functions

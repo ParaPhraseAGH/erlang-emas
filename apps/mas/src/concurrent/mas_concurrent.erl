@@ -13,7 +13,7 @@
 %% API functions
 %% ====================================================================
 
--spec start(Time::pos_integer(), sim_params(), config()) -> ok.
+-spec start(Time::pos_integer(), mas:sim_params(), config()) -> ok.
 start(Time, SP, Cf = #config{islands = Islands}) ->
 %%     io:format("{Model=Concurrent,Time=~p,Islands=~p,Topology=~p}~n",[Time,Islands,Topology]),
     mas_misc_util:clear_inbox(),

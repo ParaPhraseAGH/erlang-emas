@@ -7,7 +7,6 @@
 -type funstat() :: {Name::atom(), Map::fun(), Reduce::fun(), Value::term()}.
 
 -type agent_behaviour() :: any().
--type sim_params() :: any().
 
 -record(config, {agent_env :: atom(),
                  topology :: atom(),

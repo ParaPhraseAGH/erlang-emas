@@ -8,6 +8,7 @@
 -include("mas.hrl").
 
 -type agent() :: mas:agent().
+-type sim_params() :: mas:sim_params().
 
 %% ====================================================================
 %% API functions
