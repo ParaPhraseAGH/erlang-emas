@@ -15,6 +15,7 @@
 
 -define(RESULT_SINK, result_sink).
 -type state() :: [pid()].
+-type agent() :: mas:agent().
 
 %% ====================================================================
 %% API functions

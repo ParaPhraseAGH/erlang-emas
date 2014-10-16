@@ -1,4 +1,4 @@
--type island() :: [agent()].
+-type island() :: [mas:agent()].
 
 -type counter() :: dict:dict().
 
@@ -6,7 +6,6 @@
 
 -type funstat() :: {Name::atom(), Map::fun(), Reduce::fun(), Value::term()}.
 
--type agent() :: any().
 -type agent_behaviour() :: any().
 -type sim_params() :: any().
 

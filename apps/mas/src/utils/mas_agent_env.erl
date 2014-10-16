@@ -4,6 +4,9 @@
 
 -include ("mas.hrl").
 
+-type agent() :: mas:agent().
+
+
 -callback start(model(), pos_integer()) -> ok.
 
 -callback initial_agent(sim_params()) -> [agent()].

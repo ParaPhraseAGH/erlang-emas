@@ -33,7 +33,7 @@ start(Time, SP, Cf = #config{islands = Islands}) ->
     unregister(?RESULT_SINK),
     Agents.
 
--spec send_result(agent()) -> ok.
+-spec send_result(mas:agent()) -> ok.
 send_result(Agent) ->
     whereis(?RESULT_SINK) ! {result, Agent}.
 

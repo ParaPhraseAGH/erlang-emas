@@ -24,6 +24,8 @@
 -define(CLOSING_TIMEOUT, 2000).
 -define(AGENT_THRESHOLD, 2). %% TODO this should be user-configurable and use case dependent
 
+-type agent() :: mas:agent().
+
 %%%===================================================================
 %%% API
 %%%===================================================================

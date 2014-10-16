@@ -2,8 +2,12 @@
 
 -module (mas).
 -export ([start/5]).
+-export_type([agent/0, agent/1]).
 
 -include ("mas.hrl").
+
+-type agent(Any) :: Any.
+-type agent() :: agent(any()).
 
 -define(LOAD(Prop, Dict), Prop = dict:fetch(Prop,Dict)).
 

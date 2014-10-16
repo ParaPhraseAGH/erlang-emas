@@ -9,7 +9,7 @@
 
 -include ("mas.hrl").
 
--type groups() :: [{agent_behaviour(),[agent()]}].
+-type groups() :: [{agent_behaviour(),[mas:agent()]}].
 
 %% ====================================================================
 %% API functions
@@ -23,7 +23,7 @@ printSeq([Island|T]) ->
     printSeq(T).
 
 %% @doc Computes energy sum for the population
--spec sumEnergy([agent()]) -> integer().
+-spec sumEnergy([mas:agent()]) -> integer().
 sumEnergy(Agents) ->
     lists:foldl(fun({_,_,E},Acc) -> Acc + E end,0,Agents).
 
