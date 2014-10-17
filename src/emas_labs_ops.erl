@@ -1,8 +1,10 @@
--module (labs_ops).
--behaviour (genetic_ops).
+-module (emas_labs_ops).
+-behaviour (emas_genetic_ops).
 -export ([solution/1, evaluation/2, mutation/2, recombination/3]).
 
--include ("emas.hrl").
+-include("emas.hrl").
+
+-type sim_params() :: emas:sim_params().
 
 %% @doc Generates a random solution.
 -spec solution(sim_params()) -> solution().

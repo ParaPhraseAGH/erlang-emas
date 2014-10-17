@@ -2,10 +2,12 @@
 %% @version 1.0
 %% @doc The module contains abstract genetic operators
 
--module(genetic).
+-module(emas_genetic).
 -export([solution/1, evaluation/2, reproduction/2, reproduction/3]).
 
 -include ("emas.hrl").
+
+-type sim_params() :: emas:sim_params().
 
 %% ====================================================================
 %% API functions
