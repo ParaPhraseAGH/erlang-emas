@@ -108,7 +108,9 @@ extract_best(Agents) ->
 
 -spec load_params() -> sim_params().
 load_params() ->
-    ConfigFile = filename:join(mas_misc_util:get_config_dir(), "emas.config"),
+    ConfDir = mas_misc_util:get_config_dir(),
+    io:format("~p~n", [ConfDir]),
+    ConfigFile = filename:join(ConfDir, "emas.config"),
     {ok, ParamsFromFile} = file:consult(ConfigFile),
     ParamsFromFile.
 

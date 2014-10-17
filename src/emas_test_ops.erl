@@ -4,7 +4,7 @@
 
 -export ([evaluation/2, mutation/2, recombination/3, solution/1]).
 
--include_lib("emas/include/emas.hrl").
+-include("emas.hrl").
 
 -type sim_params() :: emas:sim_params().
 

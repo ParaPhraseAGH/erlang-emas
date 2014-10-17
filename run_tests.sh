@@ -13,8 +13,8 @@ run () {
 
                     output_file=$output_root/$model/$core/w$workers/$logfile
                     echo $output_file
-                    erl +S 4:$core -pa apps/*/ebin -pa deps/*/ebin \
-                        -eval "emas:start($model,$rtime,[{skel_workers,$workers}])." \
+                    erl +S 4:$core -pa ebin -pa deps/*/ebin \
+                        -eval "emas:start($model,$rtime,[{skel_workers,$workers},{genetic_ops, emas_test_ops}])." \
                         -run init stop -noshell
                     #> $output_file
                 done
