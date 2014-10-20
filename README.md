@@ -52,9 +52,9 @@ To run the application you can type:
 
     1> emas:start(mas_concurrent, 10000).
   
-which will start the algorithm. The word _emas_ is the name of the main module of our usecase. You can choose to implement a new one, which should be started in the same way as shown above.
+which will start the algorithm. The word `emas` is the name of the main module of our usecase. You can choose to implement a new one, which should be started in the same way as shown above.
 
-The atom _mas_concurrent_ defines the version of the program which will be used to execute the program. Currently you can choose from _mas_concurrent_, _mas_hybrid_, _mas_skel_ and _mas_sequential_ versions.
+The atom `mas_concurrent` defines the version of the program which will be used to execute the program. Currently you can choose from `mas_concurrent`, `mas_hybrid`, `mas_skel` and `mas_sequential` versions.
 The second parameter is the expected time of the execution in miliseconds. By default, the program will write all its results to stdout, so you can see if everything is configured correctly.
 
 There are also two other starting functions provided in the `emas` module:
