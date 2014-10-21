@@ -1,12 +1,13 @@
 -module (emas).
 -behaviour(mas_agent_env).
 
--export ([starts/1, start/2, start/3, start/4, initial_agent/1, behaviour_function/2, behaviours/0, meeting_function/2, stats/0]).
+-export ([starts/1, start/2, start/3, start/4, initial_agent/1,
+          behaviour_function/2, behaviours/0, meeting_function/2, stats/0]).
 -export_type([agent/0, solution/0, solution/1, sim_params/0]).
 
 -include ("emas.hrl").
 
--define(LOAD(Prop, Dict), Prop = dict:fetch(Prop,Dict)).
+-define(LOAD(Prop, Dict), Prop = dict:fetch(Prop, Dict)).
 
 -type solution(Any) :: Any.
 -type solution() :: solution(any()).
@@ -21,20 +22,23 @@
 %% Callbacks
 %% ====================================================================
 
--spec start(model(),pos_integer()) -> agent().
+-spec start(model(), pos_integer()) -> agent().
 start(Model, Time) ->
     start(Model, Time, []).
 
 
--spec start(model(),pos_integer(),[tuple()]) -> agent().
+-spec start(model(), pos_integer(), [tuple()]) -> agent().
 start(Model, Time, SimParamOptions) ->
     start(Model, Time, SimParamOptions, []).
 
 
--spec start(model(),pos_integer(),[tuple()],[tuple()]) -> agent().
+-spec start(model(), pos_integer(), [tuple()], [tuple()]) -> agent().
 start(Model, Time, SimParamOptions, ConfigOptions) ->
-    SimParamsUpdated = mas_misc_util:overwrite_options(SimParamOptions, load_params()),
-    Agents = mas:start(?MODULE, Model, Time, proplist_to_record(SimParamsUpdated), ConfigOptions),
+    SimParamsUpdated = mas_misc_util:overwrite_options(SimParamOptions,
+                                                       load_params()),
+    Agents = mas:start(?MODULE, Model, Time,
+                       proplist_to_record(SimParamsUpdated),
+                       ConfigOptions),
     extract_best(Agents).
 
 
@@ -67,7 +71,8 @@ behaviours() ->
     [reproduction, death, fight].
 
 
--spec meeting_function({agent_behaviour(), [agent()]}, sim_params()) -> [agent()].
+-spec meeting_function({agent_behaviour(), [agent()]}, sim_params()) ->
+                              [agent()].
 meeting_function({death, _}, _SP) ->
     [];
 
@@ -91,7 +96,7 @@ stats() ->
                           Fitness
                   end,
     Fitness_reduce = fun(F1, F2) ->
-                             lists:max([F1,F2])
+                             lists:max([F1, F2])
                      end,
     [{fitness, Fitness_map, Fitness_reduce, -999999}].
 
