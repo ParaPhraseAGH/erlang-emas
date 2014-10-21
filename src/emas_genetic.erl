@@ -8,6 +8,7 @@
 -include ("emas.hrl").
 
 -type sim_params() :: emas:sim_params().
+-type solution() :: emas:solution().
 
 %% ====================================================================
 %% API functions
@@ -50,4 +51,3 @@ reproduction(S1, S2, SP) ->
              false -> R2
          end,
     [M1, M2].
-

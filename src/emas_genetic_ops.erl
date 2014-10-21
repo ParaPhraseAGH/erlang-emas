@@ -6,11 +6,16 @@
 -include ("emas.hrl").
 
 -type sim_params() :: mas:sim_params().
+-type solution() :: emas:solution().
 
--callback solution(sim_params()) -> solution().
+-callback solution(sim_params()) ->
+    solution().
 
--callback evaluation(solution(), sim_params()) -> float().
+-callback evaluation(solution(), sim_params()) ->
+    float().
 
--callback mutation(solution(), sim_params()) -> solution().
+-callback mutation(solution(), sim_params()) ->
+    solution().
 
--callback recombination(solution(), solution(), sim_params()) -> {solution(), solution()}.
+-callback recombination(solution(), solution(), sim_params()) ->
+    {solution(), solution()}.
