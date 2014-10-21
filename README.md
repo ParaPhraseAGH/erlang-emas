@@ -26,7 +26,7 @@ To run the project on your machine you need:
 First you need to clone the repository:
 
     > git clone https://github.com/ParaPhraseAGH/erlang-emas.git
-    > cd erlang/
+    > cd erlang-emas/
 
 To build the project you should use the Makefile command:
 
@@ -40,7 +40,7 @@ To run the project you need to implement problem-specific operators, which defin
 
 To start a VM where you can run the application, first make sure that you are in the main project's folder:
 
-    > cd emas/
+    > cd erlang-emas/
     
 Then you can run:
 
