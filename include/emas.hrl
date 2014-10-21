@@ -2,7 +2,6 @@
 
 -record(sim_params, {genetic_ops :: atom(),
                      problem_size :: pos_integer(),
-                     monitor_diversity :: boolean(),
                      initial_energy :: integer(),
                      reproduction_threshold :: integer(),
                      reproduction_transfer :: integer(),

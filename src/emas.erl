@@ -127,7 +127,6 @@ proplist_to_record(Proplist) ->
     Dict = dict:from_list(Proplist),
     #sim_params{?LOAD(genetic_ops, Dict),
                 ?LOAD(problem_size, Dict),
-                ?LOAD(monitor_diversity, Dict),
                 ?LOAD(initial_energy, Dict),
                 ?LOAD(reproduction_threshold, Dict),
                 ?LOAD(reproduction_transfer, Dict),
