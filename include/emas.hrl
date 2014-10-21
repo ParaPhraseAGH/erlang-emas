@@ -1,7 +1,5 @@
 -include_lib("mas/include/mas.hrl").
 
--type solution() :: [float()].
-
 -record(sim_params, {genetic_ops :: atom(),
                      problem_size :: pos_integer(),
                      monitor_diversity :: boolean(),
