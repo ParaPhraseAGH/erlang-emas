@@ -8,6 +8,9 @@ import numpy as np
 from collections import defaultdict
 import log_to_files
 
+def movingaverage(interval, window_size):
+    window = np.ones(int(window_size))/float(window_size)
+    return np.convolve(interval, window, 'valid')
 
 def readlines(filepath):
     with open(filepath) as f:
@@ -16,22 +19,21 @@ def readlines(filepath):
 
 def read_run_stats(instance_name):
     statslist = ["death", "fight", "migration", "reproduction"]
+    # statslist = ["reproduction"]
     island_statslist = ["fitness"] #, "population"] #, "stddevsum", "stddevmin"]
     common_data = {}
     island_data = []
-    islands = [name for name in os.listdir(instance_name) if name.startswith('island')]
-    if len(islands) == 0:
-        # if skel stats, remove migration
-        # statslist.remove("migration")
-        data = {}
-        for filename in island_statslist:
-            filepath = os.path.join(instance_name, filename  + ".txt")
-            # print filepath, readlines(filepath)
-            try:
-                data[filename] = readlines(filepath)
-            except:
-                print 'exception:', filename, ' stats not present'
-        island_data.append(data)
+    # if skel stats, remove migration
+    # statslist.remove("migration")
+    data = {}
+    for filename in island_statslist:
+        filepath = os.path.join(instance_name, filename  + ".txt")
+        # print filepath, readlines(filepath)
+        try:
+            data[filename] = readlines(filepath)
+        except:
+            print 'exception:', filename, ' stats not present'
+    island_data.append(data)
     for filename in statslist:
         filepath = os.path.join(instance_name, filename + ".txt")
         # print filepath, readlines(filepath)
@@ -39,16 +41,6 @@ def read_run_stats(instance_name):
             common_data[filename] = readlines(filepath)
         except:
             print 'exception:', filename, ' stats not present'
-    for island in islands:
-        data = {}
-        for filename in island_statslist:
-            filepath = os.path.join(instance_name, island, filename  + ".txt")
-            # print filepath, readlines(filepath)
-            try:
-                data[filename] = readlines(filepath)
-            except:
-                print 'exception:', filename, ' stats not present'
-        island_data.append(data)
     return common_data, island_data
 
 
@@ -102,6 +94,9 @@ def merge_stats(islands, func, stat):
 class DataToPlot(object):
     """docstring for DataToPlot"""
     def __init__(self, data, attr, scale='linear', func=None, label=None):
+        if attr != "fitness":
+            window = 30
+            data = movingaverage(data, window)
         self.data = data
         self.func = func
         self.attr = attr
@@ -125,7 +120,7 @@ class DataToPlot(object):
 
 def plot_data_objs(data_to_plot_list, figure_name, same=False):
     rows = 2
-    cols = 2
+    cols = 1
     topo = figure_name.split(':')[0]
     # print "topo:",topo
     # print "figname:",figure_name
@@ -135,20 +130,21 @@ def plot_data_objs(data_to_plot_list, figure_name, same=False):
     else:
         fig, ax = plt.subplots(rows, cols)
     for i in range(rows):
-        for j in range(cols):
-            if len(data_to_plot_list) > i*rows+j:
-                obj = data_to_plot_list[i*rows+j]
-                if obj.scale == 'log' and max(obj.data) <= 0:
-                    ydata = map(lambda x: -x, obj.data)
-                else:
-                    ydata = obj.data
-                ax[i][j].plot(range(len(obj.data)), ydata, label=topo, linewidth=2.0)
-                ax[i][j].set_yscale(obj.scale)
-                ax[i][j].set_title(obj.label)
-                if same:
-                    ax[i][j].legend(loc='lower left', shadow=True)
-                    ax[i][j].legend().set_visible(False)
-                    # fig.legend(loc='lower left', shadow=True)
+        # for j in range(cols):
+        idx = i #*rows+j
+        if len(data_to_plot_list) > idx:
+            obj = data_to_plot_list[idx]
+            if obj.scale == 'log' and max(obj.data) <= 0:
+                ydata = map(lambda x: -x, obj.data)
+            else:
+                ydata = obj.data
+            ax[idx].plot(range(len(obj.data)), ydata, label=topo, linewidth=2.0)
+            ax[idx].set_yscale(obj.scale)
+            ax[idx].set_title(obj.label)
+            if same:
+                ax[idx].legend(loc='lower left', shadow=True)
+                ax[idx].legend().set_visible(False)
+                # fig.legend(loc='lower left', shadow=True)
     if fig._suptitle is None:
         suptitle = ':'.join(figure_name.split(':')[1:])
         fig.suptitle(suptitle, fontsize=18)
@@ -166,7 +162,9 @@ def fetch_instance(instance_name):
 
     # subplots_data = [best_fitness, sum_population, spread_population]
     subplots_data = [best_fitness] #, sum_population] #, stddevmin, stddevsum]
-    common_data = [DataToPlot(data, attr) for attr, data in common.items()]
+    # common_data = [DataToPlot(data, attr) for attr, data in common.items()]
+    attr = "reproduction"
+    common_data = [DataToPlot(common[attr], attr)]
     instance_data = [subplots_data[0]] + common_data + subplots_data[1:]
 
     return instance_data
@@ -237,6 +235,8 @@ def run():
         print '\tpython stat_plotter.py {<directory_with_logfiles>|<directory_with_subdirectories} ...'
     else:
         directories = sys.argv[1:]
+        if not os.path.isdir(sys.argv[-1]):
+            directories = directories[:-1]
         instance_names_in_directories = []
         for directory in directories:
             logfiles = [os.path.join(directory,name) for name in os.listdir(directory) if name.startswith(proj) and not name.endswith('_run')]
@@ -251,11 +251,13 @@ def run():
             if len(plot_label) == 0:
                 plot_label = None
             main(instance_names, func, True, plot_label)
-        fig, axes = plt.subplots(2, 2, num=1)
-        ax = axes[1][1]
+        fig, axes = plt.subplots(2, 1, num=1)
+        ax = axes[0]
         l = ax.legend()#.set_visible(False)
         # position = 'lower right'
-        if l.legendHandles is not None:
+        if l is None:
+            pass
+        elif l.legendHandles is not None:
             position = 'center left'
             fig.legend(l.legendHandles, [x._text for x in l.texts], position)
             l.set_visible(False)
@@ -266,4 +268,8 @@ def run():
 if __name__ == '__main__':
     run()
     # plt.legend()
-    plt.show()
+    if os.path.isdir(sys.argv[-1]):
+        plt.show()
+    else:
+        ext = "svg"
+        plt.savefig("plots/"+sys.argv[-1]+"."+ext, bbox_inches='tight')
