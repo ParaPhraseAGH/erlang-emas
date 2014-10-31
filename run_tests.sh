@@ -15,7 +15,7 @@ run () {
 
                         output_file=$dir/$logfile
                         echo $output_file
-                        command="emas:start($model,$rtime,[{skel_workers,4},{genetic_ops,emas_test_ops},{problem_size,30}],[{split_size,$split_size},{skel_pull,$skel_pull}])."
+                        command="emas:start($model,$rtime,[{skel_workers,4},{genetic_ops,emas_test_ops},{problem_size,30}],[{skel_split_size,$split_size},{skel_pull,$skel_pull}])."
                         echo $command
                         erl +S 4:$core -pa ebin -pa deps/*/ebin \
                             -eval $command \
