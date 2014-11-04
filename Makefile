@@ -21,13 +21,14 @@ update-deps:
 	$(REBAR) compile
 
 compile:
-	$(REBAR) skip_deps=true compile
+	$(REBAR) compile
 
 doc:
 	$(REBAR) skip_deps=true doc
 
 test: all
 	./run_tests.sh
+	make dialyzer
 
 $(DEPS_PLT):
 	@echo Building local plt at $(DEPS_PLT)
@@ -46,7 +47,7 @@ clean:
 	- rm -rf $(CURDIR)/test/*.beam
 	# - rm -rf $(CURDIR)/logs
 	# - rm -rf $(CURDIR)/ebin
-	$(REBAR) skip_deps=true clean
+	$(REBAR)  clean
 
 distclean: clean
 	- rm -rf $(DEPS_PLT)
