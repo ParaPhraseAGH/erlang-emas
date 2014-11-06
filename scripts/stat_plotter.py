@@ -214,15 +214,13 @@ def zeus(directory='.', proj="emas", func='mean'):
 
 def trim_plot_labels(first_instances):
     # print "first_instances", first_instances
+    if len(first_instances) == 1:
+        return [os.path.sep.join(first_instances[0].split(os.path.sep)[:-1])]
     paths_elems = [instance.split(os.path.sep)[:-1] for instance in first_instances]
     result = []
     for path in zip(*paths_elems):
-        if not all([path[0]==p for p in path]):
-            # print "zostaw", path[0]
+        if not all([path[0] == p for p in path]):
             result.append(path)
-        #else:
-        #     print "wywal", path[0]
-    #
     new_names = zip(*result)
     return map(lambda x: os.path.sep.join(list(x)), new_names)
 
@@ -230,46 +228,46 @@ def trim_plot_labels(first_instances):
 def run():
     proj = 'emas'
     func = 'mean'
+    directories = sys.argv[1:]
+    if not os.path.isdir(sys.argv[-1]):
+        directories = directories[:-1]
+    instance_names_in_directories = []
+    for directory in directories:
+        logfiles = [os.path.join(directory,name) for name in os.listdir(directory) if name.startswith(proj) and not name.endswith('_run')]
+        instance_names = [os.path.join(directory,name) for name in os.listdir(directory) if name.endswith('_run')]
+        if len(logfiles) != len(instance_names):
+            instance_names = zeus(directory, proj, func)
+        instance_names_in_directories.append(instance_names)
+    # print instance_names_in_directories
+    first_instances = map(lambda x: x[0], instance_names_in_directories)
+    plot_labels = trim_plot_labels(first_instances)
+    for instance_names, plot_label in zip(instance_names_in_directories, plot_labels):
+        if len(plot_label) == 0:
+            plot_label = None
+        main(instance_names, func, True, plot_label)
+    fig, axes = plt.subplots(2, 1, num=1)
+    ax = axes[0]
+    l = ax.legend()#.set_visible(False)
+    # position = 'lower right'
+    if l is None:
+        pass
+    elif l.legendHandles is not None:
+        position = 'center left'
+        fig.legend(l.legendHandles, [x._text for x in l.texts], position)
+        l.set_visible(False)
+    # fig.tight_layout()
+    # i=1
+
+
+if __name__ == '__main__':
+    # plt.legend()
     if len(sys.argv) < 2:
         print 'Usage:'
         print '\tpython stat_plotter.py {<directory_with_logfiles>|<directory_with_subdirectories} ...'
     else:
-        directories = sys.argv[1:]
-        if not os.path.isdir(sys.argv[-1]):
-            directories = directories[:-1]
-        instance_names_in_directories = []
-        for directory in directories:
-            logfiles = [os.path.join(directory,name) for name in os.listdir(directory) if name.startswith(proj) and not name.endswith('_run')]
-            instance_names = [os.path.join(directory,name) for name in os.listdir(directory) if name.endswith('_run')]
-            if len(logfiles) != len(instance_names):
-                instance_names = zeus(directory, proj, func)
-            instance_names_in_directories.append(instance_names)
-        # print instance_names_in_directories
-        first_instances = map(lambda x: x[0], instance_names_in_directories)
-        plot_labels = trim_plot_labels(first_instances)
-        for instance_names, plot_label in zip(instance_names_in_directories, plot_labels):
-            if len(plot_label) == 0:
-                plot_label = None
-            main(instance_names, func, True, plot_label)
-        fig, axes = plt.subplots(2, 1, num=1)
-        ax = axes[0]
-        l = ax.legend()#.set_visible(False)
-        # position = 'lower right'
-        if l is None:
-            pass
-        elif l.legendHandles is not None:
-            position = 'center left'
-            fig.legend(l.legendHandles, [x._text for x in l.texts], position)
-            l.set_visible(False)
-        # fig.tight_layout()
-        # i=1
-
-
-if __name__ == '__main__':
-    run()
-    # plt.legend()
-    if os.path.isdir(sys.argv[-1]):
-        plt.show()
-    else:
-        ext = "svg"
-        plt.savefig("plots/"+sys.argv[-1]+"."+ext, bbox_inches='tight')
+        run()
+        if os.path.isdir(sys.argv[-1]):
+            plt.show()
+        else:
+            ext = "svg"
+            plt.savefig("plots/"+sys.argv[-1]+"."+ext, bbox_inches='tight')
