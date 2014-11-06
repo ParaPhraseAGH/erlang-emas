@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-this script is a tool to extract logs from stdout 
+this script is a tool to extract logs from stdout
 and save the data to separate files (death.txt, fitness.txt, etc.)
 '''
 
@@ -53,7 +53,8 @@ def parse(logfile, out_dir, old_format=False):
             elif attr == 'population':
                 data2 = [sum(tup) for tup in vals]
             else:
-                data2 = [sum(tup)/len(tup) for tup in vals]
+                # data2 = [sum(tup)/len(tup) for tup in vals]
+                data2 = [sum(tup) for tup in vals]
             if data2:
                 if not data2[-1]:
                     # logger adds an additional 0.0 to the sequential model runs
