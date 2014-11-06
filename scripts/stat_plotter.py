@@ -269,5 +269,7 @@ if __name__ == '__main__':
         if os.path.isdir(sys.argv[-1]):
             plt.show()
         else:
+            from subprocess import call
+            call(["mkdir", "-p", "plots"])
             ext = "svg"
             plt.savefig("plots/"+sys.argv[-1]+"."+ext, bbox_inches='tight')
