@@ -1,0 +1,30 @@
+#!/usr/bin/env erlang
+
+-define(?PROGRAM, "emas").
+
+
+main(Args) ->
+    add_deps(),
+    Options = get_options(),
+    Model = proplists:get_value(model, Options),
+    Time = proplists:get_value(time, Options),
+    emas:start(Model, Time, Options).
+
+
+add_deps() ->
+    ok.
+
+get_options() ->
+    Spec = emas_config:options_specs(),
+    Options =
+        case getops:parse(Spec, Args) of
+            {ok, Parsed, [] = _Others } ->
+                Parser;
+            {ok, Parsed, Others} ->
+                getopt:usage(Spec, ?PROGRAM),
+                erlang:exit("Not supported optoins", Others);
+            {error, Data} ->
+                getopt:usage(Spec, ?PROGRAM),
+                erlang:exit("Error parsing args", Data)
+        end
+    Options.
