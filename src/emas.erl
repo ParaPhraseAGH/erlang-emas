@@ -1,8 +1,17 @@
 -module (emas).
 -behaviour(mas_agent_env).
 
--export ([starts/1, start/2, start/3, start/4, initial_agent/1,
-          behaviour_function/2, behaviours/0, meeting_function/2, stats/0]).
+-export([start/2,
+         initial_agent/1,
+         behaviour_function/2,
+         behaviours/0,
+         meeting_function/2,
+         stats/0]).
+
+-export([starts/1,
+         start/3
+        ]).
+
 -export_type([agent/0, solution/0, solution/1, sim_params/0]).
 
 -include ("emas.hrl").
@@ -28,13 +37,8 @@ start(Model, Time) ->
 
 
 -spec start(model(), pos_integer(), [tuple()]) -> agent().
-start(Model, Time, SimParamOptions) ->
-    start(Model, Time, SimParamOptions, []).
-
-
--spec start(model(), pos_integer(), [tuple()], [tuple()]) -> agent().
-start(Model, Time, SimParamOptions, ConfigOptions) ->
-    SimParams = emas_config:proplist_to_record(SimParamOptions),
+start(Model, Time, ConfigOptions) ->
+    SimParams = emas_config:proplist_to_record(ConfigOptions),
     io:format(">> SimParams ~p~n", [SimParams]),
     Agents = mas:start(?MODULE, Model, Time,
                        SimParams,
@@ -112,6 +116,3 @@ extract_best(Agents) ->
                      Acc
              end,
     {_Sol, _Fit, _Energy} = lists:foldl(ArgMax, hd(Agents), tl(Agents)).
-
-
-
