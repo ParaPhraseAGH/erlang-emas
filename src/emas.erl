@@ -1,15 +1,13 @@
 -module (emas).
 -behaviour(mas_agent_env).
 
--export([start/2,
-         initial_agent/1,
+-export([initial_agent/1,
          behaviour_function/2,
          behaviours/0,
          meeting_function/2,
          stats/0]).
 
--export([starts/1,
-         start/3
+-export([start/3
         ]).
 
 -export_type([agent/0, solution/0, solution/1, sim_params/0]).
@@ -31,11 +29,6 @@
 %% Callbacks
 %% ====================================================================
 
--spec start(model(), pos_integer()) -> agent().
-start(Model, Time) ->
-    start(Model, Time, []).
-
-
 -spec start(model(), pos_integer(), [tuple()]) -> agent().
 start(Model, Time, ConfigOptions) ->
     SimParams = emas_config:proplist_to_record(ConfigOptions),
@@ -44,12 +37,6 @@ start(Model, Time, ConfigOptions) ->
                        SimParams,
                        ConfigOptions),
     extract_best(Agents).
-
-
-%% @doc function for starting `emas` from command line
--spec starts(list()) -> agent().
-starts([Model, Time]) ->
-    start(erlang:list_to_atom(Model), erlang:list_to_integer(Time)).
 
 
 -spec initial_agent(sim_params()) -> agent().
