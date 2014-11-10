@@ -32,7 +32,7 @@
 -spec start(model(), pos_integer(), [tuple()]) -> agent().
 start(Model, Time, ConfigOptions) ->
     SimParams = emas_config:proplist_to_record(ConfigOptions),
-    io:format(">> SimParams ~p~n", [SimParams]),
+    io:format("### SimParams ~p~n", [SimParams]),
     Agents = mas:start(?MODULE, Model, Time,
                        SimParams,
                        ConfigOptions),

@@ -69,7 +69,8 @@ options_specs() ->
       "The probability to recombine parent solutions during reproduction <0.0 .. 1.0>"},
 
      {fight_number,           undefined, "fight_number",          {integer, 2},
-      "The size of the fight arena"}].
+      "The size of the fight arena"}]
+        ++ mas_config:options_specs().
 
 
 default_options() ->
