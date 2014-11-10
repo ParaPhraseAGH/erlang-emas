@@ -34,10 +34,10 @@ start(Model, Time, SimParamOptions) ->
 
 -spec start(model(), pos_integer(), [tuple()], [tuple()]) -> agent().
 start(Model, Time, SimParamOptions, ConfigOptions) ->
-    SimParamsUpdated = mas_misc_util:overwrite_options(SimParamOptions,
-                                                       load_params()),
+    SimParams = emas_config:proplist_to_record(SimParamOptions),
+    io:format(">> SimParams ~p~n", [SimParams]),
     Agents = mas:start(?MODULE, Model, Time,
-                       proplist_to_record(SimParamsUpdated),
+                       SimParams,
                        ConfigOptions),
     extract_best(Agents).
 
@@ -113,26 +113,5 @@ extract_best(Agents) ->
              end,
     {_Sol, _Fit, _Energy} = lists:foldl(ArgMax, hd(Agents), tl(Agents)).
 
--spec load_params() -> [{atom(), term()}].
-load_params() ->
-    ConfDir = mas_misc_util:get_config_dir(),
-    io:format("~p~n", [ConfDir]),
-    ConfigFile = filename:join(ConfDir, "emas.config"),
-    {ok, ParamsFromFile} = file:consult(ConfigFile),
-    ParamsFromFile.
 
-%% @doc Transform a proplist with simulation properties to a record
--spec proplist_to_record([{atom(), term()}]) -> sim_params().
-proplist_to_record(Proplist) ->
-    Dict = dict:from_list(Proplist),
-    #sim_params{?LOAD(genetic_ops, Dict),
-                ?LOAD(problem_size, Dict),
-                ?LOAD(initial_energy, Dict),
-                ?LOAD(reproduction_threshold, Dict),
-                ?LOAD(reproduction_transfer, Dict),
-                ?LOAD(fight_transfer, Dict),
-                ?LOAD(mutation_rate, Dict),
-                ?LOAD(mutation_range, Dict),
-                ?LOAD(mutation_chance, Dict),
-                ?LOAD(recombination_chance, Dict),
-                ?LOAD(fight_number, Dict)}.
+
