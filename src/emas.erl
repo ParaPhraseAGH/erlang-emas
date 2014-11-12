@@ -7,7 +7,7 @@
          meeting_function/2,
          stats/0]).
 
--export([start/3
+-export([start/2
         ]).
 
 -export_type([agent/0, solution/0, solution/1, sim_params/0]).
@@ -29,11 +29,12 @@
 %% Callbacks
 %% ====================================================================
 
--spec start(model(), pos_integer(), [tuple()]) -> agent().
-start(Model, Time, ConfigOptions) ->
+-spec start(pos_integer(), [tuple()]) -> agent().
+start(Time, ConfigOptions) ->
     SimParams = emas_config:proplist_to_record(ConfigOptions),
     io:format("### SimParams ~p~n", [SimParams]),
-    Agents = mas:start(?MODULE, Model, Time,
+    Agents = mas:start(?MODULE,
+                       Time,
                        SimParams,
                        ConfigOptions),
     extract_best(Agents).

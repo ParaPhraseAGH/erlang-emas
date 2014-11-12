@@ -6,9 +6,8 @@
 main(Args) ->
     add_deps(),
     Options = get_options(Args),
-    Model = proplists:get_value(model, Options),
-    Time = proplists:get_value(time, Options),
-    emas:start(Model, Time, Options).
+    Time = get_time(Options),
+    emas:start(Time, Options).
 
 
 add_deps() ->
@@ -16,24 +15,41 @@ add_deps() ->
     code:add_pathsa(filelib:wildcard("./deps/*/ebin")).
 
 get_options(Args) ->
-    Spec =
-        [{model, udefined, "model", atom,
-          "mas_model to run"},
-         {time, undefined, "time", integer,
-          "amount of time to run given simulaiton, in milliseconds"} |
-         emas_config:options_specs()],
+    Specs = emas_config:options_specs(),
+    Specs2 = add_time(Specs),
 
     Options =
-        case getopt:parse(Spec, Args) of
+        case getopt:parse(Specs2, Args) of
             {ok, {Parsed, [] = _Others} } ->
                 Parsed;
 
             {ok, {_Parsed, Others}} ->
-                getopt:usage(Spec, ?PROGRAM),
-                erlang:exit("Not supported optoins", Others);
+                getopt:usage(Specs2, ?PROGRAM),
+                erlang:exit("Not supported options", Others);
 
             {error, Data} ->
-                getopt:usage(Spec, ?PROGRAM),
+                getopt:usage(Specs2, ?PROGRAM),
                 erlang:exit("Error parsing args", Data)
         end,
     Options.
+
+
+add_time(Spec) ->
+    [time_spec()|
+     Spec].
+
+time_spec() ->
+    {time, undefined, "time", integer,
+     "amount of time to run given simulaiton, in milliseconds"}.
+
+get_time(Options) ->
+    case proplists:get_value(time, Options) of
+        undefined ->
+            Specs = add_time(emas_config:options_specs()),
+            getopt:usage(Specs, ?PROGRAM),
+            erlang:exit("Missing time argument");
+        Time ->
+            Time
+    end.
+            
+    
