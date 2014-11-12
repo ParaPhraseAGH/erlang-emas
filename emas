@@ -1,30 +1,39 @@
-#!/usr/bin/env erlang
+#!/usr/bin/env escript
 
--define(?PROGRAM, "emas").
+-define(PROGRAM, "emas").
 
 
 main(Args) ->
     add_deps(),
-    Options = get_options(),
+    Options = get_options(Args),
     Model = proplists:get_value(model, Options),
     Time = proplists:get_value(time, Options),
     emas:start(Model, Time, Options).
 
 
 add_deps() ->
-    ok.
+    code:add_patha("./ebin"),
+    code:add_pathsa(filelib:wildcard("./deps/*/ebin")).
 
-get_options() ->
-    Spec = emas_config:options_specs(),
+get_options(Args) ->
+    Spec =
+        [{model, udefined, "model", atom,
+          "mas_model to run"},
+         {time, undefined, "time", integer,
+          "amount of time to run given simulaiton, in milliseconds"} |
+         emas_config:options_specs()],
+
     Options =
-        case getops:parse(Spec, Args) of
-            {ok, Parsed, [] = _Others } ->
-                Parser;
-            {ok, Parsed, Others} ->
+        case getopt:parse(Spec, Args) of
+            {ok, {Parsed, [] = _Others} } ->
+                Parsed;
+
+            {ok, {_Parsed, Others}} ->
                 getopt:usage(Spec, ?PROGRAM),
                 erlang:exit("Not supported optoins", Others);
+
             {error, Data} ->
                 getopt:usage(Spec, ?PROGRAM),
                 erlang:exit("Error parsing args", Data)
-        end
+        end,
     Options.
