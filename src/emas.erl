@@ -33,10 +33,10 @@
 start(Time, ConfigOptions) ->
     SimParams = emas_config:proplist_to_record(ConfigOptions),
     io:format("### SimParams ~p~n", [SimParams]),
-    Agents = mas:start(?MODULE,
-                       Time,
+    Agents = mas:start(Time,
                        SimParams,
-                       ConfigOptions),
+                       [{agent_env, ?MODULE} |
+                        ConfigOptions]),
     extract_best(Agents).
 
 

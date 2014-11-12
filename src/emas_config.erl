@@ -70,7 +70,11 @@ options_specs() ->
 
      {fight_number,           undefined, "fight_number",          {integer, 2},
       "The size of the fight arena"}]
-        ++ mas_config:options_specs().
+        ++ mas_options().
+
+mas_options() ->
+    All = mas_config:options_specs(),
+    proplists:delete(agent_env, All). % set statically by emas:start/2.
 
 
 default_options() ->
