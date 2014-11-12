@@ -38,10 +38,10 @@ proplist_to_record(Options) ->
 
 -spec options_specs() -> [getopt:option_spec()].
 options_specs() ->
-    [{genetic_ops,            undefined, "genetic_ops",           {atom, emas_test_ops},
+    [{genetic_ops,            $o,        "genetic_ops",           {atom, emas_test_ops},
       "the name of the module with the genetic operators and the genetic callback implementation"},
 
-     {problem_size,           undefined, "problem_size",          {integer, 100},
+     {problem_size,           $s,        "problem_size",          {integer, 100},
       "The size of the problem represented by an agent"},
 
      {initial_energy,         undefined, "initial_energy",        {integer, 10},
@@ -78,6 +78,6 @@ mas_options() ->
 
 
 default_options() ->
-    {ok,{Options, [] = _NotParsed}}
+    {ok,{Options, _NotParsed = []}}
         = getopt:parse(options_specs(), ""),
     Options.
