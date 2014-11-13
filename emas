@@ -1,0 +1,61 @@
+#!/usr/bin/env escript
+
+-define(PROGRAM, "emas").
+
+
+main(Args) ->
+    add_deps(),
+    Options = get_options(Args),
+    Time = get_time(Options),
+    emas:start(Time, Options).
+
+
+add_deps() ->
+    ScriptPath = filename:dirname(escript:script_name()),
+    code:add_patha(ScriptPath ++  "/ebin"),
+    code:add_pathsa(filelib:wildcard(ScriptPath ++ "/deps/*/ebin")).
+
+get_options(Args) ->
+    Specs = options_spec(),
+    Options =
+        case getopt:parse(Specs, Args) of
+            {ok, {Parsed, [] = _Others} } ->
+                Parsed;
+
+            {ok, {_Parsed, Others}} ->
+                usage(),
+                erlang:exit("Not supported options", Others);
+
+            {error, Data} ->
+                usage(),
+                erlang:exit("Error parsing args", Data)
+        end,
+    Options.
+
+
+add_time(Spec) ->
+    [time_spec()|
+     Spec].
+
+time_spec() ->
+    {time, $t, "time", integer,
+     "amount of time to run given simulaiton, in milliseconds"}.
+
+get_time(Options) ->
+    case proplists:get_value(time, Options) of
+        undefined ->
+            usage(),
+            erlang:exit("Missing time argument");
+        Time ->
+            Time
+    end.
+
+
+options_spec() ->
+    Specs = emas_config:options_specs(),
+    add_time(Specs).
+
+usage() ->
+    getopt:usage(options_spec(), ?PROGRAM).
+            
+    

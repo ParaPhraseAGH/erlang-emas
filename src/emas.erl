@@ -1,8 +1,15 @@
 -module (emas).
 -behaviour(mas_agent_env).
 
--export ([starts/1, start/2, start/3, start/4, initial_agent/1,
-          behaviour_function/2, behaviours/0, meeting_function/2, stats/0]).
+-export([initial_agent/1,
+         behaviour_function/2,
+         behaviours/0,
+         meeting_function/2,
+         stats/0]).
+
+-export([start/2
+        ]).
+
 -export_type([agent/0, solution/0, solution/1, sim_params/0]).
 
 -include ("emas.hrl").
@@ -22,30 +29,15 @@
 %% Callbacks
 %% ====================================================================
 
--spec start(model(), pos_integer()) -> agent().
-start(Model, Time) ->
-    start(Model, Time, []).
-
-
--spec start(model(), pos_integer(), [tuple()]) -> agent().
-start(Model, Time, SimParamOptions) ->
-    start(Model, Time, SimParamOptions, []).
-
-
--spec start(model(), pos_integer(), [tuple()], [tuple()]) -> agent().
-start(Model, Time, SimParamOptions, ConfigOptions) ->
-    SimParamsUpdated = mas_misc_util:overwrite_options(SimParamOptions,
-                                                       load_params()),
-    Agents = mas:start(?MODULE, Model, Time,
-                       proplist_to_record(SimParamsUpdated),
-                       ConfigOptions),
+-spec start(pos_integer(), [tuple()]) -> agent().
+start(Time, ConfigOptions) ->
+    SimParams = emas_config:proplist_to_record(ConfigOptions),
+    io:format("### SimParams ~w~n", [SimParams]),
+    Agents = mas:start(Time,
+                       SimParams,
+                       [{agent_env, ?MODULE} |
+                        ConfigOptions]),
     extract_best(Agents).
-
-
-%% @doc function for starting `emas` from command line
--spec starts(list()) -> agent().
-starts([Model, Time]) ->
-    start(erlang:list_to_atom(Model), erlang:list_to_integer(Time)).
 
 
 -spec initial_agent(sim_params()) -> agent().
@@ -112,27 +104,3 @@ extract_best(Agents) ->
                      Acc
              end,
     {_Sol, _Fit, _Energy} = lists:foldl(ArgMax, hd(Agents), tl(Agents)).
-
--spec load_params() -> [{atom(), term()}].
-load_params() ->
-    ConfDir = mas_misc_util:get_config_dir(),
-    io:format("~p~n", [ConfDir]),
-    ConfigFile = filename:join(ConfDir, "emas.config"),
-    {ok, ParamsFromFile} = file:consult(ConfigFile),
-    ParamsFromFile.
-
-%% @doc Transform a proplist with simulation properties to a record
--spec proplist_to_record([{atom(), term()}]) -> sim_params().
-proplist_to_record(Proplist) ->
-    Dict = dict:from_list(Proplist),
-    #sim_params{?LOAD(genetic_ops, Dict),
-                ?LOAD(problem_size, Dict),
-                ?LOAD(initial_energy, Dict),
-                ?LOAD(reproduction_threshold, Dict),
-                ?LOAD(reproduction_transfer, Dict),
-                ?LOAD(fight_transfer, Dict),
-                ?LOAD(mutation_rate, Dict),
-                ?LOAD(mutation_range, Dict),
-                ?LOAD(mutation_chance, Dict),
-                ?LOAD(recombination_chance, Dict),
-                ?LOAD(fight_number, Dict)}.
