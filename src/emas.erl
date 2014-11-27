@@ -4,11 +4,9 @@
 -export([initial_agent/1,
          behaviour_function/2,
          behaviours/0,
-         meeting_function/2,
-         stats/0]).
+         meeting_function/2]).
 
--export([start/2
-        ]).
+-export([start/2]).
 
 -export_type([agent/0, solution/0, solution/1, sim_params/0]).
 
@@ -32,11 +30,13 @@
 -spec start(pos_integer(), [tuple()]) -> agent().
 start(Time, ConfigOptions) ->
     SimParams = emas_config:proplist_to_record(ConfigOptions),
+    Config = mas_config:proplist_to_record([{agent_env, ?MODULE} |
+                                            ConfigOptions]),
     io:format("### SimParams ~w~n", [SimParams]),
-    Agents = mas:start(Time,
-                       SimParams,
-                       [{agent_env, ?MODULE} |
-                        ConfigOptions]),
+    io:format("### ConfigRecord: ~w~n", [Config]),
+    initialize_exometer(Config),
+
+    Agents = mas:start(Time, SimParams, Config),
     extract_best(Agents).
 
 
@@ -81,17 +81,6 @@ meeting_function({fight, Agents}, SP) ->
 meeting_function({_, _}, _SP) ->
     erlang:error(unexpected_behaviour).
 
-
--spec stats() -> [funstat()].
-stats() ->
-    Fitness_map = fun({_Solution, Fitness, _Energy}) ->
-                          Fitness
-                  end,
-    Fitness_reduce = fun(F1, F2) ->
-                             lists:max([F1, F2])
-                     end,
-    [{fitness, Fitness_map, Fitness_reduce, -999999}].
-
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
@@ -104,3 +93,14 @@ extract_best(Agents) ->
                      Acc
              end,
     {_Sol, _Fit, _Energy} = lists:foldl(ArgMax, hd(Agents), tl(Agents)).
+
+
+-spec initialize_exometer(config()) -> ok.
+initialize_exometer(Cf) ->
+    application:ensure_all_started(exometer),
+    exometer:new([global, fitness], histogram),
+    mas_reporter:add_reporter(Cf),
+    exometer_report:subscribe(mas_reporter,
+                              [global, fitness],
+                              min,
+                              Cf#config.write_interval).

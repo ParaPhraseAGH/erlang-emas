@@ -20,7 +20,7 @@ run () {
                                --genetic_ops emas_test_ops \
                                --problem_size 30 \
                                --skel_split_size $split_size \
-                               --skel_pull $skel_pull
+                               --skel_pull $skel_pull || exit 1
                         #> $output_file
                     done
                 done
@@ -32,15 +32,15 @@ run () {
 
 output_dir="output"
 # rtime=120000
-rtime=2000
+rtime=10000
 
 # cores="1 2 4"
 cores="4"
 # run_repeat=3
 run_repeat=1
-skel_pull_workflow="enable disable"
-split_sizes="2 8 20 60"
-models="mas_skel"
+skel_pull_workflow="enable"
+split_sizes="2"
+models="mas_sequential mas_skel mas_hybrid mas_concurrent"
 #" "
 operators="emas_test_ops"
 
