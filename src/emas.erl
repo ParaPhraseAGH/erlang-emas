@@ -37,6 +37,10 @@ start(Time, ConfigOptions) ->
     initialize_exometer(Config),
 
     Agents = mas:start(Time, SimParams, Config),
+
+    exometer_report:unsubscribe_all(mas_reporter, [global,fitness]),
+    exometer:delete([global, fitness]),
+
     extract_best(Agents).
 
 
