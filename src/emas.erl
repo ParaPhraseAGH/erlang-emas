@@ -37,6 +37,10 @@ start(Time, ConfigOptions) ->
     initialize_exometer(Config),
 
     Agents = mas:start(Time, SimParams, Config),
+
+    exometer_report:unsubscribe_all(mas_reporter, [global, fitness]),
+    exometer:delete([global, fitness]),
+
     extract_best(Agents).
 
 
@@ -48,7 +52,7 @@ initial_agent(SP) ->
 
 %% @doc This function chooses a behaviour for the agent based on its energy.
 -spec behaviour_function(agent(), sim_params()) -> agent_behaviour().
-behaviour_function({_,_,0}, _SimParams) ->
+behaviour_function({_, _, 0}, _SimParams) ->
     death;
 
 behaviour_function({_, _, Energy}, #sim_params{reproduction_threshold = RT}) ->
