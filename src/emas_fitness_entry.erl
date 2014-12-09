@@ -35,7 +35,8 @@ new(_Name, _Type, _Options) ->
 
 -spec delete(name(), type(), ref()) -> ok | error().
 delete(_Name, _Type, Ref) ->
-    ets:delete(Ref).
+    ets:delete(Ref),
+    ok.
 
 -spec get_value(name(), type(), ref(), datapoints()) ->
     [{datapoint(), value()}].
