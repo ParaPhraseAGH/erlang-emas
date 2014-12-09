@@ -6,26 +6,33 @@
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
+typedef struct
+{
+    double fitness;
+    ErlNifRWLock* lock;
+} priv_data;
+
+
 static int load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
-    double* fitness_var = (double*) enif_alloc(sizeof(int));
-    if (fitness_var == NULL) {
-        return enif_make_badarg(env);
-    }
-    *fitness_var = INIT_FITNESS;
-    *priv = (void*) fitness_var;
+
+    priv_data* data_struct = (priv_data*) enif_alloc(sizeof(priv_data));
+    data_struct->fitness = INIT_FITNESS;
+    data_struct->lock = enif_rwlock_create("fitness_val_lock");
+
+    *priv = (void*) data_struct;
     return 0;
 }
 
 static ERL_NIF_TERM delete_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
-    double* priv = (double*) enif_priv_data(env);
+    priv_data* priv = (priv_data*) enif_priv_data(env);
     free(priv);
     return enif_make_atom(env, "ok");
 }
 
 static ERL_NIF_TERM get_value_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
-    double* priv = (double*) enif_priv_data(env);
+    priv_data* priv = (priv_data*) enif_priv_data(env);
     ERL_NIF_TERM fitness_atom = enif_make_atom(env, "fitness");
-    ERL_NIF_TERM fitness_val = enif_make_double(env, *priv);
+    ERL_NIF_TERM fitness_val = enif_make_double(env, priv->fitness);
     ERL_NIF_TERM tuple = enif_make_tuple2(env, fitness_atom, fitness_val);
     return enif_make_list1(env, tuple);
 }
@@ -35,15 +42,19 @@ static ERL_NIF_TERM update_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv
     if (!enif_get_double(env, argv[1], &new_fitness)) {
 	    return enif_make_badarg(env);
     }
-    double* priv = (double*) enif_priv_data(env);
-    double old_fitness = *priv;
-    *priv = MAX(old_fitness, new_fitness);
+    priv_data* priv = (priv_data*) enif_priv_data(env);
+
+    if (priv->fitness < new_fitness) {
+        enif_rwlock_rwlock(priv->lock);
+        priv->fitness = MAX(priv->fitness, new_fitness);
+        enif_rwlock_rwunlock(priv->lock);
+    }
     return enif_make_atom(env, "ok");
 }
 
 static ERL_NIF_TERM reset_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
-    double* priv = (double*) enif_priv_data(env);
-    *priv = INIT_FITNESS;
+    priv_data* priv = (priv_data*) enif_priv_data(env);
+    priv->fitness = INIT_FITNESS;
     return enif_make_atom(env, "ok");
 }
 
