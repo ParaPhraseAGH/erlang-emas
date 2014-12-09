@@ -27,7 +27,8 @@
 
 -spec init() -> ok.
 init() ->
-    SOName = filename:join([priv, ?LIBNAME]),
+    ProjectPath = filename:dirname(filename:dirname(code:which(?MODULE))),
+    SOName = filename:join([ProjectPath, priv, ?LIBNAME]),
     ok = erlang:load_nif(SOName, 0).
 
 -spec behaviour() -> exometer:behaviour().

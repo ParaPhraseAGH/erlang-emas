@@ -13,7 +13,7 @@
 -include ("emas.hrl").
 
 -define(LOAD(Prop, Dict), Prop = dict:fetch(Prop, Dict)).
--define(FITNESS_ENTRY, emas_fitness_entry).
+-define(FITNESS_ENTRY, emas_fitness_entry_nif).
 
 -type solution(Any) :: Any.
 -type solution() :: solution(any()).
