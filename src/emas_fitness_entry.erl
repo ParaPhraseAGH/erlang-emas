@@ -29,8 +29,8 @@ behaviour() ->
 
 -spec new(name(), type(), options()) -> ok | {ok, ref()} | error().
 new(_Name, _Type, _Options) ->
-    Tid = ets:new(fitness_table,[public]),
-    ets:insert(Tid, {fitness, ?INIT_FITNESS}),
+    Tid = ets:new(fitness_table, [public, {write_concurrency, true}]),
+    ets:insert(Tid, {?INIT_FITNESS}),
     {ok, Tid}.
 
 -spec delete(name(), type(), ref()) -> ok | error().
@@ -39,20 +39,24 @@ delete(_Name, _Type, Ref) ->
     ok.
 
 -spec get_value(name(), type(), ref(), datapoints()) ->
-    [{datapoint(), value()}].
+                       [{datapoint(), value()}].
 get_value(_Name, _Type, Ref, _Datapoints) ->
-    [{fitness, Val}] = ets:lookup(Ref, fitness),
-    [{fitness, Val}].
+    Max = ets:foldl(fun({Fitness}, MaxFit) ->
+                            ets:delete(Ref, {Fitness}),
+                            max(Fitness, MaxFit)
+                    end, ?INIT_FITNESS, Ref),
+    ets:insert(Ref, {Max}),
+    [{fitness, Max}].
 
 -spec update(name(), value(), type(), ref()) -> ok | {ok, value()} | error().
 update(_Name, Value, _Type, Ref) ->
-    [{fitness, OldFitness}] = ets:lookup(Ref, fitness),
-    ets:insert(Ref, {fitness, max(OldFitness, Value)}),
+    ets:insert(Ref, {Value}),
     ok.
 
 -spec reset(name(), type(), ref()) -> ok | {ok, value()} | error().
 reset(_Name, _Type, Ref) ->
-    ets:insert(Ref, {fitness, ?INIT_FITNESS}),
+    ets:delete_all_objects(Ref),
+    ets:insert(Ref, {?INIT_FITNESS}),
     ok.
 
 -spec sample(name(), type(), ref()) -> ok | error().
