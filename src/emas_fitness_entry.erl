@@ -42,9 +42,9 @@ delete(_Name, _Type, Ref) ->
                        [{datapoint(), value()}].
 get_value(_Name, _Type, Ref, _Datapoints) ->
     Max = ets:foldl(fun({Fitness}, MaxFit) ->
-                            ets:delete(Ref, {Fitness}),
                             max(Fitness, MaxFit)
                     end, ?INIT_FITNESS, Ref),
+    ets:delete_all_objects(Ref),
     ets:insert(Ref, {Max}),
     [{fitness, Max}].
 
