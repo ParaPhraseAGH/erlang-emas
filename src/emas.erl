@@ -13,6 +13,7 @@
 -include ("emas.hrl").
 
 -define(LOAD(Prop, Dict), Prop = dict:fetch(Prop, Dict)).
+-define(FITNESS_ENTRY, emas_fitness_entry).
 
 -type solution(Any) :: Any.
 -type solution() :: solution(any()).
@@ -105,9 +106,9 @@ initialize_exometer(Cf) ->
     mas_reporter:add_reporter(Cf),
 
     exometer_admin:set_default(['_'],
-                               emas_fitness_entry,
-                               [{module, emas_fitness_entry}]),
-    exometer:new([global, fitness], emas_fitness_entry, []),
+                               ?FITNESS_ENTRY,
+                               [{module, ?FITNESS_ENTRY}]),
+    exometer:new([global, fitness], ?FITNESS_ENTRY, []),
     exometer_report:subscribe(mas_reporter,
                               [global, fitness],
                               fitness,
