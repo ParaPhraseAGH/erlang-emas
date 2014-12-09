@@ -102,9 +102,13 @@ extract_best(Agents) ->
 -spec initialize_exometer(config()) -> ok.
 initialize_exometer(Cf) ->
     application:ensure_all_started(exometer),
-    exometer:new([global, fitness], histogram),
     mas_reporter:add_reporter(Cf),
+
+    exometer_admin:set_default(['_'],
+                               emas_fitness_entry,
+                               [{module, emas_fitness_entry}]),
+    exometer:new([global, fitness], emas_fitness_entry, []),
     exometer_report:subscribe(mas_reporter,
                               [global, fitness],
-                              min,
+                              fitness,
                               Cf#config.write_interval).
