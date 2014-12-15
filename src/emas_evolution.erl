@@ -64,13 +64,13 @@ do_reproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}, SP) ->
 
 
 %% @doc Splits agents into pairs with an optional single remainder.
--spec optional_pairs([agent()],[{agent(),agent()}]) ->
-    [{agent(),agent()} | {agent()}].
-optional_pairs([],Acc) -> Acc;
+-spec optional_pairs([agent()], [{agent(), agent()}]) ->
+                            [{agent(), agent()} | {agent()}].
+optional_pairs([], Acc) -> Acc;
 
-optional_pairs([A],Acc) -> [{A}|Acc];
+optional_pairs([A], Acc) -> [{A} | Acc];
 
-optional_pairs([A,B|L],Acc) -> optional_pairs(L,[{A,B}|Acc]).
+optional_pairs([A, B | L], Acc) -> optional_pairs(L, [{A, B} | Acc]).
 
 %% ====================================================================
 %% Internal functions
