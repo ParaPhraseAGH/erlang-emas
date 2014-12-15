@@ -13,6 +13,7 @@
 -include ("emas.hrl").
 
 -define(LOAD(Prop, Dict), Prop = dict:fetch(Prop, Dict)).
+-define(FITNESS_ENTRY, emas_fitness_entry_nif).
 
 -type solution(Any) :: Any.
 -type solution() :: solution(any()).
@@ -102,9 +103,13 @@ extract_best(Agents) ->
 -spec initialize_exometer(config()) -> ok.
 initialize_exometer(Cf) ->
     application:ensure_all_started(exometer),
-    exometer:new([global, fitness], histogram),
     mas_reporter:add_reporter(Cf),
+
+    exometer_admin:set_default(['_'],
+                               ?FITNESS_ENTRY,
+                               [{module, ?FITNESS_ENTRY}]),
+    exometer:new([global, fitness], ?FITNESS_ENTRY, []),
     exometer_report:subscribe(mas_reporter,
                               [global, fitness],
-                              min,
+                              fitness,
                               Cf#config.write_interval).
