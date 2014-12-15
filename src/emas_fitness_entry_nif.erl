@@ -11,7 +11,8 @@
 -on_load(init/0).
 
 %% API
--export([behaviour/0, new/3, delete/3, get_value/4, update/4, reset/3, sample/3, get_datapoints/3, setopts/3]).
+-export([behaviour/0, new/3, delete/3, get_value/4, update/4, reset/3, sample/3,
+         get_datapoints/3, setopts/3]).
 
 -type name()        :: list().
 -type type()        :: atom().
@@ -22,7 +23,6 @@
 -type ref()         :: any().
 -type error()       :: {error, any()}.
 
--define(INIT_FITNESS, -999999).
 -define (LIBNAME, "fitness_entry_nif").
 
 -spec init() -> ok.
@@ -44,7 +44,7 @@ delete(_Name, _Type, _Ref) ->
     error(nif_not_loaded).
 
 -spec get_value(name(), type(), ref(), datapoints()) ->
-    [{datapoint(), value()}].
+                       [{datapoint(), value()}].
 get_value(_Name, _Type, _Ref, _Datapoints) ->
     error(nif_not_loaded).
 

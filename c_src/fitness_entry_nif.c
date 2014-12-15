@@ -1,6 +1,7 @@
 #include "erl_nif.h"
+#include "float.h"
 
-#define INIT_FITNESS -999999
+#define INIT_FITNESS -DBL_MAX
 #define MAX(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \

@@ -13,7 +13,8 @@
 %% API functions
 %% ====================================================================
 
-%% @doc This function implements an all-vs-all fight between agents. It returns the list of agents after the fight.
+%% @doc This function implements an all-vs-all fight between agents.
+%% It returns the list of agents after the fight.
 %% -spec each_fights_all([agent()]) -> [agent()].
 %% each_fights_all([]) -> [];
 %%
@@ -22,7 +23,8 @@
 %%     [NewH | each_fights_all(NewT)].
 
 
-%% @doc The fight logic for a pair of agents. It returns a list of both agents updated after the fight.
+%% @doc The fight logic for a pair of agents.
+%% It returns a list of both agents updated after the fight.
 -spec do_fight({agent()} | {agent(), agent()}, sim_params()) -> [agent()].
 do_fight({A}, _SP) -> [A];
 
@@ -36,7 +38,8 @@ do_fight({{SolA, EvA, EnA}, {SolB, EvB, EnB}}, SP) ->
     [{SolA, EvA, EnA - AtoBtransfer}, {SolB, EvB, EnB + AtoBtransfer}].
 
 
-%% @doc The reproduction logic for a single agent. It returns a list with the updated parent and new child.
+%% @doc The reproduction logic for a single agent.
+%% It returns a list with the updated parent and new child.
 -spec do_reproduce({agent()} | {agent(), agent()}, sim_params()) -> [agent()].
 do_reproduce({{SolA, EvA, EnA}}, SP) ->
     SolB = emas_genetic:reproduction(SolA, SP),
@@ -45,18 +48,24 @@ do_reproduce({{SolA, EvA, EnA}}, SP) ->
     AtoBtransfer = erlang:min(SP#sim_params.reproduction_transfer, EnA),
     [{SolA, EvA, EnA - AtoBtransfer}, {SolB, EvB, AtoBtransfer}];
 
-%% @doc The reproduction logic for a pair of agents. It returns a list with the updated parents and new children.
+%% @doc The reproduction logic for a pair of agents.
+%% It returns a list with the updated parents and new children.
 do_reproduce({{SolA, EvA, EnA}, {SolB, EvB, EnB}}, SP) ->
     [SolC, SolD] = emas_genetic:reproduction(SolA, SolB, SP),
     [EvC, EvD] = [emas_genetic:evaluation(S, SP) || S <- [SolC, SolD]],
     exometer:update([global, fitness], EvC),
     exometer:update([global, fitness], EvD),
-    [AtoCTransfer, BtoDTransfer] = [erlang:min(SP#sim_params.reproduction_transfer, E) || E <- [EnA, EnB]],
-    [{SolA, EvA, EnA - AtoCTransfer}, {SolB, EvB, EnB - BtoDTransfer}, {SolC, EvC, AtoCTransfer}, {SolD, EvD, BtoDTransfer}].
+    [AtoCTransfer, BtoDTransfer] =
+        [erlang:min(SP#sim_params.reproduction_transfer, E) || E <- [EnA, EnB]],
+    [{SolA, EvA, EnA - AtoCTransfer},
+     {SolB, EvB, EnB - BtoDTransfer},
+     {SolC, EvC, AtoCTransfer},
+     {SolD, EvD, BtoDTransfer}].
 
 
 %% @doc Splits agents into pairs with an optional single remainder.
--spec optional_pairs([agent()],[{agent(),agent()}]) -> [{agent(),agent()} | {agent()}].
+-spec optional_pairs([agent()],[{agent(),agent()}]) ->
+    [{agent(),agent()} | {agent()}].
 optional_pairs([],Acc) -> Acc;
 
 optional_pairs([A],Acc) -> [{A}|Acc];
