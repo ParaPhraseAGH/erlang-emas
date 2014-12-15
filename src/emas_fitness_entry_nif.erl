@@ -39,24 +39,24 @@ behaviour() ->
 new(_Name, _Type, _Options) ->
     {ok, none}.
 
--spec delete(name(), type(), ref()) -> ok | error().
+-spec delete(name(), type(), ref()) -> ok.
 delete(_Name, _Type, _Ref) ->
-    error(nif_not_loaded).
+    erlang:nif_error(nif_not_loaded).
 
 -spec get_value(name(), type(), ref(), datapoints()) ->
                        [{datapoint(), value()}].
 get_value(_Name, _Type, _Ref, _Datapoints) ->
-    error(nif_not_loaded).
+    erlang:nif_error(nif_not_loaded).
 
--spec update(name(), value(), type(), ref()) -> ok | {ok, value()} | error().
+-spec update(name(), value(), type(), ref()) -> ok | {ok, value()}.
 update(_Name, _Value, _Type, _Ref) ->
-    error(nif_not_loaded).
+    erlang:nif_error(nif_not_loaded).
 
--spec reset(name(), type(), ref()) -> ok | {ok, value()} | error().
+-spec reset(name(), type(), ref()) -> ok | {ok, value()}.
 reset(_Name, _Type, _Ref) ->
-    error(nif_not_loaded).
+    erlang:nif_error(nif_not_loaded).
 
--spec sample(name(), type(), ref()) -> ok | error().
+-spec sample(name(), type(), ref()) -> ok.
 sample(_, _, _) ->
     ok.
 
@@ -64,6 +64,6 @@ sample(_, _, _) ->
 get_datapoints(_, _, _) ->
     [fitness].
 
--spec setopts(exometer:entry(), options(), exometer:status()) -> ok | error().
+-spec setopts(exometer:entry(), options(), exometer:status()) -> ok.
 setopts(_, _, _) ->
     ok.
