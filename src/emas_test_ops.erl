@@ -2,7 +2,7 @@
 
 -behaviour(emas_genetic_ops).
 
--export ([evaluation/2, mutation/2, recombination/3, solution/1]).
+-export ([evaluation/2, mutation/2, recombination/3, solution/1, config/0]).
 
 -include("emas.hrl").
 
@@ -37,6 +37,10 @@ mutation(B, SP) ->
     Indexes = [random:uniform(length(S)) || _ <- lists:seq(1, NrGenesMutated)], % indices may be duplicated
     Mut = mutate_genes(S, lists:usort(Indexes), 1, [], SP), % usort removes duplicates
     erlang:term_to_binary(Mut).
+
+-spec config() -> term().
+config() ->
+    undefined.
 
 
 %% ====================================================================
