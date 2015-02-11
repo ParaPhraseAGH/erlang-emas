@@ -19,3 +19,5 @@
 
 -callback recombination(solution(), solution(), sim_params()) ->
     {solution(), solution()}.
+
+-callback config() -> term().

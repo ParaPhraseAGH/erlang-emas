@@ -10,4 +10,5 @@
                      mutation_range :: float(),
                      mutation_chance :: float(),
                      recombination_chance :: float(),
-                     fight_number :: pos_integer()}).
+                     fight_number :: pos_integer(),
+                     extra :: term()}).

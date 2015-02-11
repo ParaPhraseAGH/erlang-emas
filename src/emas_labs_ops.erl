@@ -1,6 +1,6 @@
 -module (emas_labs_ops).
 -behaviour (emas_genetic_ops).
--export ([solution/1, evaluation/2, mutation/2, recombination/3]).
+-export ([solution/1, evaluation/2, mutation/2, recombination/3, config/0]).
 
 -include("emas.hrl").
 
@@ -19,29 +19,11 @@ solution(SP) ->
 evaluation(Solution, _SP) ->
     local_search(Solution).
 
--spec energy(solution()) -> float().
-energy(Solution) ->
-    L = length(Solution),
-    Cs = [foldzip(drop(Solution, K), Solution)
-          || K <- lists:seq(1, L-1)],
-    E = lists:foldl(fun (X, Acc) -> X*X + Acc end, 0, Cs),
-    L*L*0.5/E.
-
-
 -spec recombination(solution(), solution(), sim_params()) ->
                            {solution(), solution()}.
 recombination(S1, S2, _SP) ->
     Zipped = [recombination_features(F1, F2) || {F1, F2} <- lists:zip(S1, S2)],
     lists:unzip(Zipped).
-
-%% @doc Chooses a random order between the two initial features.
--spec recombination_features(float(), float()) -> {float(), float()}.
-recombination_features(F, F) -> {F, F};
-recombination_features(F1, F2) ->
-    case random:uniform() < 0.5 of
-        true -> {F1, F2};
-        false -> {F2, F1}
-    end.
 
 %% @doc Reproduction function for a single agent (mutation only).
 -spec mutation(solution(), sim_params()) -> solution().
@@ -53,7 +35,28 @@ mutation(Solution, SP) ->
                       end
               end, Solution).
 
+-spec config() -> term().
+config() ->
+    undefined.
+
 %% internal functions
+
+-spec energy(solution()) -> float().
+energy(Solution) ->
+    L = length(Solution),
+    Cs = [foldzip(drop(Solution, K), Solution)
+          || K <- lists:seq(1, L-1)],
+    E = lists:foldl(fun (X, Acc) -> X*X + Acc end, 0, Cs),
+    L*L*0.5/E.
+
+%% @doc Chooses a random order between the two initial features.
+-spec recombination_features(float(), float()) -> {float(), float()}.
+recombination_features(F, F) -> {F, F};
+recombination_features(F1, F2) ->
+    case random:uniform() < 0.5 of
+        true -> {F1, F2};
+        false -> {F2, F1}
+    end.
 
 drop([], _) -> [];
 drop(L, 0) -> L;
