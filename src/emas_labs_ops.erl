@@ -45,7 +45,7 @@ config() ->
 energy(Solution) ->
     L = length(Solution),
     Cs = [foldzip(drop(Solution, K), Solution)
-        || K <- lists:seq(1, L-1)],
+          || K <- lists:seq(1, L-1)],
     E = lists:foldl(fun (X, Acc) -> X*X + Acc end, 0, Cs),
     L*L*0.5/E.
 

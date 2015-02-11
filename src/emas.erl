@@ -32,7 +32,7 @@
 start(Time, ConfigOptions) ->
     SP = emas_config:proplist_to_record(ConfigOptions),
     Env = SP#sim_params.genetic_ops,
-    SimParams = SP#sim_params{ extra = Env:config()},
+    SimParams = SP#sim_params{extra = Env:config()},
     Config = mas_config:proplist_to_record([{agent_env, ?MODULE} |
                                             ConfigOptions]),
     io:format("### SimParams ~w~n", [SimParams]),
