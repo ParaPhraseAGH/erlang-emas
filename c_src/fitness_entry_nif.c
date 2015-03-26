@@ -25,8 +25,8 @@ static int load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
 }
 
 static ERL_NIF_TERM delete_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
-    priv_data* priv = (priv_data*) enif_priv_data(env);
-    free(priv);
+    //priv_data* priv = (priv_data*) enif_priv_data(env);
+    //free(priv);
     return enif_make_atom(env, "ok");
 }
 

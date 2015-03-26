@@ -20,4 +20,6 @@
 -callback recombination(solution(), solution(), sim_params()) ->
     {solution(), solution()}.
 
--callback config() -> term().
+-callback config(sim_params()) -> term().
+
+-callback cleanup(sim_params()) -> ok.
