@@ -47,7 +47,7 @@ mutation(B, SP) ->
 config(_SimParams) ->
     undefined.
 
--spec cleanup(sim_params()) -> term().
+-spec cleanup(sim_params()) -> ok.
 cleanup(_Simparams) ->
     ok.
 
