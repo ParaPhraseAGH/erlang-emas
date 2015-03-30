@@ -1,6 +1,11 @@
 -module (emas_labs_ops).
 -behaviour (emas_genetic_ops).
--export ([solution/1, evaluation/2, mutation/2, recombination/3, config/0]).
+-export ([solution/1,
+          evaluation/2,
+          mutation/2,
+          recombination/3,
+          config/1,
+          cleanup/1]).
 
 -include("emas.hrl").
 
@@ -35,9 +40,13 @@ mutation(Solution, SP) ->
                       end
               end, Solution).
 
--spec config() -> term().
-config() ->
+-spec config(sim_params()) -> term().
+config(_SimParams) ->
     undefined.
+
+-spec cleanup(sim_params()) -> ok.
+cleanup(_SimParams) ->
+    ok.
 
 %% internal functions
 
